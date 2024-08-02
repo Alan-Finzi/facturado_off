@@ -1,15 +1,10 @@
 class ProductoModel {
-
-  // Campos de la tabla 'productos'
-  static ProductoModel currentProducto = ProductoModel();
-  static List<ProductoModel> productosAvailables = [];
   final String? name;
   final String? tipoProducto;
   final String? productoTipo;
   final double? precioInterno;
   final String? barcode;
   final double? cost;
-  final List<Alert>? alerts;
   final String? image;
   final int? categoryId;
   final int? marcaId;
@@ -46,7 +41,6 @@ class ProductoModel {
     this.precioInterno,
     this.barcode,
     this.cost,
-    this.alerts,
     this.image,
     this.categoryId,
     this.marcaId,
@@ -80,9 +74,6 @@ class ProductoModel {
       precioInterno: json['precio_interno'],
       barcode: json['barcode'],
       cost: json['cost'],
-      alerts: json['alerts'] != null
-          ? (json['alerts'] as List).map((alert) => Alert.fromJson(alert)).toList()
-          : null,
       image: json['image'],
       categoryId: json['category_id'],
       marcaId: json['marca_id'],
@@ -117,7 +108,6 @@ class ProductoModel {
       'precio_interno': precioInterno,
       'barcode': barcode,
       'cost': cost,
-      'alerts': alerts?.map((alert) => alert.toJson()).toList(),
       'image': image,
       'category_id': categoryId,
       'marca_id': marcaId,
@@ -144,20 +134,3 @@ class ProductoModel {
   }
 }
 
-class Alert {
-  final int? stock;
-
-  Alert({this.stock});
-
-  factory Alert.fromJson(Map<String, dynamic> json) {
-    return Alert(
-      stock: json['stock'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'stock': stock,
-    };
-  }
-}

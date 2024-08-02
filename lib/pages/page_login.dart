@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:facturador_offline/bloc/cubit_login/login_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../bloc/cubit_productos/productos_cubit.dart';
+
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -10,6 +12,7 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loginCubit = context.watch<LoginCubit>();
+    final productosCubit = context.watch<ProductosCubit>();
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -48,6 +51,7 @@ class LoginPage extends StatelessWidget {
                     final password = passwordController.text;
 
                     await loginCubit.loginBD(username, password);
+                    await productosCubit.getProductsBD();
 
                     if (loginCubit.state.isLogin) {
                       Navigator.pushReplacement(

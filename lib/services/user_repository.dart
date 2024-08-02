@@ -1,3 +1,4 @@
+import 'package:facturador_offline/models/Producto.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -19,5 +20,9 @@ class UserRepository {
 
   Future<List<User>> getUsers() async {
     return await databaseHelper.getUsers();
+  }
+
+  Future<List<ProductoModel>> getProductos() async {
+    return await databaseHelper.getProductos();
   }
 }

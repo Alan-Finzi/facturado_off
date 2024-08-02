@@ -1,9 +1,10 @@
 import 'dart:io';
-
+import 'package:flutter/material.dart';
+import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
 import 'package:facturador_offline/pages/page_login.dart';
-import 'package:flutter/material.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/cubit_login/login_cubit.dart';
 import '../services/user_repository.dart';
@@ -28,7 +29,9 @@ void main() async {
 
 Future<void> setWindowSize() async {
 //  await DesktopWindow.toggleFullScreen();
-  await DesktopWindow.setWindowSize(const Size(800, 800));
+  await DesktopWindow.setWindowSize(const Size(400, 800));
+  await DesktopWindow.setFullScreen(true);
+ // await DesktopWindow.setWindowSize( Size.infinite);
 }
 
 Future<void> _initDatabase() async {
@@ -61,42 +64,48 @@ Future<void> _initDatabase() async {
     casaCentralUserId: 1,
   ).toJson());
 
-  ProductoModel newProducto = ProductoModel(
-    name: 'Producto 1',
-    tipoProducto: 'Tipo 1',
-    productoTipo: 's',
-    precioInterno: 100.0,
-    barcode: '123456789',
-    cost: 50.0,
-    image: 'url_to_image',
-    categoryId: 1,
-    marcaId: 1,
-    comercioId: 1,
-    stockDescubierto: 'no',
-    proveedorId: 1,
-    eliminado: false,
-    unidadMedida: 1,
-    wcProductId: 1,
-    wcPush: true,
-    wcImage: 'url_to_wc_image',
-    etiquetas: 'etiqueta1, etiqueta2',
-    mostradorCanal: true,
-    ecommerceCanal: true,
-    wcCanal: true,
-    descripcion: 'Descripción del producto',
-    recetaId: 1,
-    stock: 100,
-    stockReal: 90,
-    precioLista: 120.0,
-    listaId: 1,
-    iva: 0.21,
-  );
   final dbHelper = DatabaseHelper.instance;
-  await dbHelper.insertProducto(newProducto);
+  for (int i =0; i <5; i++){
+    ProductoModel newProducto = ProductoModel(
+      name: 'Producto $i',
+      tipoProducto: 'Tipo $i',
+      productoTipo: 's',
+      precioInterno: 100.0,
+      barcode: i.toString(),
+      cost: 50.0,
+      image: 'url_to_image',
+      categoryId: 1,
+      marcaId: 1,
+      comercioId: 1,
+      stockDescubierto: 'no',
+      proveedorId: 1,
+      eliminado: false,
+      unidadMedida: 1,
+      wcProductId: 1,
+      wcPush: true,
+      wcImage: 'url_to_wc_image',
+      etiquetas: 'etiqueta1, etiqueta2',
+      mostradorCanal: true,
+      ecommerceCanal: true,
+      wcCanal: true,
+      descripcion: 'Descripción del producto',
+      recetaId: 1,
+      stock: 100,
+      stockReal: 90,
+      precioLista: 120.0,
+      listaId: 1,
+      iva: 0.21,
+    );
+    await dbHelper.insertProducto(newProducto);
+  }
+
+
+
+
 
   // Obtener todos los productos de la base de datos
-  List<ProductoModel> productos = await dbHelper.getProductos();
-  print('Productos: $productos');
+  //List<ProductoModel> productos = await dbHelper.getProductos();
+ // print('Productos: $productos');
 }
 
 class BlocProviders extends StatelessWidget {
@@ -108,6 +117,7 @@ class BlocProviders extends StatelessWidget {
         BlocProvider(create: (context)=> LoginCubit(UserRepository())),
         BlocProvider(create: (context)=> StatusApisCubit()),
         BlocProvider(create: (context)=> ThemaCubit()),
+        BlocProvider(create: (context)=> ProductosCubit(UserRepository(), currentListProductCubit: [])),
       ],
       child: const Myapp()
     );
