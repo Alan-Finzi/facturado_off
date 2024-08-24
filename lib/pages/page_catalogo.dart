@@ -1,3 +1,4 @@
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
@@ -23,39 +24,54 @@ class CatalogoPage extends StatelessWidget {
           children: [
             TextField(
               controller: _searchController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Buscar producto por nombre o código',
                 prefixIcon: Icon(Icons.search),
               ),
             ),
             SizedBox(height: 16.0),
-            BlocBuilder<ProductosCubit, ProductosState>(
-              builder: (context, state) {
-                return DropdownButton<String>(
-                  value: state.categoriaSeleccionada.isEmpty ? 'Todas las categorías' : state.categoriaSeleccionada,
-                  hint: const Text('Seleccionar categoría'),
-                  items: state.categorias.map((categoria) {
-                    return DropdownMenuItem<String>(
-                      value: categoria,
-                      child: Text(categoria),
+          BlocBuilder<ProductosCubit, ProductosState>(
+            builder: (context, state) {
+              return DropdownSearch<String>(
+                items: state.categorias,
+                dropdownDecoratorProps: const DropDownDecoratorProps(
+                  dropdownSearchDecoration: InputDecoration(
+                    labelText: "Seleccionar categoría",
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 40),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                selectedItem: state.categoriaSeleccionada.isEmpty
+                    ? 'Todas las categorías'
+                    : state.categoriaSeleccionada,
+                onChanged: (categoria) {
+                  if (categoria != null) {
+                    productosCubit.setCategoriaSeleccionada(categoria);
+                  } else {
+                    productosCubit.setCategoriaSeleccionada('Todas las categorías');
+                  }
+                },
+                popupProps: PopupProps.menu(
+                  showSearchBox: true,
+                  searchFieldProps: const TextFieldProps(
+                    decoration: InputDecoration(
+                      hintText: "Buscar categoría",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  itemBuilder: (context, item, isSelected) {
+                    return ListTile(
+                      title: Text(item),
                     );
-                  }).toList(),
-                  onChanged: (categoria) {
-                    if (categoria != null) {
-                      productosCubit.setCategoriaSeleccionada(categoria);
-                    } else {
-                      productosCubit.setCategoriaSeleccionada('Todas las categorías');
-                    }
                   },
-                );
-              },
-            ),
-            SizedBox(height: 16.0),
+                ),
+              );
+            },
+          ),
+
+          SizedBox(height: 16.0),
             BlocBuilder<ProductosCubit, ProductosState>(
               builder: (context, state) {
-                if (state.filteredListProductCubit == null || state.filteredListProductCubit!.isEmpty) {
-                  return Center(child: CircularProgressIndicator());
-                }
 
                 return Expanded(
                   child: DataTable(

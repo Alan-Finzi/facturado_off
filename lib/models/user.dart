@@ -1,4 +1,5 @@
 class User {
+  final int? id;
   final String username;
   final String password;
   final String? nombreUsuario;
@@ -22,13 +23,16 @@ class User {
   final int? clienteId;
   final String? image;
   final int? casaCentralUserId;
+  final int? idListaPrecio;
 
   User({
     required this.username,
     required this.password,
-     this.nombreUsuario,
-     this.apellidoUsuario,
-     this.cantidadSucursales,
+    this.id,
+    this.idListaPrecio,
+    this.nombreUsuario,
+    this.apellidoUsuario,
+    this.cantidadSucursales,
      this.cantidadEmpleados,
      this.name,
      this.sucursal,
@@ -52,6 +56,7 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       username: json['username'],
+      id: json['id'],
       password: json['password'],
       nombreUsuario: json['nombre_usuario'],
       apellidoUsuario: json['apellido_usuario'],
@@ -85,6 +90,7 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
+      'id':id,
       'username': username,
       'password': password,
       'nombre_usuario': nombreUsuario,

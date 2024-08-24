@@ -1,12 +1,14 @@
 
-import 'package:facturador_offline/pages/page_clientes.dart';
+import 'package:facturador_offline/pages/page_lista_cliente.dart';
+import 'package:facturador_offline/pages/page_mod_baja_cliente.dart';
+import 'package:facturador_offline/widget/widget_alta_clientes.dart';
 import 'package:facturador_offline/pages/page_home.dart';
 import 'package:facturador_offline/pages/page_nueva_venta.dart';
 import 'package:facturador_offline/pages/page_productos.dart';
 import 'package:facturador_offline/pages/pege_connection.dart';
 import 'package:flutter/material.dart';
 import 'package:bottom_navy_bar/bottom_navy_bar.dart';
-import 'package:permission_handler/permission_handler.dart';
+
 
 
 class RootNavScreen extends StatefulWidget {
@@ -39,7 +41,9 @@ class _RootNavScreenState extends State<RootNavScreen> {
      //   const ProductSearchPage(),
       //  ClientesMostradorPage(),
       //  const HomePage(),
+
         NuevaVentaPage(),
+        ClientesListPage(),
         ConnectionPage(),
       ],
     ),
@@ -75,6 +79,12 @@ class _RootNavScreenState extends State<RootNavScreen> {
       BottomNavyBarItem(
         icon: Icon(Icons.home),
         title: Text('Nueva Venta'),
+        activeColor: Colors.blue,
+        textAlign: TextAlign.center,
+      ),
+      BottomNavyBarItem(
+        icon: const Icon(Icons.person),
+        title: const Text('Clientes'),
         activeColor: Colors.blue,
         textAlign: TextAlign.center,
       ),

@@ -1,9 +1,12 @@
-
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../../models/user.dart';
-import '../models/Producto.dart';
+import '../models/clientes_mostrador.dart';
+import '../models/lista_precio_model.dart';
+import '../models/producto.dart';
+import '../models/productos_ivas_model.dart';
+import '../models/productos_stock_sucursales.dart';
+import '../models/user.dart';
+import 'package:path/path.dart';
 
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
@@ -27,13 +30,14 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'flaminco_app_DB.db');
     return await openDatabase(
       path,
-      version: 2, // Incrementa la versión para aplicar cambios en la estructura de la base de datos
+      version: 12,
       onCreate: (db, version) async {
+        // Crear tablas
         await db.execute('''
         CREATE TABLE users(
-          id INTEGER PRIMARY KEY,
-          username TEXT,
-          password TEXT,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL,
+          password TEXT NOT NULL,
           nombre_usuario TEXT,
           apellido_usuario TEXT,
           cantidad_sucursales INTEGER,
@@ -54,19 +58,22 @@ class DatabaseHelper {
           comercio_id INTEGER,
           cliente_id INTEGER,
           image TEXT,
-          casa_central_user_id INTEGER
+          casa_central_user_id INTEGER,
+          id_lista_precio INTEGER
         )
       ''');
 
         await db.execute('''
         CREATE TABLE productos(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          producto_id INTEGER,
           name TEXT,
           tipo_producto TEXT,
           producto_tipo TEXT,
           precio_interno REAL,
           barcode TEXT,
           cost REAL,
+          alerts REAL,
           image TEXT,
           category_id INTEGER,
           marca_id INTEGER,
@@ -83,26 +90,98 @@ class DatabaseHelper {
           ecommerce_canal INTEGER,
           wc_canal INTEGER,
           descripcion TEXT,
-          receta_id INTEGER,
-          stock INTEGER,
-          stock_real INTEGER,
-          precio_lista REAL,
-          lista_id INTEGER,
-          iva REAL
+          receta_id INTEGER
         )
       ''');
+
+        await db.execute('''
+        CREATE TABLE lista_precios(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nombre TEXT,
+          comercio_id INTEGER,
+          descripcion TEXT,
+          eliminado INTEGER,
+          wc_key TEXT
+        )
+      ''');
+
+        await db.execute('''
+        CREATE TABLE Clientes_mostrador(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          creador_id INTEGER,
+          id_cliente TEXT,
+          activo INTEGER,
+          nombre TEXT,
+          sucursal_id INTEGER,
+          lista_precio INTEGER,
+          comercio_id INTEGER,
+          last_sale TEXT,
+          recontacto TEXT,
+          plazo_cuenta_corriente INTEGER,
+          monto_maximo_cuenta_corriente REAL,
+          saldo_inicial_cuenta_corriente REAL,
+          fecha_inicial_cuenta_corriente TEXT,
+          pais TEXT,
+          codigo_postal TEXT,
+          depto TEXT,
+          piso TEXT,
+          altura TEXT,
+          eliminado INTEGER,
+          email TEXT,
+          telefono TEXT,
+          observaciones TEXT,
+          localidad TEXT,
+          barrio TEXT,
+          provincia TEXT,
+          direccion TEXT,
+          dni TEXT,
+          status TEXT,
+          image TEXT,
+          wc_customer_id TEXT
+        )
+      ''');
+
+        // Crear la tabla productos_stock_sucursales
+        await db.execute('''
+        CREATE TABLE productos_stock_sucursales(
+          product_id INTEGER,
+          referencia_variacion TEXT,
+          comercio_id INTEGER,
+          sucursal_id INTEGER,
+          almacen_id INTEGER,
+          stock INTEGER,
+          stock_real INTEGER,
+          eliminado INTEGER,
+          PRIMARY KEY (product_id, referencia_variacion, comercio_id, sucursal_id, almacen_id)
+        )
+      ''');
+
+        // Crear la tabla productos_ivas
+        await db.execute('''
+        CREATE TABLE productos_ivas(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nombre TEXT,
+          porcentaje REAL,
+          comercio_id INTEGER
+        )
+      ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 4) {
+          await db.execute('ALTER TABLE Clientes_mostrador ADD COLUMN creador_id INTEGER');
+        }
       },
     );
   }
 
+  // Métodos relacionados con la tabla users
   Future<User?> getUser(String username) async {
     Database db = await database;
-    List<Map<String, dynamic>> maps = (await db.query(
+    List<Map<String, dynamic>> maps = await db.query(
       'users',
       where: 'username = ?',
       whereArgs: [username],
-    )).cast<Map<String, dynamic>>();
-
+    );
     if (maps.isNotEmpty) {
       return User.fromJson(maps.first);
     }
@@ -111,30 +190,115 @@ class DatabaseHelper {
 
   Future<List<User>> getUsers() async {
     Database db = await database;
-    final List<Map<String, dynamic>> maps = (await db.query('users')).cast<Map<String, dynamic>>();
-
-    return List.generate(maps.length, (i) {
-      return User.fromJson(maps[i]);
-    });
+    final List<Map<String, dynamic>> maps = await db.query('users');
+    return List.generate(maps.length, (i) => User.fromJson(maps[i]));
   }
 
-  // Nuevo método para agregar producto
+  // Métodos relacionados con la tabla productos
   Future<void> insertProducto(ProductoModel producto) async {
     Database db = await database;
     await db.insert(
       'productos',
-      producto.toJson(),
+      producto.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  // Nuevo método para obtener productos
   Future<List<ProductoModel>> getProductos() async {
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('productos');
+    return List.generate(maps.length, (i) => ProductoModel.fromMap(maps[i]));
+  }
 
-    return List.generate(maps.length, (i) {
-      return ProductoModel.fromJson(maps[i]);
-    });
+  // Métodos relacionados con la tabla lista_precios
+  Future<void> insertListaPrecio(ListaPreciosModel listaPrecio) async {
+    Database db = await database;
+    await db.insert(
+      'lista_precios',
+      listaPrecio.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<ListaPreciosModel>> getListaPrecios() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('lista_precios');
+    return List.generate(maps.length, (i) => ListaPreciosModel.fromMap(maps[i]));
+  }
+
+  Future<void> deleteListaPrecio(int id) async {
+    Database db = await database;
+    await db.delete(
+      'lista_precios',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Métodos relacionados con la tabla Clientes_mostrador
+  Future<void> insertCliente(ClientesMostrador cliente) async {
+    Database db = await database;
+    await db.insert(
+      'Clientes_mostrador',
+      cliente.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateCliente(ClientesMostrador cliente) async {
+    Database db = await database;
+    await db.update(
+      'Clientes_mostrador',
+      cliente.toMap(),
+      where: 'id_cliente = ?',
+      whereArgs: [cliente.idCliente],
+    );
+  }
+
+  Future<void> deleteCliente(String idCliente) async {
+    Database db = await database;
+    await db.delete(
+      'Clientes_mostrador',
+      where: 'id_cliente = ?',
+      whereArgs: [idCliente],
+    );
+  }
+
+  Future<List<ClientesMostrador>> getClientesDB() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('Clientes_mostrador');
+    return List.generate(maps.length, (i) => ClientesMostrador.fromJson(maps[i]));
+  }
+
+  // Métodos relacionados con la tabla productos_stock_sucursales
+  Future<void> insertProductosStockSucursal(ProductosStockSucursalesModel productoStockSucursal) async {
+    final db = await database;
+    await db.insert(
+      'productos_stock_sucursales',
+      productoStockSucursal.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<ProductosStockSucursalesModel>> getProductosStockSucursales() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('productos_stock_sucursales');
+    return List.generate(maps.length, (i) => ProductosStockSucursalesModel.fromMap(maps[i]));
+  }
+
+  // Métodos relacionados con la tabla productos_ivas
+  Future<List<ProductosIvasModel>> getProductosIvas() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('productos_ivas');
+    return List.generate(maps.length, (i) => ProductosIvasModel.fromMap(maps[i]));
+  }
+
+  Future<void> insertProductoIva(ProductosIvasModel productoIva) async {
+    final db = await database;
+    await db.insert(
+      'productos_ivas',
+      productoIva.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 }

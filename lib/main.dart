@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:facturador_offline/bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import 'package:facturador_offline/bloc/cubit_resumen/resumen_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
@@ -6,10 +8,13 @@ import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
 import 'package:facturador_offline/pages/page_login.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import 'bloc/cubit_login/login_cubit.dart';
 import '../services/user_repository.dart';
+import 'data/database_seeder.dart';
 import 'helper/database_helper.dart';
-import 'models/Producto.dart';
+import 'models/producto.dart';
+import 'models/lista_precio_model.dart';
 import 'models/user.dart';
 import 'package:desktop_window/desktop_window.dart';
 
@@ -36,76 +41,8 @@ Future<void> setWindowSize() async {
 
 Future<void> _initDatabase() async {
   await DatabaseHelper.instance.deleteDatabaseIfExists();
-
-  final db = await DatabaseHelper.instance.database;
-  await db.insert('users', User(
-    username: 'test1',
-    password: 'test',
-    nombreUsuario: 'Nombre',
-    apellidoUsuario: 'Apellido',
-    cantidadSucursales: 1,
-    cantidadEmpleados: 10,
-    name: 'Comercio Test',
-    sucursal: 1,
-    email: 'test1@example.com',
-    profile: 'admin',
-    status: 'activo',
-    externalAuth: '',
-    externalId: '',
-    emailVerifiedAt: DateTime.now(),
-    confirmedAt: DateTime.now(),
-    confirmed: 1,
-    plan: 1,
-    lastLogin: DateTime.now(),
-    cantidadLogin: 5,
-    comercioId: 1,
-    clienteId: 1,
-    image: 'path/to/image.png',
-    casaCentralUserId: 1,
-  ).toJson());
-
-  final dbHelper = DatabaseHelper.instance;
-  for (int i =0; i <5; i++){
-    ProductoModel newProducto = ProductoModel(
-      name: 'Producto $i',
-      tipoProducto: 'Tipo $i',
-      productoTipo: 's',
-      precioInterno: 100.0,
-      barcode: i.toString(),
-      cost: 50.0,
-      image: 'url_to_image',
-      categoryId: 1,
-      marcaId: 1,
-      comercioId: 1,
-      stockDescubierto: 'no',
-      proveedorId: 1,
-      eliminado: false,
-      unidadMedida: 1,
-      wcProductId: 1,
-      wcPush: true,
-      wcImage: 'url_to_wc_image',
-      etiquetas: 'etiqueta1, etiqueta2',
-      mostradorCanal: true,
-      ecommerceCanal: true,
-      wcCanal: true,
-      descripcion: 'Descripción del producto',
-      recetaId: 1,
-      stock: 100,
-      stockReal: 90,
-      precioLista: 120.0,
-      listaId: 1,
-      iva: 0.21,
-    );
-    await dbHelper.insertProducto(newProducto);
-  }
-
-
-
-
-
-  // Obtener todos los productos de la base de datos
-  //List<ProductoModel> productos = await dbHelper.getProductos();
- // print('Productos: $productos');
+  final seeder = DatabaseSeeder();
+  await seeder.seedDatabase();
 }
 
 class BlocProviders extends StatelessWidget {
@@ -117,6 +54,9 @@ class BlocProviders extends StatelessWidget {
         BlocProvider(create: (context)=> LoginCubit(UserRepository())),
         BlocProvider(create: (context)=> StatusApisCubit()),
         BlocProvider(create: (context)=> ThemaCubit()),
+        BlocProvider(create: (context)=> ResumenCubit()),
+        BlocProvider(create: (context)=> ListaPreciosCubit(UserRepository())),
+        BlocProvider(create: (context)=> ClientesMostradorCubit(UserRepository())),
         BlocProvider(create: (context)=> ProductosCubit(UserRepository(), currentListProductCubit: [])),
       ],
       child: const Myapp()
