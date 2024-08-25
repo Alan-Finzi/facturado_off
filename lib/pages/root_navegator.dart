@@ -1,4 +1,5 @@
 
+import 'package:facturador_offline/pages/page_imprimir.dart';
 import 'package:facturador_offline/pages/page_lista_cliente.dart';
 import 'package:facturador_offline/pages/page_mod_baja_cliente.dart';
 import 'package:facturador_offline/widget/widget_alta_clientes.dart';
@@ -45,6 +46,7 @@ class _RootNavScreenState extends State<RootNavScreen> {
         NuevaVentaPage(),
         ClientesListPage(),
         ConnectionPage(),
+        Imprimir()
       ],
     ),
   );
@@ -70,12 +72,7 @@ class _RootNavScreenState extends State<RootNavScreen> {
    //     textAlign: TextAlign.center,
    //   ),
 
-   //   BottomNavyBarItem(
-    //    icon: Icon(Icons.home),
-    //    title: Text('Venta'),
-   //    activeColor: Colors.blue,
-    //    textAlign: TextAlign.center,
-    //  ),
+
       BottomNavyBarItem(
         icon: Icon(Icons.home),
         title: Text('Nueva Venta'),
@@ -91,6 +88,12 @@ class _RootNavScreenState extends State<RootNavScreen> {
       BottomNavyBarItem(
         icon: const Icon(Icons.connected_tv_outlined),
         title: const Text('Status servicios'),
+        activeColor: Colors.blue,
+        textAlign: TextAlign.center,
+      ),
+      BottomNavyBarItem(
+        icon: Icon(Icons.print),
+        title: Text('imprimir'),
         activeColor: Colors.blue,
         textAlign: TextAlign.center,
       ),

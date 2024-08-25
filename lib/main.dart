@@ -26,11 +26,14 @@ void main() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setWindowSize();
+
     });
+
   }
   runApp(BlocProviders());
 
 }
+
 
 Future<void> setWindowSize() async {
 //  await DesktopWindow.toggleFullScreen();
