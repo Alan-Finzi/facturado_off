@@ -1,6 +1,7 @@
 
 import 'package:facturador_offline/pages/page_lista_cliente.dart';
 import 'package:facturador_offline/pages/page_mod_baja_cliente.dart';
+import 'package:facturador_offline/pages/page_product_list.dart';
 import 'package:facturador_offline/widget/widget_alta_clientes.dart';
 import 'package:facturador_offline/pages/page_home.dart';
 import 'package:facturador_offline/pages/page_nueva_venta.dart';
@@ -42,8 +43,10 @@ class _RootNavScreenState extends State<RootNavScreen> {
       //  ClientesMostradorPage(),
       //  const HomePage(),
 
-        NuevaVentaPage(),
+        VentaMainPage(),
         ClientesListPage(),
+        ProductsPage(),
+
         ConnectionPage(),
       ],
     ),
@@ -85,6 +88,12 @@ class _RootNavScreenState extends State<RootNavScreen> {
       BottomNavyBarItem(
         icon: const Icon(Icons.person),
         title: const Text('Clientes'),
+        activeColor: Colors.blue,
+        textAlign: TextAlign.center,
+      ),
+      BottomNavyBarItem(
+        icon: const Icon(Icons.pageview_rounded),
+        title: const Text('Products'),
         activeColor: Colors.blue,
         textAlign: TextAlign.center,
       ),

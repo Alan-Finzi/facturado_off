@@ -3,9 +3,11 @@ import 'package:sqflite/sqflite.dart';
 
 
 import '../helper/database_helper.dart';
+import '../models/Producto_precio_stock.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/lista_precio_model.dart';
 import '../models/productos_ivas_model.dart';
+import '../models/productos_lista_precios_model.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
 class UserRepository {
@@ -91,5 +93,41 @@ class UserRepository {
 
   Future<List<ProductosIvasModel>> fetchProductosIvas() async {
     return await _dbHelper.getProductosIvas();
+  }
+
+  // Método para obtener la lista de productos en una lista de precios desde la base de datos
+  Future<void> addProductoListaPrecio(ProductosListaPreciosModel productoListaPrecio) async {
+    await _dbHelper.insertProductosListaPrecio(productoListaPrecio);
+  }
+
+  // Método para obtener los productos de una lista de precios específica
+  Future<List<ProductosListaPreciosModel>> fetchProductosListaPrecios(int listaId) async {
+    return await _dbHelper.getProductosListaPrecios(listaId);
+  }
+
+  Future<List<ProductoConPrecioYStock>> fetchProductosConPrecioYStock(
+      {required int listaId, required int sucursalUsuario}) async {
+    final db = await _dbHelper.database;
+    // Query para obtener los productos con sus precios, stock y IVA
+    final result = await db.rawQuery('''
+  SELECT 
+    p.producto_id,
+    p.name,
+    p.barcode,
+    p.tipo_producto,
+    plp.precio_lista,
+    pss.stock,
+    pi.iva 
+  FROM productos p
+  INNER JOIN productos_lista_precios plp ON p.producto_id = plp.product_id
+  INNER JOIN productos_stock_sucursales pss ON p.producto_id = pss.product_id
+  LEFT JOIN productos_ivas pi ON p.producto_id = pi.product_id 
+  WHERE plp.lista_id = ?
+  AND pi.sucursal_id = ?
+''', [listaId, sucursalUsuario]);
+
+    print('Resultados de la consulta principal: $result');
+
+    return result.map((map) => ProductoConPrecioYStock.fromMap(map)).toList();
   }
 }

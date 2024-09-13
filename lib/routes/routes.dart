@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
 import '../main.dart';
+import '../pages/page_forma_cobro.dart';
 import '../pages/page_home.dart';
 import '../pages/root_navegator.dart';
 
@@ -30,4 +31,5 @@ var customRoutes = <String, Widget>{
     "home"  :  HomePage(),
    // "main"  :   App(),
     "Root"  : const RootNavScreen(),
+
 };

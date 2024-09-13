@@ -4,9 +4,12 @@ import '../models/clientes_mostrador.dart';
 import '../models/lista_precio_model.dart';
 import '../models/producto.dart';
 import '../models/productos_ivas_model.dart';
+import '../models/productos_lista_precios_model.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
 import 'package:path/path.dart';
+
+
 
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
@@ -65,7 +68,7 @@ class DatabaseHelper {
 
         await db.execute('''
         CREATE TABLE productos(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          id INTEGER,
           producto_id INTEGER,
           name TEXT,
           tipo_producto TEXT,
@@ -155,16 +158,28 @@ class DatabaseHelper {
           PRIMARY KEY (product_id, referencia_variacion, comercio_id, sucursal_id, almacen_id)
         )
       ''');
-
-        // Crear la tabla productos_ivas
         await db.execute('''
-        CREATE TABLE productos_ivas(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          nombre TEXT,
-          porcentaje REAL,
-          comercio_id INTEGER
-        )
+        CREATE TABLE productos_lista_precios(
+        product_id INTEGER,
+        referencia_variacion TEXT,
+        lista_id INTEGER,
+        precio_lista REAL,
+        comercio_id INTEGER,
+        eliminado INTEGER,
+        PRIMARY KEY (product_id, referencia_variacion, lista_id, comercio_id)
+       )
       ''');
+// Crear la tabla productos_ivas actualizada
+        await db.execute('''
+CREATE TABLE productos_ivas(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER,       -- ID del producto
+  comercio_id INTEGER,       -- ID de la casa central
+  sucursal_id INTEGER,       -- ID de la sucursal
+  iva REAL,                  -- IVA en decimales (ej. 0.21 para 21%)
+  porcentaje REAL            -- Porcentaje del IVA en decimales
+)
+''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 4) {
@@ -286,6 +301,50 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) => ProductosStockSucursalesModel.fromMap(maps[i]));
   }
 
+  Future<void> insertProductosListaPrecio(ProductosListaPreciosModel productoListaPrecio) async {
+    final db = await database;
+    await db.insert(
+      'productos_lista_precios',
+      productoListaPrecio.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<ProductosListaPreciosModel>> getProductosListaPrecios(int listaId) async {
+    final db = await database;
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'productos_lista_precios',
+      where: 'lista_id = ?',
+      whereArgs: [listaId],
+    );
+
+    return List.generate(maps.length, (i) => ProductosListaPreciosModel.fromMap(maps[i]));
+  }
+
+  Future<List<Map<String, dynamic>>> getProductosConPrecioYStock(int listaId) async {
+    final db = await database;
+
+    final result = await db.rawQuery('''
+    SELECT 
+  p.id AS productId,
+  p.name AS productName,    -- Asegúrate de seleccionar el nombre
+  p.tipo_producto AS productType,
+  p.precio_interno AS internalPrice,
+  plp.precio_lista AS listPrice,
+  pss.stock AS stock,
+  pss.sucursal_id AS sucursalId,
+  p.barcode AS productBarcode  -- Selecciona el código de barras
+FROM productos p
+INNER JOIN productos_lista_precios plp ON p.producto_id = plp.product_id
+INNER JOIN productos_stock_sucursales pss ON p.producto_id = pss.product_id
+WHERE plp.lista_id = ?
+
+  ''', [listaId]);
+print(listaId.toString());
+    return result;
+  }
+
   // Métodos relacionados con la tabla productos_ivas
   Future<List<ProductosIvasModel>> getProductosIvas() async {
     final db = await database;
@@ -301,4 +360,31 @@ class DatabaseHelper {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<List<Product>> getProducts() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('products');
+
+    return List.generate(maps.length, (i) {
+      return Product(
+        maps[i]['name'],
+        maps[i]['image'],
+        maps[i]['price'],
+        maps[i]['code'],
+        maps[i]['stock'],
+      );
+    });
+  }
+
+
+}
+
+class Product {
+  final String name;
+  final String image;
+  final double price;
+  final String code;
+  final int stock;
+
+  Product(this.name, this.image, this.price, this.code, this.stock);
 }

@@ -1,8 +1,10 @@
+import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/widget/mod_cliente_dialogo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
 import 'widget_alta_clientes.dart';
 
 class BuscarCliente extends StatelessWidget {
@@ -11,7 +13,8 @@ class BuscarCliente extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final clientesCubit = context.watch<ClientesMostradorCubit>();
-
+    final productosConPrecioYStockCubit = context.watch<ProductosConPrecioYStockCubit>();
+    final productosSeleccionados = context.watch<ProductosCubit>();
     return Column(
       children: [
         TextField(
@@ -43,8 +46,14 @@ class BuscarCliente extends StatelessWidget {
                     title: Text('Seleccionar cliente'),
                     children: clientesCubit.state.filteredClientes.map((cliente) {
                       return SimpleDialogOption(
-                        onPressed: () {
+                        onPressed: () async {
                           clientesCubit.seleccionarCliente(cliente);
+                         final listaId = clientesCubit.state.clienteSeleccionado?.listaPrecio;
+                          if (listaId != null) {
+                            final listaPrecios = await productosConPrecioYStockCubit.getProductosConPrecioYStock(listaId);
+                            productosSeleccionados.actualizarPreciosDeProductosSeleccionados(productosSeleccionados.state.productosSeleccionados, listaPrecios);
+                          }
+
                           Navigator.pop(context); // Cierra el diálogo
                           _controller.text = cliente.dni ?? ''; // Coloca el DNI en el TextField
                         },
@@ -57,6 +66,7 @@ class BuscarCliente extends StatelessWidget {
                   );
                 },
               );
+
             } else {
               // Maneja el caso donde no hay resultados
               showDialog(

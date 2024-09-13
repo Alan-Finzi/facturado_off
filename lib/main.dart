@@ -11,11 +11,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import 'bloc/cubit_login/login_cubit.dart';
 import '../services/user_repository.dart';
+import 'bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
 import 'data/database_seeder.dart';
 import 'helper/database_helper.dart';
-import 'models/producto.dart';
-import 'models/lista_precio_model.dart';
-import 'models/user.dart';
 import 'package:desktop_window/desktop_window.dart';
 
 
@@ -35,6 +33,7 @@ void main() async {
 Future<void> setWindowSize() async {
 //  await DesktopWindow.toggleFullScreen();
   await DesktopWindow.setWindowSize(const Size(400, 800));
+  await DesktopWindow.setWindowSize(const Size(600, 800));
   await DesktopWindow.setFullScreen(true);
  // await DesktopWindow.setWindowSize( Size.infinite);
 }
@@ -48,18 +47,23 @@ Future<void> _initDatabase() async {
 class BlocProviders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (context)=> LoginCubit(UserRepository())),
-        BlocProvider(create: (context)=> StatusApisCubit()),
-        BlocProvider(create: (context)=> ThemaCubit()),
-        BlocProvider(create: (context)=> ResumenCubit()),
-        BlocProvider(create: (context)=> ListaPreciosCubit(UserRepository())),
-        BlocProvider(create: (context)=> ClientesMostradorCubit(UserRepository())),
-        BlocProvider(create: (context)=> ProductosCubit(UserRepository(), currentListProductCubit: [])),
+        BlocProvider(create: (context) => LoginCubit(UserRepository())),
+        BlocProvider(create: (context) => StatusApisCubit()),
+        BlocProvider(create: (context) => ThemaCubit()),
+        BlocProvider(create: (context) => ResumenCubit()),
+        BlocProvider(create: (context) => ListaPreciosCubit(UserRepository())),
+        BlocProvider(create: (context) => ClientesMostradorCubit(UserRepository())),
+        BlocProvider(
+            create: (context) {
+              final loginCubit = BlocProvider.of<LoginCubit>(context);
+              return ProductosConPrecioYStockCubit(UserRepository(), loginCubit);
+            }
+        ),
+        BlocProvider(create: (context) => ProductosCubit(UserRepository(), currentListProductCubit: [])),
       ],
-      child: const Myapp()
+      child: const Myapp(),
     );
   }
 }

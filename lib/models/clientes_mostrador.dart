@@ -17,7 +17,7 @@ class ClientesMostrador {
   final String? depto;
   final String? piso;
   final String? altura;
-  final bool? eliminado;
+  final int? eliminado;
   final String? email;
   final String? telefono;
   final String? observaciones;

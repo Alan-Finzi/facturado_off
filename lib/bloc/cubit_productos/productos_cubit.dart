@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import '../../models/Producto_precio_stock.dart';
 import '../../models/producto.dart';
 import '../../services/user_repository.dart';
 
@@ -47,6 +48,8 @@ class ProductosCubit extends Cubit<ProductosState> {
   void setCategoriaSeleccionada(String categoria) {
     filterProducts('', categoria);
   }
+
+
 
   void agregarProducto(Map<String, dynamic> producto) {
     final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
@@ -108,6 +111,22 @@ class ProductosCubit extends Cubit<ProductosState> {
     emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
   }
 
+   actualizarPreciosConLista(Map<String, double> listaPrecios) {
+    final updatedList = state.productosSeleccionados.map((producto) {
+      final codigo = producto['codigo'];
+      if (listaPrecios.containsKey(codigo)) {
+        final nuevoPrecio = listaPrecios[codigo];
+        return {
+          ...producto,
+          'precio': nuevoPrecio,
+          'precioTotal': nuevoPrecio! * producto['cantidad'],
+        };
+      }
+      return producto;
+    }).toList();
+
+    emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+  }
   void actualizarPrecioTotalProducto(Map<String, dynamic> producto) {
     final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
 
@@ -146,5 +165,33 @@ class ProductosCubit extends Cubit<ProductosState> {
 
   static List<String> _extractCategorias(List<ProductoModel> productos) {
     return productos.map((producto) => producto.tipoProducto ?? 'Sin categoría').toSet().toList();
+  }
+
+   actualizarPreciosDeProductosSeleccionados(
+      List<Map<String, dynamic>> productosSeleccionados,
+      List<ProductoConPrecioYStock> listaPrecios) {
+
+    final updatedList = productosSeleccionados.map((producto) {
+      final codigoProducto = producto['codigo'];
+
+      // Encuentra el producto en la lista de precios basado en el código
+      final productoConNuevoPrecio = listaPrecios.firstWhere(
+              (p) => p.producto.barcode == codigoProducto);
+
+      if (productoConNuevoPrecio != null) {
+        final nuevoPrecio = productoConNuevoPrecio.precioLista;
+
+        // Actualizar el producto con el nuevo precio y recalcular el precio total
+        return {
+          ...producto,
+          'precio': nuevoPrecio,
+          'precioTotal': nuevoPrecio! * producto['cantidad'],
+        };
+      }
+      return producto; // Si no se encuentra un nuevo precio, retorna el producto sin cambios
+    }).toList();
+
+    // Emitir la nueva lista de productos seleccionados actualizados
+    emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
   }
 }
