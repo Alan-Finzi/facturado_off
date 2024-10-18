@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../models/Producto_precio_stock.dart';
+import '../models/categorias_model.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/lista_precio_model.dart';
 import '../models/producto.dart';
@@ -25,22 +27,26 @@ class DatabaseHelper {
   }
 
   Future<void> deleteDatabaseIfExists() async {
-    String path = join(await getDatabasesPath(), 'flaminco_app_DB.db');
+    String path = join(await getDatabasesPath(), 'flaminco_appv1_DB.db');
     await deleteDatabase(path);
   }
-
+  Future<void> insertUser(User user) async {
+    final db = await database;
+    await db.insert('users', user.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'flaminco_app_DB.db');
+    String path = join(await getDatabasesPath(), 'flaminco_appv1_DB.db');
+    print('La base de datos se guarda en la siguiente ruta: $path');
     return await openDatabase(
       path,
-      version: 12,
+      version: 18,
       onCreate: (db, version) async {
         // Crear tablas
         await db.execute('''
         CREATE TABLE users(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT NOT NULL,
-          password TEXT NOT NULL,
+          username TEXT,
+          password TEXT ,
           nombre_usuario TEXT,
           apellido_usuario TEXT,
           cantidad_sucursales INTEGER,
@@ -54,7 +60,6 @@ class DatabaseHelper {
           external_id TEXT,
           email_verified_at TEXT,
           confirmed_at TEXT,
-          confirmed INTEGER,
           plan INTEGER,
           last_login TEXT,
           cantidad_login INTEGER,
@@ -169,6 +174,19 @@ class DatabaseHelper {
         PRIMARY KEY (product_id, referencia_variacion, lista_id, comercio_id)
        )
       ''');
+
+        await db.execute('''
+CREATE TABLE categorias(
+  id INTEGER PRIMARY KEY,
+  comercio_id TEXT,
+  name TEXT,
+  image TEXT,
+  wc_category_id TEXT,
+  eliminado INTEGER,
+  created_at TEXT,
+  updated_at TEXT
+)
+''');
 // Crear la tabla productos_ivas actualizada
         await db.execute('''
 CREATE TABLE productos_ivas(
@@ -203,6 +221,21 @@ CREATE TABLE productos_ivas(
     return null;
   }
 
+
+  // Métodos relacionados con la tabla users
+  Future<User?> getUserByEmail(String email) async {
+    Database db = await database;
+    List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    if (maps.isNotEmpty) {
+      return User.fromJson(maps.first);
+    }
+    return null;
+  }
+
   Future<List<User>> getUsers() async {
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('users');
@@ -219,12 +252,41 @@ CREATE TABLE productos_ivas(
     );
   }
 
+
+  Future<void> insertProductos(List<ProductoModel> productos) async {
+    for (var producto in productos) {
+      await insertProducto(producto);
+    }
+  }
   Future<List<ProductoModel>> getProductos() async {
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('productos');
     return List.generate(maps.length, (i) => ProductoModel.fromMap(maps[i]));
   }
 
+  // Métodos relacionados con la tabla categorias
+  Future<void> insertCategoria(CategoriaModel categoria) async {
+    Database db = await database;
+    await db.insert(
+      'categorias',
+      categoria.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> insertCategorias(List<CategoriaModel> categorias) async {
+    for (var categoria in categorias) {
+      if(categoria.eliminado ==0){
+        await insertCategoria(categoria);
+      }
+    }
+  }
+
+  Future<List<CategoriaModel>> getCategorias() async {
+    Database db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('categorias');
+    return List.generate(maps.length, (i) => CategoriaModel.fromJson(maps[i]));
+  }
   // Métodos relacionados con la tabla lista_precios
   Future<void> insertListaPrecio(ListaPreciosModel listaPrecio) async {
     Database db = await database;
@@ -234,6 +296,21 @@ CREATE TABLE productos_ivas(
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<void> insertListaPrecios(List<ListaPreciosModel> listaPrecios) async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      for (var listaPrecio in listaPrecios) {
+        await txn.insert(
+          'lista_precios',
+          listaPrecio.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
 
   Future<List<ListaPreciosModel>> getListaPrecios() async {
     Database db = await database;
@@ -294,12 +371,81 @@ CREATE TABLE productos_ivas(
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
-
-  Future<List<ProductosStockSucursalesModel>> getProductosStockSucursales() async {
+  // Método para insertar una lista de productos en productos_stock_sucursales
+  Future<void> insertProductosStockSucursales(List<ProductosStockSucursalesModel> productosStockSucursales) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('productos_stock_sucursales');
+
+    await db.transaction((txn) async {
+      for (var productoStockSucursal in productosStockSucursales) {
+        await txn.insert(
+          'productos_stock_sucursales',
+          productoStockSucursal.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  Future<List<ProductosStockSucursalesModel>> getProductosStockSucursales({ required int sucursalId}) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'productos_stock_sucursales',
+      where: 'sucursal_id = ?', // Condición para filtrar por sucursal
+      whereArgs: [sucursalId], // Argumento para la condición
+    );
     return List.generate(maps.length, (i) => ProductosStockSucursalesModel.fromMap(maps[i]));
   }
+
+  Future<List<ProductoConPrecioYStock>> getProductosConPrecioYStockQuery(
+      {required int sucursalId,required int listaId}) async {
+    final db = await database;
+
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+    SELECT 
+    p.barcode AS barcode,
+    p.id AS productId,
+    p.name AS productName,
+    p.tipo_producto AS productType,
+    pss.stock AS stock,
+    plp.precio_lista AS precioLista,
+    c.name AS categoryName  
+FROM 
+    productos p
+INNER JOIN 
+    productos_stock_sucursales pss ON p.id = pss.product_id
+INNER JOIN 
+    productos_lista_precios plp ON p.id = plp.product_id
+INNER JOIN
+    categorias c ON p.category_id = c.id
+WHERE 
+    pss.sucursal_id = ? 
+    AND plp.lista_id = ?  
+    AND pss.stock > 0
+  ''', [sucursalId, listaId]);
+
+    return List.generate(maps.length, (i) {
+      final map = maps[i];
+      return ProductoConPrecioYStock(
+        producto: ProductoModel(
+          id: map['productId'],
+          name: map['productName'],
+          tipoProducto: map['productType'],
+          barcode:  map['barcode']
+          // Agrega otros campos necesarios...
+        ),
+        precioLista: map['precioLista'] as double?,
+        stock: map['stock'] is int
+            ? (map['stock'] as int).toDouble()  // Si es int, conviértelo a double
+            : map['stock'] is double
+            ? map['stock'] as double         // Si ya es double, lo deja igual
+            : null,  // Convertir a int si es necesario
+        iva: null,
+        categoria: map['categoryName']// Asigna un valor si es necesario
+      );
+    });
+  }
+
+
 
   Future<void> insertProductosListaPrecio(ProductosListaPreciosModel productoListaPrecio) async {
     final db = await database;
@@ -310,6 +456,21 @@ CREATE TABLE productos_ivas(
     );
   }
 
+
+  // Método para insertar una lista de productos en productos_lista_precios en una transacción
+  Future<void> insertProductosListasPrecios(List<ProductosListaPreciosModel> productosListaPrecios) async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      for (var productoListaPrecio in productosListaPrecios) {
+        await txn.insert(
+          'productos_lista_precios',
+          productoListaPrecio.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
   Future<List<ProductosListaPreciosModel>> getProductosListaPrecios(int listaId) async {
     final db = await database;
 
@@ -322,29 +483,48 @@ CREATE TABLE productos_ivas(
     return List.generate(maps.length, (i) => ProductosListaPreciosModel.fromMap(maps[i]));
   }
 
-  Future<List<Map<String, dynamic>>> getProductosConPrecioYStock(int listaId) async {
+
+  Future<List<Map<String, dynamic>>> getProductosConPrecioYStock(int listaId, int sucursalId) async {
     final db = await database;
 
     final result = await db.rawQuery('''
     SELECT 
-  p.id AS productId,
-  p.name AS productName,    -- Asegúrate de seleccionar el nombre
-  p.tipo_producto AS productType,
-  p.precio_interno AS internalPrice,
-  plp.precio_lista AS listPrice,
-  pss.stock AS stock,
-  pss.sucursal_id AS sucursalId,
-  p.barcode AS productBarcode  -- Selecciona el código de barras
-FROM productos p
-INNER JOIN productos_lista_precios plp ON p.producto_id = plp.product_id
-INNER JOIN productos_stock_sucursales pss ON p.producto_id = pss.product_id
-WHERE plp.lista_id = ?
+      p.id AS productId,
+      p.name AS productName,
+      p.tipo_producto AS productType,
+      p.precio_interno AS internalPrice,
+      plp.precio_lista AS listPrice,
+      pss.stock AS stock,
+      pss.sucursal_id AS sucursalId,
+      p.barcode AS productBarcode
+    FROM productos p
+    INNER JOIN productos_lista_precios plp ON p.producto_id = plp.product_id
+    INNER JOIN productos_stock_sucursales pss ON p.producto_id = pss.product_id
+    WHERE plp.lista_id = ? AND pss.sucursal_id = ?
+  ''', [listaId, sucursalId]);
 
-  ''', [listaId]);
-print(listaId.toString());
+    print('Lista ID: $listaId, Sucursal ID: $sucursalId');
     return result;
   }
 
+
+  Future<List<Map<String, dynamic>>> getProductosYStock(int listaId, int sucursalId) async {
+    final db = await database;
+
+    final result = await db.rawQuery('''
+    SELECT 
+      p.id AS productId,
+      p.name AS productName,
+      p.tipo_producto AS productType,
+      pss.stock AS stock,
+      p.barcode AS productBarcode
+    FROM productos p
+    INNER JOIN productos_stock_sucursales pss ON p.idProducto = pss.producto_id
+  ''', [listaId, sucursalId]);
+
+    print('Lista ID: $listaId, Sucursal ID: $sucursalId');
+    return result;
+  }
   // Métodos relacionados con la tabla productos_ivas
   Future<List<ProductosIvasModel>> getProductosIvas() async {
     final db = await database;
@@ -359,6 +539,21 @@ print(listaId.toString());
       productoIva.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  // Método para insertar una lista de productosIvas en una sola transacción
+  Future<void> insertProductosIvas(List<ProductosIvasModel> productosIvas) async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      for (var productoIva in productosIvas) {
+        await txn.insert(
+          'productos_ivas',
+          productoIva.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   Future<List<Product>> getProducts() async {

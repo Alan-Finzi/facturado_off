@@ -3,14 +3,16 @@ import 'package:facturador_offline/models/producto.dart';
 class ProductoConPrecioYStock {
   final ProductoModel producto;
   final double? precioLista;
-  final int? stock;
+  final double? stock;
   final double? iva;
+  final String? categoria;
 
   ProductoConPrecioYStock({
     required this.producto,
     this.precioLista,
     this.stock,
     this.iva,
+    this.categoria
   });
 
   factory ProductoConPrecioYStock.fromMap(Map<String, dynamic> map) {
@@ -44,8 +46,13 @@ class ProductoConPrecioYStock {
         recetaId: map['receta_id'],
       ),
       precioLista: map['precio_lista'] as double?,
-      stock: map['stock'] as int?,
+        stock: map['stock'] is int
+            ? (map['stock'] as int).toDouble()  // Si es int, conviértelo a double
+            : (map['stock'] is bool
+            ? (map['stock'] ? 1.0 : 0.0)    // Si es bool, conviértelo a double 1.0 o 0.0
+            : null),
       iva: map['iva'] as double?,
+        categoria: map['categoryName']
     );
   }
 }

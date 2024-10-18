@@ -16,7 +16,7 @@ class ProductosIvasModel {
       productId: map['product_id'],
       comercioId: map['comercio_id'],
       sucursalId: map['sucursal_id'],
-      iva: map['iva'],
+      iva: map['iva'] != null ? (map['iva'] is int ? map['iva'].toDouble() : map['iva']) : null,
     );
   }
 

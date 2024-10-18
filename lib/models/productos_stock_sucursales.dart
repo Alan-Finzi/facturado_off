@@ -4,8 +4,8 @@ class ProductosStockSucursalesModel {
   final int? comercioId;
   final int? sucursalId;
   final int? almacenId;
-  final int? stock;
-  final int? stockReal;
+  final double? stock;
+  final double? stockReal;
   final int? eliminado;
 
   ProductosStockSucursalesModel({
@@ -26,8 +26,8 @@ class ProductosStockSucursalesModel {
       comercioId: map['comercio_id'],
       sucursalId: map['sucursal_id'],
       almacenId: map['almacen_id'],
-      stock: map['stock'],
-      stockReal: map['stock_real'],
+      stock: map['stock'] != null ? (map['stock'] is int ? (map['stock'] as int).toDouble() : map['stock']) : null,
+      stockReal: map['stock_real']!= null ? (map['stock_real'] is int ? (map['stock_real'] as int).toDouble() : map['stock_real']) : null,
       eliminado: map['eliminado'],
     );
   }

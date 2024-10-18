@@ -42,7 +42,7 @@ class _RootNavScreenState extends State<RootNavScreen> {
      //   const ProductSearchPage(),
       //  ClientesMostradorPage(),
       //  const HomePage(),
-
+        //VentaMainPageMobile(),
         VentaMainPage(),
         ClientesListPage(),
         ProductsPage(),

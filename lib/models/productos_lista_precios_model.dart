@@ -20,7 +20,8 @@ class ProductosListaPreciosModel {
       productId: map['product_id'],
       referenciaVariacion: map['referencia_variacion'],
       listaId: map['lista_id'],
-      precioLista: map['precio_lista'],
+      precioLista: map['precio_lista'] != null ? (map['precio_lista'] is int ? (map['precio_lista'] as int).toDouble() : map['precio_lista']) : null,
+
       comercioId: map['comercio_id'],
       eliminado: map['eliminado'],
     );

@@ -12,7 +12,12 @@ import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
 class UserRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  Future<void> addUser(User user) async {
+    if(user.username != null && user.password != null){
+      await _dbHelper.insertUser(user);
+    }
 
+  }
   // Métodos relacionados con la tabla users
   Future<User?> authenticateUser(String username, String password) async {
     final user = await _dbHelper.getUser(username);
@@ -23,7 +28,7 @@ class UserRepository {
   }
   Future<User?> authenticate(User user) async {
     // Suponiendo que el objeto `user` tiene un campo `username` y `password`
-    final existingUser = await _dbHelper.getUser(user.username);
+    final existingUser = await _dbHelper.getUser(user.username!);
     if (existingUser != null && existingUser.password == user.password) {
       return existingUser;
     }
@@ -33,6 +38,8 @@ class UserRepository {
   Future<User?> fetchUserByUsername(String username) async {
     return await _dbHelper.getUser(username);
   }
+
+
 
   Future<List<User>> getAllUsers() async {
     return await _dbHelper.getUsers();
@@ -50,6 +57,10 @@ class UserRepository {
   // Métodos relacionados con la tabla lista_precios
   Future<void> addListaPrecio(ListaPreciosModel listaPrecio) async {
     await _dbHelper.insertListaPrecio(listaPrecio);
+  }
+
+  Future<List<ProductoConPrecioYStock>> addQueryProductoCatalogo({required int sucursalId,required int listaId}) async {
+    return await _dbHelper.getProductosConPrecioYStockQuery(sucursalId: sucursalId,listaId: listaId);
   }
 
   Future<List<ListaPreciosModel>> fetchListaPrecios() async {
@@ -82,8 +93,8 @@ class UserRepository {
     await _dbHelper.insertProductosStockSucursal(productoStockSucursal);
   }
 
-  Future<List<ProductosStockSucursalesModel>> fetchProductosStockSucursales() async {
-    return await _dbHelper.getProductosStockSucursales();
+  Future<List<ProductosStockSucursalesModel>> fetchProductosStockSucursales({required int sucursal}) async {
+    return await _dbHelper.getProductosStockSucursales(sucursalId: sucursal);
   }
 
   // Métodos relacionados con la tabla productos_ivas
@@ -130,4 +141,24 @@ class UserRepository {
 
     return result.map((map) => ProductoConPrecioYStock.fromMap(map)).toList();
   }
+  Future<List<Map<String, dynamic>>> getProductosYStock(int listaId, int sucursalId) async {
+    final db = await _dbHelper.database;
+
+    final result = await db.rawQuery('''
+  SELECT 
+      p.id AS productId,
+      p.name AS productName,
+      p.tipo_producto AS productType,
+      pss.stock AS stock,
+      p.barcode AS productBarcode
+    FROM productos p
+    INNER JOIN productos_stock_sucursales pss ON p.id = pss.product_id
+  ''', [listaId, sucursalId]);
+
+    print('Lista ID: $listaId, Sucursal ID: $sucursalId');
+    return result;
+  }
+
+
+
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:facturador_offline/bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_resumen/resumen_cubit.dart';
+import 'package:facturador_offline/services/service_api.dart';
 import 'package:flutter/material.dart';
 import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
@@ -20,9 +21,9 @@ import 'package:desktop_window/desktop_window.dart';
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
-  await _initDatabase();
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      //DatabaseHelper.instance.deleteDatabaseIfExists();
       setWindowSize();
     });
   }
@@ -34,22 +35,19 @@ Future<void> setWindowSize() async {
 //  await DesktopWindow.toggleFullScreen();
   await DesktopWindow.setWindowSize(const Size(400, 800));
   await DesktopWindow.setWindowSize(const Size(600, 800));
+  await DesktopWindow.setWindowSize(const Size(600, 800));
   await DesktopWindow.setFullScreen(true);
  // await DesktopWindow.setWindowSize( Size.infinite);
 }
 
-Future<void> _initDatabase() async {
-  await DatabaseHelper.instance.deleteDatabaseIfExists();
-  final seeder = DatabaseSeeder();
-  await seeder.seedDatabase();
-}
+
 
 class BlocProviders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (context) => LoginCubit(UserRepository())),
+        BlocProvider(create: (context) => LoginCubit( )),
         BlocProvider(create: (context) => StatusApisCubit()),
         BlocProvider(create: (context) => ThemaCubit()),
         BlocProvider(create: (context) => ResumenCubit()),
@@ -103,7 +101,7 @@ class _MyappState extends State<Myapp> {
           labelSmall: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 10),
         ),
       ),
-      home: LoginPage(),
+      home: const LoginScreen(),
       debugShowCheckedModeBanner: false, // Quita el banner de depuración
       darkTheme: themeCubit.state.isDark? ThemeData.dark() :ThemeData.light() , // Tema oscuro
       themeMode:themeCubit.state.isDark?   ThemeMode.dark : ThemeMode.light, // Establece el modo de tema a oscuro

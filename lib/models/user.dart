@@ -1,7 +1,7 @@
 class User {
   final int? id;
-  final String username;
-  final String password;
+  final String? username;
+  final String? password;
   final String? nombreUsuario;
   final String? apellidoUsuario;
   final int? cantidadSucursales;
@@ -15,11 +15,10 @@ class User {
   final String? externalId;
   final DateTime? emailVerifiedAt;
   final DateTime? confirmedAt;
-  final int? confirmed;
   final int? plan;
   final DateTime? lastLogin;
   final int? cantidadLogin;
-  final int? comercioId;
+  final String? comercioId;
   final int? clienteId;
   final String? image;
   final int? casaCentralUserId;
@@ -43,7 +42,6 @@ class User {
     this.externalId,
     this.emailVerifiedAt,
     this.confirmedAt,
-     this.confirmed,
      this.plan,
     this.lastLogin,
      this.cantidadLogin,
@@ -60,10 +58,8 @@ class User {
       password: json['password'],
       nombreUsuario: json['nombre_usuario'],
       apellidoUsuario: json['apellido_usuario'],
-      cantidadSucursales: json['cantidad_sucursales'],
-      cantidadEmpleados: json['cantidad_empleados'],
       name: json['name'],
-      idListaPrecio:json['id_lista_precio'],
+      idListaPrecio:json['lista_defecto'],
       sucursal: json['sucursal'],
       email: json['email'],
       profile: json['profile'],
@@ -76,13 +72,14 @@ class User {
       confirmedAt: json['confirmed_at'] != null
           ? DateTime.parse(json['confirmed_at'])
           : null,
-      confirmed: json['confirmed'],
       plan: json['plan'],
       lastLogin: json['last_login'] != null
           ? DateTime.parse(json['last_login'])
           : null,
       cantidadLogin: json['cantidad_login'],
-      comercioId: json['comercio_id'],
+      comercioId: json['comercio_id'] is int
+          ? json['comercio_id'].toString() // Convertir a String si es un int
+          : json['comercio_id'] as String?,
       clienteId: json['cliente_id'],
       image: json['image'],
       casaCentralUserId: json['casa_central_user_id'],
@@ -108,7 +105,6 @@ class User {
       'external_id': externalId,
       'email_verified_at': emailVerifiedAt?.toIso8601String(),
       'confirmed_at': confirmedAt?.toIso8601String(),
-      'confirmed': confirmed,
       'plan': plan,
       'last_login': lastLogin?.toIso8601String(),
       'cantidad_login': cantidadLogin,

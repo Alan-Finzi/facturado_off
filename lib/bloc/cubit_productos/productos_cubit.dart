@@ -164,7 +164,7 @@ class ProductosCubit extends Cubit<ProductosState> {
   }
 
   static List<String> _extractCategorias(List<ProductoModel> productos) {
-    return productos.map((producto) => producto.tipoProducto ?? 'Sin categoría').toSet().toList();
+    return productos.map((producto) => producto.tipoProducto.toString() ?? 'Sin categoría').toSet().toList();
   }
 
    actualizarPreciosDeProductosSeleccionados(

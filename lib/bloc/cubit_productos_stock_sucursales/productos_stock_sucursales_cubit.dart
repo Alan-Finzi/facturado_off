@@ -3,18 +3,22 @@ import 'package:equatable/equatable.dart';
 
 import '../../models/productos_stock_sucursales.dart';
 import '../../services/user_repository.dart';
+import '../cubit_login/login_cubit.dart';
 
 part 'productos_stock_sucursales_state.dart';
 
 class ProductosStockSucursalesCubit extends Cubit<ProductosStockSucursalesState> {
   final UserRepository userRepository;
+  final LoginCubit loginCubit;
 
-  ProductosStockSucursalesCubit(this.userRepository)
+  ProductosStockSucursalesCubit(this.userRepository, this.loginCubit)
       : super(ProductosStockSucursalesState(currentList: []));
 
   Future<void> getProductosStockSucursalesBD() async {
     try {
-      final list = await userRepository.fetchProductosStockSucursales();
+
+
+      final list = await userRepository.fetchProductosStockSucursales(sucursal: loginCubit.state.user!.sucursal!);
       emit(ProductosStockSucursalesState(currentList: list));
     } catch (e) {
       // Manejo de errores

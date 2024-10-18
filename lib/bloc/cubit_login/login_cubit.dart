@@ -1,41 +1,124 @@
+import 'dart:convert';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../models/user.dart';
-import '../../services/user_repository.dart';
-
+import '../../services/service_api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 part 'login_state.dart';
 
+
 class LoginCubit extends Cubit<LoginState> {
-  final UserRepository userRepository;
+  LoginCubit({bool isLogin = false, bool isPreference = false})
+      : super(LoginState(isLogin: isLogin, userToken: null, isPreference: isPreference));
 
-  LoginCubit(this.userRepository, {
-    bool isLogin = false,
-  }) : super(LoginState(isLogin: isLogin));
-
-  // Método para realizar el logout y eliminar el usuario del estado
-  void logoutBD() {
-    emit(const LoginState(isLogin: false, user: null));
+  // Método para cerrar sesión (mantener credenciales guardadas)
+  void logout() {
+    emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
   }
 
-  // Método para realizar el login desde la base de datos
-  Future<void> loginBD(String username, String password) async {
-    emit(const LoginState(isLogin: false, user: null)); // Emitir estado inicial sin usuario
+  Future<void> _saveCredentials(String email, String password, String token) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    final user = User(username: username, password: password);
+    // Obtener la lista de usuarios almacenada previamente
+    String? usersJson = prefs.getString('users');
+    List<dynamic> users = usersJson != null ? jsonDecode(usersJson) : [];
 
-    try {
-      final isAuthenticated = await userRepository.authenticate(user);
+    // Verificar si ya existe un usuario con el mismo email
+    bool exists = users.any((user) => user['email'] == email);
 
-      if (isAuthenticated != null) {
-        final authenticatedUser = await userRepository.fetchUserByUsername(username); // Obtener el usuario autenticado
-        emit(LoginState(isLogin: true, user: authenticatedUser));
-      } else {
-        emit(const LoginState(isLogin: false, user: null)); // Usuario no autenticado
-      }
-    } catch (e) {
-      print("Error during login: $e");
-      emit(const LoginState(isLogin: false, user: null)); // Emitir estado de error
+    if (!exists) {
+      // Agregar el nuevo usuario
+      Map<String, String> newUser = {
+        'email': email,
+        'password': password,
+        'token': token,
+      };
+      users.add(newUser);
+
+      // Guardar la lista actualizada de usuarios
+      await prefs.setString('users', jsonEncode(users));
+    } else {
+      print("El usuario ya existe.");
     }
   }
+
+  Future<void> login(String? email, String? password) async {
+    ApiServices apiServices = ApiServices();
+
+    try {
+      // Validación de email o password vacíos
+      if (email == null || email.isEmpty || password == null || password.isEmpty) {
+        print("Acceso denegado: Email o contraseña vacíos.");
+        emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
+        return;
+      }
+
+      // Si no tenemos email y password (significa que el usuario no ha ingresado credenciales)
+      if (email == null || password == null) {
+        final credentialsList = await _getCredentials();
+
+        // Verificamos si tenemos usuarios guardados en las preferencias
+        if (credentialsList.isNotEmpty) {
+          // Buscamos si existe el usuario con el email proporcionado
+          final userCredentials = credentialsList.firstWhere(
+                (user) => user['email'] == email,
+            orElse: () => {}, // Devuelve un mapa vacío si no se encuentra el usuario
+          );
+
+          if (userCredentials.isNotEmpty) {
+            password = userCredentials['password'];
+            final savedToken = userCredentials['token'];
+
+            // Si ya tenemos un token guardado, lo usamos directamente
+            if (savedToken != null) {
+
+              emit(LoginState(isLogin: true, userToken: savedToken,isPreference: false));
+              return;
+            }
+          }
+        }
+      }
+
+      // Si es la primera vez (el usuario ha proporcionado email y password), llamamos a la API
+      if (email != null && password != null) {
+        final token = await apiServices.loginUser(email, password);
+        if (token != null) {
+          // Guardamos las credenciales en SharedPreferences
+          await _saveCredentials(email, password, token);
+          emit(LoginState(isLogin: true, userToken: token, isPreference: false));
+        } else {
+          // Fallo en la autenticación
+          emit(const LoginState(isLogin: false, userToken: null,isPreference: false));
+          print("Acceso denegado: Credenciales incorrectas.");
+        }
+      } else {
+        // Si no hay credenciales ni en el input ni en SharedPreferences
+        emit(const LoginState(isLogin: false, userToken: null,isPreference: false));
+      }
+    } catch (e) {
+      print("Error durante el login: $e");
+      emit(const LoginState(isLogin: false, userToken: null,isPreference: false)); // Emitir estado de error
+    }
+  }
+
+  Future<List<Map<String, String>>> _getCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Obtener la lista almacenada como JSON
+    String? usersJson = prefs.getString('users');
+
+    if (usersJson != null) {
+      // Decodificar la lista de usuarios desde el string JSON
+      List<dynamic> users = jsonDecode(usersJson);
+
+      // Convertir la lista dinámica en una lista de mapas con tipo adecuado
+      return List<Map<String, String>>.from(users.map((user) => Map<String, String>.from(user)));
+    }
+
+    // Si no hay usuarios almacenados, devolver una lista vacía
+    return [];
+  }
+
 }

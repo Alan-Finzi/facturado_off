@@ -6,8 +6,8 @@ import '../models/producto.dart';
 import '../models/productos_lista_precios_model.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
-
-class DatabaseSeeder {
+/**
+class DatabaseSeederss {
   final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
   Future<void> seedDatabase() async {
@@ -32,11 +32,11 @@ class DatabaseSeeder {
         externalId: '',
         emailVerifiedAt: DateTime.now(),
         confirmedAt: DateTime.now(),
-        confirmed: 1,
+        confirmed: true,
         plan: 1,
         lastLogin: DateTime.now(),
         cantidadLogin: 5,
-        comercioId: 1,
+        comercioId: "1",
         clienteId: 1,
         idListaPrecio: 1,
         image: 'path/to/image.png',
@@ -392,3 +392,4 @@ class DatabaseSeeder {
     ));
   }
 }
+    **/

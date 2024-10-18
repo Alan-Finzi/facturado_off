@@ -50,7 +50,7 @@ class BuscarCliente extends StatelessWidget {
                           clientesCubit.seleccionarCliente(cliente);
                          final listaId = clientesCubit.state.clienteSeleccionado?.listaPrecio;
                           if (listaId != null) {
-                            final listaPrecios = await productosConPrecioYStockCubit.getProductosConPrecioYStock(listaId);
+                            final listaPrecios = await productosConPrecioYStockCubit.cargarProductosConPrecioYStock(listaId);
                             productosSeleccionados.actualizarPreciosDeProductosSeleccionados(productosSeleccionados.state.productosSeleccionados, listaPrecios);
                           }
 
