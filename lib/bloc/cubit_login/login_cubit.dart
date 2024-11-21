@@ -74,7 +74,7 @@ class LoginCubit extends Cubit<LoginState> {
             // Si ya tenemos un token guardado, lo usamos directamente
             if (savedToken != null) {
 
-              emit(LoginState(isLogin: true, userToken: savedToken,isPreference: false));
+              emit(LoginState(isLogin: true, userToken: savedToken,isPreference: false,user: User(username: email, password: password)));
               return;
             }
           }

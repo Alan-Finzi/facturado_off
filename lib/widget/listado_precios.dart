@@ -16,7 +16,14 @@ class _ListaPreciosState extends State<ListaPrecios> {
   void initState() {
     super.initState();
     final productosCubit = context.read<ProductosCubit>();
-   context.read<ResumenCubit>().changResumen(descuentoPromoTotal: 0, descuentoTotal: 0, ivaTotal: 0, ivaIncl: true, subtotal: 0, totalFacturar: 0);
+    context.read<ResumenCubit>().changResumen(
+      descuentoPromoTotal: 0,
+      descuentoTotal: 0,
+      ivaTotal: 0,
+      ivaIncl: true,
+      subtotal: 0,
+      totalFacturar: 0,
+    );
     _initializeControllers(productosCubit.state.productosSeleccionados);
   }
 
@@ -45,16 +52,12 @@ class _ListaPreciosState extends State<ListaPrecios> {
 
   @override
   Widget build(BuildContext context) {
-    double sumaTotal =0;
     return BlocBuilder<ProductosCubit, ProductosState>(
-
       builder: (context, state) {
-        // Asegúrate de que los controladores se inicialicen correctamente
         if (_controllers.length != state.productosSeleccionados.length) {
           _initializeControllers(state.productosSeleccionados);
         }
 
-        // Calcular sumaTotal
         double sumaTotal = _calcularSumaTotal(state.productosSeleccionados);
         context.read<ResumenCubit>().changResumen(
           descuentoPromoTotal: 0,
@@ -66,12 +69,13 @@ class _ListaPreciosState extends State<ListaPrecios> {
         );
 
         return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: DataTable(
             columns: const [
               DataColumn(label: Text('CÓDIGO')),
               DataColumn(label: Text('NOMBRE')),
               DataColumn(label: Text('PRECIO')),
-              DataColumn(label: Text('  CANT')),
+              DataColumn(label: Text('CANT')),
               DataColumn(label: Text('PROMO')),
               DataColumn(label: Text('IVA')),
               DataColumn(label: Text('TOTAL')),
@@ -84,9 +88,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
                 _controllers[index].text = producto['cantidad'].toString();
                 return DataRow(
                   cells: [
-                    DataCell(Text(producto['codigo']?? '')),
-                    DataCell(Text(producto['nombre']?? '')),
-                    DataCell(Text('\$ ${producto['precio']?? ''}')),
+                    DataCell(Text(producto['codigo'] ?? '')),
+                    DataCell(Text(producto['nombre'] ?? '')),
+                    DataCell(Text('\$ ${producto['precio'] ?? ''}')),
                     DataCell(
                       Row(
                         children: [
@@ -114,11 +118,13 @@ class _ListaPreciosState extends State<ListaPrecios> {
                     ),
                     DataCell(Row(
                       children: [
-                        Text('${producto['promoName'] ?? ''}'), // Aquí el nombre de la promoción
+                        Flexible(
+                          child: Text('${producto['promoName'] ?? ''}'),
+                        ),
                         IconButton(
                           icon: Icon(Icons.cancel),
                           onPressed: () {
-                            // Aquí va la lógica para cancelar la promoción
+                            // Lógica para cancelar la promoción
                           },
                         ),
                       ],

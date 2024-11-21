@@ -12,31 +12,46 @@ class CatalogoPage extends StatefulWidget {
 
 class _CatalogoPageState extends State<CatalogoPage> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategoria = 'Todas las categorías'; // Almacena la categoría seleccionada
-  int limit = 100; // Número de productos a mostrar inicialmente
+  String _selectedCategoria = 'Todas las categorías';
+  int limit = 100;
+  int? _listaId; // Almacena el valor de listaId seleccionado
 
   @override
   void initState() {
     super.initState();
-    final productosConPrecioYStockCubit = context.read<ProductosConPrecioYStockCubit>();
+    _initializeListaId();
+    _searchController.addListener(() {
+      final query = _searchController.text.toLowerCase();
+      context.read<ProductosConPrecioYStockCubit>().filterProductosConPrecioYStock(
+        query,
+        _selectedCategoria == 'Todas las categorías' ? '' : _selectedCategoria,
+      );
+    });
+  }
+
+  void _initializeListaId() {
     final clientesMostradorCubit = context.read<ClientesMostradorCubit>();
     final loginCubit = context.read<LoginCubit>();
 
-    // Determinar el listaId basado en el cliente seleccionado o el usuario
-    final listaId = clientesMostradorCubit.state.clienteSeleccionado?.listaPrecio
-        ?? loginCubit.state.user?.idListaPrecio
-        ?? 1;
+    // Determina el listaId basado en el cliente seleccionado o el usuario
+    final listaId = (clientesMostradorCubit.state.clienteSeleccionado?.listaPrecio ??
+        loginCubit.state.user?.idListaPrecio) ?? 1;
 
-    // Cargar los productos con precio, stock y IVA una vez cuando se construye la página
-    productosConPrecioYStockCubit.cargarProductosConPrecioYStock(listaId);
+    // Actualiza _listaId solo si es diferente para evitar recargas innecesarias
+    if (_listaId != listaId) {
+      setState(() {
+        _listaId = listaId;
+      });
 
-    _searchController.addListener(() {
-      final query = _searchController.text.toLowerCase();
-      productosConPrecioYStockCubit.filterProductosConPrecioYStock(
-        query,
-        _selectedCategoria == 'Todas las categorías' ? '' : _selectedCategoria, // Respetar la categoría
-      );
-    });
+      // Cargar los productos con el listaId actualizado
+      context.read<ProductosConPrecioYStockCubit>().cargarProductosConPrecioYStock(_listaId!,loginCubit.state.user!.sucursal!);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _initializeListaId(); // Verifica y actualiza _listaId cada vez que cambian las dependencias
   }
 
   @override
@@ -60,7 +75,6 @@ class _CatalogoPageState extends State<CatalogoPage> {
               SizedBox(height: 16.0),
               BlocBuilder<ProductosConPrecioYStockCubit, ProductosConPrecioYStockState>(
                 builder: (context, productosConPrecioYStockState) {
-                  // Extraemos las categorías de los productos cargados
                   final categorias = productosConPrecioYStockState.productos
                       .map((productoConPrecioYStock) => productoConPrecioYStock.categoria ?? 'Sin categoría')
                       .toSet()
@@ -75,14 +89,12 @@ class _CatalogoPageState extends State<CatalogoPage> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    selectedItem: _selectedCategoria, // Mantener la categoría seleccionada
+                    selectedItem: _selectedCategoria,
                     onChanged: (categoria) {
                       if (categoria != null) {
                         setState(() {
                           _selectedCategoria = categoria;
                         });
-
-                        // Aplicar filtro respetando el texto de búsqueda actual
                         context.read<ProductosConPrecioYStockCubit>().filterProductosConPrecioYStock(
                           _searchController.text.toLowerCase(),
                           categoria == 'Todas las categorías' ? '' : categoria,
@@ -127,16 +139,12 @@ class _CatalogoPageState extends State<CatalogoPage> {
                       DataCell(Text(productoConPrecioYStock.producto.barcode ?? '')),
                       DataCell(Text('\$${productoConPrecioYStock.precioLista?.toStringAsFixed(2) ?? '0.00'}')),
                       DataCell(Text('${productoConPrecioYStock.stock ?? 0}')),
-                      DataCell(Text('${productoConPrecioYStock.iva?.toStringAsFixed(2) ?? '0.00'}%')),
                       DataCell(Text(productoConPrecioYStock.categoria ?? 'Sin categoría')),
                       DataCell(
                         ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context, {
-                              'codigo': productoConPrecioYStock.producto.barcode,
-                              'nombre': productoConPrecioYStock.producto.name,
-                              'precio': productoConPrecioYStock.precioLista,
-                              'iva': productoConPrecioYStock.iva,
+                              'productoConPrecioYStock': productoConPrecioYStock,
                             });
                           },
                           child: Text('Agregar'),
@@ -153,7 +161,6 @@ class _CatalogoPageState extends State<CatalogoPage> {
                           DataColumn(label: Text('Código')),
                           DataColumn(label: Text('Precio de Lista')),
                           DataColumn(label: Text('Stock')),
-                          DataColumn(label: Text('IVA')),
                           DataColumn(label: Text('Categoría')),
                           DataColumn(label: Text('Acción')),
                         ],
@@ -163,7 +170,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
                       ElevatedButton(
                         onPressed: () {
                           setState(() {
-                            limit += 100; // Incrementar el límite de productos a mostrar
+                            limit += 100;
                           });
                         },
                         child: Text('Cargar más productos'),

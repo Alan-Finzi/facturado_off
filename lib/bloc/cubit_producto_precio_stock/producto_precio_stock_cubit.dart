@@ -19,30 +19,12 @@ class ProductosConPrecioYStockCubit extends Cubit<ProductosConPrecioYStockState>
   ProductosConPrecioYStockCubit(this.userRepository, this.loginCubit)
       : super(ProductosConPrecioYStockState(productos: [], filteredProductosConPrecioYStock: [], isLoading: false));
 
-  Future<List<ProductoConPrecioYStock>> cargarProductosConPrecioYStock(int listaId) async {
+  Future<List<ProductoConPrecioYStock>> cargarProductosConPrecioYStock(int listaId, int sucursal) async {
     emit(state.copyWith(isLoading: true, filteredProductosConPrecioYStock: []));
 
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('email');
-
-    if (email == null) {
-      emit(state.copyWith(isLoading: false, errorMessage: "No se encontró el correo en SharedPreferences", filteredProductosConPrecioYStock: [],));
-      return [];
-    }
-
-    // Consultar al método getUserByEmail usando el email recuperado
-    final user = await DatabaseHelper.instance.getUserByEmail(email);
-
-    if (user == null || user.sucursal == null) {
-      emit(state.copyWith(isLoading: false, errorMessage: "No se encontró el usuario o la sucursal", filteredProductosConPrecioYStock: [], ));
-      return [];
-    }
-
-    // Actualizar el estado del loginCubit con la sucursal del usuario
-    loginCubit.emit(loginCubit.state.copyWith(user: user));
 
     // Crear la lista de ProductoConPrecioYStock
-    List<ProductoConPrecioYStock> productosConPrecioYStock = await userRepository.addQueryProductoCatalogo(listaId: listaId, sucursalId: user.sucursal!);
+    List<ProductoConPrecioYStock> productosConPrecioYStock = await userRepository.addQueryProductoCatalogo(listaId: listaId, sucursalId:sucursal);
 
     emit(state.copyWith(isLoading: false, productos: productosConPrecioYStock, filteredProductosConPrecioYStock: [], ));
 

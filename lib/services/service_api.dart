@@ -18,6 +18,7 @@ import '../models/user.dart';
 class ApiServices{
 
   final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users';
+  final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/cliente-mostradors';
   final String apiUrlLogin = 'https://api.flamincoapp.com.ar/api/login';
   final String apiUrlProducto= 'https://api.flamincoapp.com.ar/api/products';
   final  String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
@@ -131,9 +132,31 @@ class ApiServices{
       // Aquí haces el mapeo correcto a tu modelo, por ejemplo ProductoModel
       List<ProductoModel> productos = data.map((json) => ProductoModel.fromMap(json)).toList();
 
-      await DatabaseHelper.instance.insertProductos(productos);
+      await DatabaseHelper.instance.insertOrUpdateProductos(productos);
     } else {
       throw Exception('Error al cargar los datos de la API');
+    }
+  }
+
+  // Función para obtener clientes de la API y guardarlos en la base de datos
+  Future<void> fetchClientesMostrador(String token) async {
+    final response = await http.get(
+      Uri.parse(apiUrlClienteMostrador),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      List<ClientesMostrador> clientes = data.map((json) => ClientesMostrador.fromJson(json)).toList();
+
+      for (var cliente in clientes) {
+        await DatabaseHelper.instance.insertCliente(cliente);
+      }
+    } else {
+      throw Exception('Error al cargar los datos de cliente mostrador');
     }
   }
 

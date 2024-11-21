@@ -17,11 +17,12 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
   Future<void> startSynchronization(String token, String email, LoginCubit loginCubit) async {
     try {
-      DatabaseHelper.instance.deleteDatabaseIfExists();
+
       emit(SynchronizationInProgress(progress: 0.0, currentTask: "Iniciando sincronización"));
 
       await apiServices.fetchUsersData(token, email, loginCubit);
       await apiServices.fetchProductos(token);
+
       emit(const SynchronizationInProgress(progress: 0.1, currentTask: "Sincronización de Productos"));
 
       await apiServices.fetchProductosIvas(token);
@@ -32,6 +33,9 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
       await apiServices.fetchProductosStockSucursals(token);
       emit(const SynchronizationInProgress(progress: 0.6, currentTask: "Sincronización Stock Sucursales"));
+
+      await apiServices.fetchClientesMostrador(token);
+      emit(const SynchronizationInProgress(progress: 0.7, currentTask: "Sincronización Clientes"));
 
       await apiServices.fetchListaPrecio(token);
       emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización Lista Precio"));

@@ -11,6 +11,15 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
   ClientesMostradorCubit(this.userRepository)
       : super(const ClientesMostradorState(clientes: [], filteredClientes: []));
 
+  // Método para deseleccionar un cliente
+  void deseleccionarCliente() {
+    emit(state.copyWith(
+      clienteSeleccionado: null,
+      buscarCliente: false,
+    ));
+  }
+
+  // Método para obtener los clientes desde la base de datos
   Future<void> getClientesBD() async {
     try {
       // Obtener todos los clientes de la base de datos
@@ -32,12 +41,14 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
     }
   }
 
+// Método para buscar un cliente
   Future<void> buscarCliente(String query) async {
     try {
       final filteredClientes = state.clientes.where((cliente) {
+        final nombre = cliente.nombre?.toLowerCase() ?? '';
         final dni = cliente.dni ?? '';
         final codigoCliente = cliente.idCliente ?? '';
-        return dni.contains(query) || codigoCliente.contains(query);
+        return nombre.contains(query.toLowerCase()) || dni.contains(query) || codigoCliente.contains(query);
       }).toList();
 
       emit(state.copyWith(filteredClientes: filteredClientes));
@@ -46,9 +57,12 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
     }
   }
 
-  // Método para seleccionar un cliente
+
   void seleccionarCliente(ClientesMostrador cliente) {
-    emit(state.copyWith(clienteSeleccionado: cliente));
+    emit(state.copyWith(
+      clienteSeleccionado: cliente,
+      buscarCliente: true,
+    ));
   }
 
   // Método para actualizar un cliente
@@ -75,13 +89,16 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
         clientes: updatedClientes,
         deleteClientes: List.from(state.deleteClientes)..addAll(updatedClientes.where((c) => c.idCliente == idCliente)),
       ));
+
+      // Deseleccionar el cliente después de la eliminación
+      deseleccionarCliente();
     } catch (e) {
       print("Error al eliminar cliente: $e");
       // Aquí podrías manejar el error de manera más detallada, como emitir un estado con un mensaje de error si es necesario.
     }
   }
 
-
+  // Método para filtrar los clientes
   void filterClientes(String nameQuery, String dniQuery, int priceListQuery, int isActivo) {
     if (isActivo == 1) {
       final filteredClientes = state.clientes.where((cliente) {

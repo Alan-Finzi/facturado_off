@@ -1,7 +1,9 @@
+import 'package:facturador_offline/pages/page_catalogo.dart';
 import 'package:facturador_offline/pages/page_forma_cobro.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../bloc/cubit_productos/productos_cubit.dart';
 import '../bloc/cubit_resumen/resumen_cubit.dart';
 import '../widget/buscar_cliente.dart';
 import '../widget/buscar_productos.dart';
@@ -48,27 +50,29 @@ class _VentaMainPageState extends State<VentaMainPage> {
   }
 
   Widget _buildResumenDeVenta(BuildContext context) {
-    return Container(
-      width: 300,
-      padding: const EdgeInsets.all(16.0),
-      color: Colors.grey[200],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              'Monotributo - PTO: 2 - (CUIT: 20358072101)',
-              style: TextStyle(fontWeight: FontWeight.bold),
+    return SingleChildScrollView(
+      child: Container(
+        width: 300,
+        padding: const EdgeInsets.all(16.0),
+        color: Colors.grey[200],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Monotributo - PTO: 2 - (CUIT: 20358072101)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-          _buildDropdowns(),
-          const SizedBox(height: 16.0),
-          const Text('Resumen de venta'),
-          const ResumenTabla(),
-          const SizedBox(height: 16.0),
-          _buildBotonesAccion(context),
-        ],
+            _buildDropdowns(),
+            const SizedBox(height: 16.0),
+            const Text('Resumen de venta'),
+            const ResumenTabla(),
+            const SizedBox(height: 16.0),
+            _buildBotonesAccion(context),
+          ],
+        ),
       ),
     );
   }
@@ -171,9 +175,34 @@ class NuevaVentaPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BuscarCliente(),
+          BuscarClienteWidget(),
           const SizedBox(height: 16.0),
-          BuscarProducto(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 1,
+                child: BuscarProductoScanner(),
+              ),
+              const SizedBox(width: 8.0), // Espaciado entre widgets
+              Expanded(
+                flex: 1,
+                child: BuscarProductoWidget(),
+              ),
+            ],
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CatalogoPage()),
+              );
+              if (result != null) {
+                context.read<ProductosCubit>().agregarProducto(result);
+              }
+            },
+            child: const Text('Ver catálogo'),
+          ),
           const SizedBox(height: 16.0),
           const Text('Lista de precios: Precio base'),
           const SizedBox(height: 16.0),

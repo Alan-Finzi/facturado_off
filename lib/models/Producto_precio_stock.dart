@@ -55,4 +55,15 @@ class ProductoConPrecioYStock {
         categoria: map['categoryName']
     );
   }
+
+  // Método para convertir a Map<String, dynamic>
+  Map<String, dynamic> toMap() {
+      return {
+          'producto': producto.toMap(), // Usa el método toMap del modelo ProductoModel
+          'precio_lista': precioLista,
+          'stock': stock,
+          'iva': iva,
+          'categoryName': categoria,
+      };
+  }
 }

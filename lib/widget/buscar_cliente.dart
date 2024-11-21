@@ -5,90 +5,81 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
+import '../helper/database_helper.dart';
+import '../models/clientes_mostrador.dart';
 import 'widget_alta_clientes.dart';
+import 'package:flutter/material.dart';
+import 'package:searchfield/searchfield.dart';
+class BuscarClienteWidget extends StatefulWidget {
+  @override
+  _BuscarClienteWidgetState createState() => _BuscarClienteWidgetState();
+}
 
-class BuscarCliente extends StatelessWidget {
+class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  List<SearchFieldListItem<String>> clienteSugerencias = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Llama al método para cargar los clientes al iniciar el widget
+    context.read<ClientesMostradorCubit>().getClientesBD();
+  }
+
+  void cargarSugerencias(List<ClientesMostrador> clientes) {
+    // Convierte la lista de ClientesMostrador a SearchFieldListItem
+    clienteSugerencias = clientes.map((cliente) {
+      return SearchFieldListItem<String>(
+        cliente.nombre ?? 'Sin nombre',
+        item: cliente.dni ?? cliente.idCliente ?? 'Sin DNI',
+      );
+    }).toList();
+    setState(() {}); // Actualiza el estado para mostrar las sugerencias cargadas
+  }
 
   @override
   Widget build(BuildContext context) {
-    final clientesCubit = context.watch<ClientesMostradorCubit>();
-    final productosConPrecioYStockCubit = context.watch<ProductosConPrecioYStockCubit>();
-    final productosSeleccionados = context.watch<ProductosCubit>();
-    return Column(
-      children: [
-        TextField(
-          controller: _controller,
-          decoration: InputDecoration(
-            labelText: 'Buscar cliente o cuit',
-            prefixIcon: Icon(Icons.person_search),
-            suffixIcon: IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AltaClienteDialog();
-                  },
-                );
-              },
+    return BlocListener<ClientesMostradorCubit, ClientesMostradorState>(
+      listener: (context, state) {
+        // Cuando hay cambios en el estado, cargamos las sugerencias
+        if (state.clientes.isNotEmpty) {
+          cargarSugerencias(state.clientes);
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SearchField(
+            controller: _controller,
+            focusNode: _focusNode,
+            suggestions: clienteSugerencias,
+            suggestionState: Suggestion.expand,
+            textInputAction: TextInputAction.done,
+            searchInputDecoration: SearchInputDecoration(
+              labelText: 'Buscar cliente o cuit',
+              prefixIcon: Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: Icon(Icons.clear),
+                onPressed: () {
+                  _controller.clear();
+                  _focusNode.unfocus();
+                },
+              ),
             ),
+            maxSuggestionsInViewPort: 5,
+            itemHeight: 50,
+            onSuggestionTap: (cliente) {
+              final selectedCliente = clienteSugerencias.firstWhere(
+                    (c) => c.searchKey == cliente.searchKey,
+              );
+              print('Cliente seleccionado: ${selectedCliente.searchKey} - DNI: ${selectedCliente.item}');
+              _controller.text = selectedCliente.searchKey;
+            },
           ),
-          onSubmitted: (query) async {
-            // Realiza la búsqueda cuando se presiona Enter
-            await clientesCubit.buscarCliente(query);
-            if (clientesCubit.state.filteredClientes.isNotEmpty) {
-              // Muestra el popup con los resultados
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return SimpleDialog(
-                    title: Text('Seleccionar cliente'),
-                    children: clientesCubit.state.filteredClientes.map((cliente) {
-                      return SimpleDialogOption(
-                        onPressed: () async {
-                          clientesCubit.seleccionarCliente(cliente);
-                         final listaId = clientesCubit.state.clienteSeleccionado?.listaPrecio;
-                          if (listaId != null) {
-                            final listaPrecios = await productosConPrecioYStockCubit.cargarProductosConPrecioYStock(listaId);
-                            productosSeleccionados.actualizarPreciosDeProductosSeleccionados(productosSeleccionados.state.productosSeleccionados, listaPrecios);
-                          }
-
-                          Navigator.pop(context); // Cierra el diálogo
-                          _controller.text = cliente.dni ?? ''; // Coloca el DNI en el TextField
-                        },
-                        child: ListTile(
-                          title: Text(cliente.nombre ?? 'No Name'),
-                          subtitle: Text(cliente.dni ?? ''),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              );
-
-            } else {
-              // Maneja el caso donde no hay resultados
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('No se encontraron resultados'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text('OK'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            }
-          },
-        ),
-      ],
+          SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }

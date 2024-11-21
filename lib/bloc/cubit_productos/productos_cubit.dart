@@ -51,27 +51,19 @@ class ProductosCubit extends Cubit<ProductosState> {
 
 
 
-  void agregarProducto(Map<String, dynamic> producto) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
-    final existingProductIndex = updatedList.indexWhere((item) => item['codigo'] == producto['codigo']);
+  void agregarProducto(Map<String, dynamic> data) {
+    // Verificar si el `Map` contiene un objeto `ProductoConPrecioYStock`
+    if (data.containsKey('productoConPrecioYStock') && data['productoConPrecioYStock'] is ProductoConPrecioYStock) {
+      ProductoConPrecioYStock productoAgregar = data['productoConPrecioYStock'] as ProductoConPrecioYStock;
 
-    if (existingProductIndex >= 0) {
-      updatedList[existingProductIndex]['cantidad'] += 1;
+      // Realiza aquí las acciones necesarias con el producto
+      print('Producto agregado: ${productoAgregar.producto.name}');
     } else {
-      updatedList.add({
-        'codigo': producto['codigo'],
-        'nombre': producto['nombre'],
-        'precio': producto['precio'],
-        'precioTotal': producto['precio'],
-        'cantidad': 1,
-        'promoName': 'Promo',
-        'iva': 0,
-        'stock': 1,
-      });
+      // Si no se pasa el objeto correctamente, lanza un error o maneja el caso
+      print('Error: Se esperaba un ProductoConPrecioYStock en el Map');
     }
-
-    emit(state.copyWith(productosSeleccionados: updatedList));
   }
+
 
   void eliminarProducto(int index) {
     final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);

@@ -28,9 +28,9 @@ class VentaMainPageMobile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BuscarCliente(),
+          BuscarClienteWidget(),
           const SizedBox(height: 16.0),
-          BuscarProducto(),
+          BuscarProductoScanner(),
           const SizedBox(height: 16.0),
           const Text('Lista de precios: Precio base'),
           const SizedBox(height: 16.0),

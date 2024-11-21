@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:facturador_offline/bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_resumen/resumen_cubit.dart';
-import 'package:facturador_offline/services/service_api.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
@@ -19,26 +19,23 @@ import 'package:desktop_window/desktop_window.dart';
 
 
 void main() async {
-
+  sqfliteFfiInit();
   WidgetsFlutterBinding.ensureInitialized();
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Initialize FFI
+    databaseFactory = databaseFactoryFfi;
+
+  // Elimina la base de datos si existe y crea una nueva
+  await DatabaseHelper.instance.deleteDatabaseIfExists();
+  await DatabaseHelper.instance.database; // Crea la base de datos
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       //DatabaseHelper.instance.deleteDatabaseIfExists();
-      setWindowSize();
+     FocusManager.instance.primaryFocus?.unfocus();
     });
-  }
   runApp(BlocProviders());
 
 }
 
-Future<void> setWindowSize() async {
-//  await DesktopWindow.toggleFullScreen();
-  await DesktopWindow.setWindowSize(const Size(400, 800));
-  await DesktopWindow.setWindowSize(const Size(600, 800));
-  await DesktopWindow.setWindowSize(const Size(600, 800));
-  await DesktopWindow.setFullScreen(true);
- // await DesktopWindow.setWindowSize( Size.infinite);
-}
 
 
 

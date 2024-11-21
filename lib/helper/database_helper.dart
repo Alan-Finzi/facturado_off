@@ -20,22 +20,29 @@ class DatabaseHelper {
   static Database? _database;
 
   Future<Database> get database async {
+    // Si la base de datos ya está inicializada, retornamos la instancia
     if (_database != null) return _database!;
 
+    // Si no está inicializada, eliminamos la base de datos existente antes de crearla
+    await deleteDatabaseIfExists();
+
+    // Inicializamos la base de datos
     _database = await _initDatabase();
     return _database!;
   }
 
   Future<void> deleteDatabaseIfExists() async {
-    String path = join(await getDatabasesPath(), 'flaminco_appv1_DB.db');
+    String path = join(await getDatabasesPath(), 'flaminco_appv2_DB.db');
     await deleteDatabase(path);
   }
+
+
   Future<void> insertUser(User user) async {
     final db = await database;
     await db.insert('users', user.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'flaminco_appv1_DB.db');
+    String path = join(await getDatabasesPath(), 'flaminco_appv2_DB.db');
     print('La base de datos se guarda en la siguiente ruta: $path');
     return await openDatabase(
       path,
@@ -251,11 +258,43 @@ CREATE TABLE productos_ivas(
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+  Future<ProductoModel?> getProductoById(int id) async {
+    final db = await database;
+    final result = await db.query(
+      'productos',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
 
+    if (result.isNotEmpty) {
+      return ProductoModel.fromMap(result.first); // Convertimos el resultado a ProductoModel
+    }
 
-  Future<void> insertProductos(List<ProductoModel> productos) async {
+    return null; // Retornamos null si no se encontró el producto
+  }
+
+// Función para actualizar un producto
+  Future<void> updateProducto(ProductoModel producto) async {
+    final db = await database;
+    await db.update(
+      'productos',
+      producto.toMap(), // Convertimos el producto a un mapa para la base de datos
+      where: 'id = ?',
+      whereArgs: [producto.id],
+    );
+  }
+
+  Future<void> insertOrUpdateProductos(List<ProductoModel> productos) async {
     for (var producto in productos) {
-      await insertProducto(producto);
+      final existingProduct = await getProductoById(producto.id!);
+
+      if (existingProduct != null) {
+        // Si el producto existe, actualizamos el registro
+        await updateProducto(producto);
+      } else {
+        // Si el producto no existe, lo insertamos
+        await insertProducto(producto);
+      }
     }
   }
   Future<List<ProductoModel>> getProductos() async {
@@ -329,12 +368,24 @@ CREATE TABLE productos_ivas(
 
   // Métodos relacionados con la tabla Clientes_mostrador
   Future<void> insertCliente(ClientesMostrador cliente) async {
+    if (!await clienteExiste(cliente.idCliente!)) {
+      Database db = await database;
+      await db.insert(
+        'Clientes_mostrador',
+        cliente.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+  }
+
+  Future<bool> clienteExiste(String idCliente) async {
     Database db = await database;
-    await db.insert(
+    final result = await db.query(
       'Clientes_mostrador',
-      cliente.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      where: 'id_cliente = ?',
+      whereArgs: [idCliente],
     );
+    return result.isNotEmpty;
   }
 
   Future<void> updateCliente(ClientesMostrador cliente) async {
