@@ -6,7 +6,7 @@ class ProductosState extends Equatable {
  final List<String> categorias;
  final String categoriaSeleccionada;
  late final bool precioTotal;
- final List<Map<String, dynamic>> productosSeleccionados; // Añadido para manejar productos seleccionados
+ final List<ProductoConPrecioYStock> productosSeleccionados; // Añadido para manejar productos seleccionados
 
   ProductosState({
   required this.currentListProductCubit,
@@ -23,7 +23,7 @@ class ProductosState extends Equatable {
   List<String>? categorias,
   String? categoriaSeleccionada,
   bool? precioTotal,
-  List<Map<String, dynamic>>? productosSeleccionados, // Añadido para manejar productos seleccionados
+  List<ProductoConPrecioYStock>? productosSeleccionados, // Añadido para manejar productos seleccionados
  }) {
   return ProductosState(
    currentListProductCubit: currentListProductCubit ?? this.currentListProductCubit,

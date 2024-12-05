@@ -2,21 +2,30 @@ import 'package:facturador_offline/models/producto.dart';
 
 class ProductoConPrecioYStock {
   final ProductoModel producto;
-  final double? precioLista;
+  late final double? precioLista;
   final double? stock;
-  final double? iva;
+  late  double? iva;
   final String? categoria;
+  late  double? cantidad;
+  late  double? precioFinal;
+  final String? promo;
 
-  ProductoConPrecioYStock({
+  ProductoConPrecioYStock( {
     required this.producto,
     this.precioLista,
     this.stock,
     this.iva,
-    this.categoria
+    this.categoria,
+      this.cantidad,
+      this.precioFinal,
+    this.promo
   });
 
   factory ProductoConPrecioYStock.fromMap(Map<String, dynamic> map) {
     return ProductoConPrecioYStock(
+        cantidad:map["cantidad"],
+        precioFinal: map["precioFinal"],
+      promo: map["promo"],
       producto: ProductoModel(
         id: map['id'],
         idProducto: map['producto_id'] as int,
@@ -52,7 +61,8 @@ class ProductoConPrecioYStock {
             ? (map['stock'] ? 1.0 : 0.0)    // Si es bool, conviértelo a double 1.0 o 0.0
             : null),
       iva: map['iva'] as double?,
-        categoria: map['categoryName']
+        categoria: map['categoryName'],
+
     );
   }
 
@@ -64,6 +74,8 @@ class ProductoConPrecioYStock {
           'stock': stock,
           'iva': iva,
           'categoryName': categoria,
+          "precioFinal":precioFinal,
+        "cantidad":cantidad,
       };
   }
 }

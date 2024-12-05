@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../bloc/cubit_resumen/resumen_cubit.dart';
+import '../models/Producto_precio_stock.dart';
 class ListaPrecios extends StatefulWidget {
   @override
   _ListaPreciosState createState() => _ListaPreciosState();
@@ -27,18 +28,18 @@ class _ListaPreciosState extends State<ListaPrecios> {
     _initializeControllers(productosCubit.state.productosSeleccionados);
   }
 
-  void _initializeControllers(List<Map<String, dynamic>> productosSeleccionados) {
+  void _initializeControllers(List<ProductoConPrecioYStock> productosSeleccionados) {
     _controllers = List.generate(
       productosSeleccionados.length,
           (index) => TextEditingController(
-        text: productosSeleccionados[index]['cantidad'].toString(),
+        text: productosSeleccionados[index].cantidad.toString(),
       ),
     );
   }
 
-  double _calcularSumaTotal(List<Map<String, dynamic>> productosSeleccionados) {
+  double _calcularSumaTotal(List<ProductoConPrecioYStock> productosSeleccionados) {
     return productosSeleccionados.fold(0.0, (total, producto) {
-      return total + (producto['precioTotal'] ?? 0.0);
+      return total + (producto.precioFinal ?? 0.0);
     });
   }
 
@@ -71,6 +72,8 @@ class _ListaPreciosState extends State<ListaPrecios> {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
+            dataTextStyle: TextStyle(fontSize: 11),
+            headingTextStyle: TextStyle(fontSize: 12),
             columns: const [
               DataColumn(label: Text('CÓDIGO')),
               DataColumn(label: Text('NOMBRE')),
@@ -85,12 +88,12 @@ class _ListaPreciosState extends State<ListaPrecios> {
               state.productosSeleccionados.length,
                   (index) {
                 final producto = state.productosSeleccionados[index];
-                _controllers[index].text = producto['cantidad'].toString();
+                _controllers[index].text = producto.cantidad.toString();
                 return DataRow(
                   cells: [
-                    DataCell(Text(producto['codigo'] ?? '')),
-                    DataCell(Text(producto['nombre'] ?? '')),
-                    DataCell(Text('\$ ${producto['precio'] ?? ''}')),
+                    DataCell(Text(producto.producto.barcode ?? '')),
+                    DataCell(Text(producto.producto.name ?? '')),
+                    DataCell(Text('\$ ${producto.precioLista ?? ''}')),
                     DataCell(
                       Row(
                         children: [
@@ -104,7 +107,7 @@ class _ListaPreciosState extends State<ListaPrecios> {
                               controller: _controllers[index],
                               keyboardType: TextInputType.number,
                               onChanged: (value) {
-                                final cantidad = int.tryParse(value) ?? 1;
+                                final cantidad = double.parse(value);
                                 context.read<ProductosCubit>().precioTotal(index, cantidad);
                               },
                             ),
@@ -119,7 +122,7 @@ class _ListaPreciosState extends State<ListaPrecios> {
                     DataCell(Row(
                       children: [
                         Flexible(
-                          child: Text('${producto['promoName'] ?? ''}'),
+                          child: Text(producto.promo ?? ''),
                         ),
                         IconButton(
                           icon: Icon(Icons.cancel),
@@ -129,8 +132,8 @@ class _ListaPreciosState extends State<ListaPrecios> {
                         ),
                       ],
                     )),
-                    DataCell(Text('${producto['iva']} %')),
-                    DataCell(Text('\$ ${(producto['precioTotal'] ?? 0).toStringAsFixed(2)}')),
+                    DataCell(Text('${producto.iva} %')),
+                    DataCell(Text('\$ ${(producto.precioFinal ?? 0).toStringAsFixed(2)}')),
                     DataCell(
                       IconButton(
                         icon: Icon(Icons.delete),

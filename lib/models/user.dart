@@ -1,4 +1,5 @@
 class User {
+  static User? currencyUser; // Propiedad estática para almacenar el usuario actual
   final int? id;
   final String? username;
   final String? password;
@@ -50,6 +51,11 @@ class User {
     this.image,
     this.casaCentralUserId,
   });
+
+  // Método para actualizar el currencyUser
+  static void setCurrencyUser(User user) {
+    currencyUser = user;
+  }
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(

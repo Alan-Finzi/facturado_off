@@ -64,12 +64,22 @@ class ProductoModel {
           ? map['tipo_producto'].toString() // Convertir a String si es int
           : map['tipo_producto'] as String?,
       productoTipo: map['producto_tipo'],
-      precioInterno: map['precio_interno'] is int
+      precioInterno: map['precio_interno'] == null
+          ? 0.0
+          : (map['precio_interno'] is int
           ? (map['precio_interno'] as int).toDouble()
-          : map['precio_interno'] as double,
+          : map['precio_interno'] as double),
       barcode: map['barcode'],
-      cost: map['cost'] is int ?  (map['cost'] as int).toDouble() : map['cost'] as double,
-      alerts: map['alerts'] is int?  (map['alerts'] as int).toDouble() : map['alerts'] as double,
+      cost: map['cost'] == null
+          ? 0.0
+          : (map['cost'] is int
+          ? (map['cost'] as int).toDouble()
+          : map['cost'] as double),
+      alerts: map['alerts'] == null
+          ? 0.0
+          : (map['alerts'] is int
+          ? (map['alerts'] as int).toDouble()
+          : map['alerts'] as double),
       image: map['image'],
       categoryId: map['category_id'],
       marcaId: map['marca_id'],

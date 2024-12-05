@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/Producto_precio_stock.dart';
 import '../../models/producto.dart';
+import '../../models/user.dart';
 import '../../services/user_repository.dart';
 
 part 'productos_state.dart';
@@ -50,106 +51,199 @@ class ProductosCubit extends Cubit<ProductosState> {
   }
 
 
+  void agregarProducto(Map<String, dynamic> data) async {
+    try {
+      final user = User.currencyUser;
+      if (user == null) {
+        print('Error: Usuario no autenticado.');
+        return;
+      }
 
-  void agregarProducto(Map<String, dynamic> data) {
-    // Verificar si el `Map` contiene un objeto `ProductoConPrecioYStock`
-    if (data.containsKey('productoConPrecioYStock') && data['productoConPrecioYStock'] is ProductoConPrecioYStock) {
-      ProductoConPrecioYStock productoAgregar = data['productoConPrecioYStock'] as ProductoConPrecioYStock;
+      final sucursalId = user.comercioId == 1 ? user.sucursal : user.comercioId;
 
-      // Realiza aquí las acciones necesarias con el producto
+      // Obtener productosIvas si no se han cargado previamente
+      final productosIvas = await userRepository.fetchProductosIvas();
+
+      ProductoConPrecioYStock? productoAgregar;
+      double? ivaEncontrado = 0.0;
+
+      // Clonar la lista actual de productos seleccionados
+      final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+
+      // Verificar si el producto ya existe en la lista
+      final existingProductIndex = updatedList.indexWhere((item) {
+        if (data.containsKey('productoConPrecioYStock')) {
+          return item.producto.barcode == (data['productoConPrecioYStock'] as ProductoConPrecioYStock).producto.barcode;
+        } else if (data.containsKey('producto')) {
+          return item.producto.barcode == (data['producto']['barcode'] as String?);
+        }
+        return false;
+      });
+
+      if (existingProductIndex >= 0) {
+        // Producto ya existe: actualizar cantidad y precio final
+        final existingProduct = updatedList[existingProductIndex];
+        existingProduct.cantidad = (existingProduct.cantidad ?? 0) + 1;
+        existingProduct.precioFinal = (existingProduct.precioLista ?? 0.0) * existingProduct.cantidad!;
+
+        emit(state.copyWith(
+          productosSeleccionados: updatedList,
+          precioTotal: !state.precioTotal,
+        ));
+        print('Producto actualizado: ${existingProduct.producto.name}');
+        return;
+      }
+
+      // Procesar el nuevo producto
+      if (data.containsKey('productoConPrecioYStock')) {
+        productoAgregar = data['productoConPrecioYStock'] as ProductoConPrecioYStock;
+        ivaEncontrado = productosIvas
+            .firstWhere(
+              (iva) => iva.sucursalId.toString() == sucursalId.toString() &&
+              iva.productId.toString() == productoAgregar!.producto.id.toString(),
+        )
+            ?.iva ?? 0.0;
+        productoAgregar.iva = ivaEncontrado;
+      } else if (data.containsKey('producto')) {
+        final producto = ProductoModel.fromMap(data['producto'] as Map<String, dynamic>);
+        final double? precioLista = data['precio_lista'] as double?;
+        final double cantidadInicial = (data['cantidad'] as double?) ?? 0.0;
+
+        ivaEncontrado = productosIvas
+            .firstWhere(
+              (iva) => iva.sucursalId.toString() == sucursalId.toString() &&
+              iva.productId.toString() == producto.id.toString(),
+        )
+            ?.iva ?? 0.0;
+
+        productoAgregar = ProductoConPrecioYStock(
+          producto: producto,
+          precioLista: precioLista,
+          iva: ivaEncontrado,
+          cantidad: cantidadInicial,
+          precioFinal: (precioLista ?? 0.0) * cantidadInicial,
+        );
+      } else {
+        print('Error: Datos inválidos para procesar el producto.');
+        return;
+      }
+
+      // Agregar el nuevo producto a la lista
+      productoAgregar.cantidad = 1;
+      productoAgregar.precioFinal = (productoAgregar.precioLista ?? 0.0) * productoAgregar.cantidad!;
+      updatedList.add(productoAgregar);
+
+      emit(state.copyWith(
+        productosSeleccionados: updatedList,
+        precioTotal: !state.precioTotal,
+      ));
       print('Producto agregado: ${productoAgregar.producto.name}');
-    } else {
-      // Si no se pasa el objeto correctamente, lanza un error o maneja el caso
-      print('Error: Se esperaba un ProductoConPrecioYStock en el Map');
+    } catch (e) {
+      print('Error al agregar el producto: $e');
     }
   }
 
 
   void eliminarProducto(int index) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
     updatedList.removeAt(index);
     emit(state.copyWith(productosSeleccionados: updatedList));
   }
 
   void incrementarCantidad(int index) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
-    updatedList[index]['cantidad']++;
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    updatedList[index].cantidad = (updatedList[index].cantidad ?? 0) + 1;
     actualizarPrecioTotal(index);
     emit(state.copyWith(productosSeleccionados: updatedList));
   }
 
   void decrementarCantidad(int index) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
-    if (updatedList[index]['cantidad'] > 1) {
-      updatedList[index]['cantidad']--;
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    if (updatedList[index].cantidad! > 1) {
+      updatedList[index].cantidad = (updatedList[index].cantidad ?? 0) - 1;
       actualizarPrecioTotal(index);
       emit(state.copyWith(productosSeleccionados: updatedList));
     }
   }
 
-  void precioTotal(int index, int cantidad) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
+  void precioTotal(int index, double cantidad) {
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
     if (cantidad > 0) {
-      updatedList[index]['cantidad'] = cantidad;
-      updatedList[index]['precioTotal'] = updatedList[index]['precio'] * cantidad;
+      updatedList[index].cantidad = cantidad;
+      updatedList[index].precioFinal = updatedList[index].precioFinal! * cantidad;
       emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
     }
   }
 
   void actualizarPrecioTotal(int index) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
-    final cantidad = updatedList[index]['cantidad'];
-    updatedList[index]['precioTotal'] = updatedList[index]['precio'] * cantidad;
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    final cantidad = updatedList[index].cantidad;
+    updatedList[index].precioFinal = updatedList[index].precioLista! * cantidad!;
     emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
   }
 
-   actualizarPreciosConLista(Map<String, double> listaPrecios) {
+  void actualizarPreciosConLista(Map<String, double> listaPrecios) {
+    // Clonar la lista actual de productos seleccionados y actualizar los precios
     final updatedList = state.productosSeleccionados.map((producto) {
-      final codigo = producto['codigo'];
+      final codigo = producto.producto.barcode;
+
       if (listaPrecios.containsKey(codigo)) {
         final nuevoPrecio = listaPrecios[codigo];
-        return {
-          ...producto,
-          'precio': nuevoPrecio,
-          'precioTotal': nuevoPrecio! * producto['cantidad'],
-        };
+
+        // Actualizar las propiedades del producto
+        producto.precioLista = nuevoPrecio;
+        producto.precioFinal = (nuevoPrecio ?? 0) * (producto.cantidad ?? 1);
       }
-      return producto;
+      return producto; // Si no hay precio en la lista, se deja sin cambios
     }).toList();
 
-    emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+    // Calcular el nuevo precio total de todos los productos seleccionados
+
+
+    // Emitir el nuevo estado
+    emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: true));
   }
+
   void actualizarPrecioTotalProducto(Map<String, dynamic> producto) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
+    // Clonar la lista actual de productos seleccionados
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
 
     // Encuentra el índice del producto en la lista
-    final index = updatedList.indexWhere((item) => item['codigo'] == producto['codigo']);
+    final index = updatedList.indexWhere((item) => item.producto.barcode == producto['codigo']);
 
     if (index != -1) {
-      // Recupera la cantidad actual
-      final cantidad = updatedList[index]['cantidad'] as int;
+      // Recupera el producto existente
+      final productoExistente = updatedList[index];
 
-      // Actualiza el precio total del producto
-      updatedList[index]['precioTotal'] = (producto['precio'] as double) * cantidad;
+      // Recupera el nuevo precio del producto desde el parámetro
+      final nuevoPrecio = producto['precio'] as double;
+
+      // Actualiza directamente las propiedades del producto
+      productoExistente.precioLista = nuevoPrecio;
+      productoExistente.precioFinal = nuevoPrecio * (productoExistente.cantidad ?? 1);
 
       // Emitir el nuevo estado con la lista actualizada
-      emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+      final nuevoPrecioTotal = updatedList.fold<double>(
+        0,
+            (total, producto) => total + (producto.precioFinal ?? 0),
+      );
+
+      emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: true));
     } else {
-      // Manejo del caso cuando el producto no se encuentra en la lista (opcional)
-      // Puedes agregar una notificación o log para el producto no encontrado
+      // Manejo del caso cuando el producto no se encuentra en la lista
       print('Producto no encontrado en la lista de seleccionados');
     }
   }
 
   void cambiarCantidad(int index, int cambio) {
-    final updatedList = List<Map<String, dynamic>>.from(state.productosSeleccionados);
-    final nuevaCantidad = updatedList[index]['cantidad'] + cambio;
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    final nuevaCantidad = updatedList[index].cantidad! + cambio;
 
     if (nuevaCantidad < 1) return; // Evita cantidades negativas
 
     // Actualiza la cantidad y el precio total del producto
-    updatedList[index]['cantidad'] = nuevaCantidad;
-    updatedList[index]['precioTotal'] = updatedList[index]['precio'] * nuevaCantidad;
+    updatedList[index].cantidad = nuevaCantidad;
+    updatedList[index].precioFinal = updatedList[index].precioLista! * nuevaCantidad;
 
     // Emite un nuevo estado con la lista actualizada
     emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
@@ -159,31 +253,43 @@ class ProductosCubit extends Cubit<ProductosState> {
     return productos.map((producto) => producto.tipoProducto.toString() ?? 'Sin categoría').toSet().toList();
   }
 
-   actualizarPreciosDeProductosSeleccionados(
-      List<Map<String, dynamic>> productosSeleccionados,
+  void actualizarPreciosDeProductosSeleccionados(
+      List<ProductoConPrecioYStock> productosSeleccionados,
       List<ProductoConPrecioYStock> listaPrecios) {
 
+    // Mapea la lista de productos seleccionados para actualizar sus precios
     final updatedList = productosSeleccionados.map((producto) {
-      final codigoProducto = producto['codigo'];
+      final codigoProducto = producto.producto.barcode;
 
       // Encuentra el producto en la lista de precios basado en el código
       final productoConNuevoPrecio = listaPrecios.firstWhere(
-              (p) => p.producto.barcode == codigoProducto);
+            (p) => p.producto.barcode == codigoProducto,
+
+      );
 
       if (productoConNuevoPrecio != null) {
         final nuevoPrecio = productoConNuevoPrecio.precioLista;
 
         // Actualizar el producto con el nuevo precio y recalcular el precio total
-        return {
-          ...producto,
-          'precio': nuevoPrecio,
-          'precioTotal': nuevoPrecio! * producto['cantidad'],
-        };
+
+        producto.precioLista = nuevoPrecio;
+        producto.precioFinal = nuevoPrecio! * (producto.cantidad ?? 1);
+
+      return producto;
       }
-      return producto; // Si no se encuentra un nuevo precio, retorna el producto sin cambios
+
+      // Si no se encuentra un nuevo precio, retorna el producto sin cambios
+      return producto;
     }).toList();
 
-    // Emitir la nueva lista de productos seleccionados actualizados
-    emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+    // Recalcular el precio total global después de actualizar los productos
+    final nuevoPrecioTotal = updatedList.fold<double>(
+      0,
+          (total, producto) => total + (producto.precioFinal ?? 0),
+    );
+
+    // Emitir el nuevo estado con la lista actualizada y el precio total
+    emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: true));
   }
+
 }

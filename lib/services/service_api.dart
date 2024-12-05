@@ -90,7 +90,15 @@ class ApiServices{
           await DatabaseHelper.instance.insertUser(user);
         }
         // Buscar el usuario logueado por email
-        var loggedUser = users.firstWhere((user) => user.email == email);
+        User? loggedUser;
+
+        try {
+          loggedUser = users.firstWhere((user) => user.email == email);
+          print('Usuario encontrado: ${loggedUser.email}');
+        } catch (e) {
+          print('Error: No se encontró ningún usuario con el email: $email. Detalle: $e');
+          loggedUser = null; // Opcional, si necesitas un valor nulo para manejarlo luego
+        }
 
         // Emit the state with the logged user
         loginCubit.emit(LoginState(
@@ -101,6 +109,7 @@ class ApiServices{
           // Set the logged user
         ));
 
+        User.setCurrencyUser(loggedUser!);
 
 
         return users;

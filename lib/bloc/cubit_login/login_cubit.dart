@@ -85,6 +85,7 @@ class LoginCubit extends Cubit<LoginState> {
       if (email != null && password != null) {
         final token = await apiServices.loginUser(email, password);
         if (token != null) {
+
           // Guardamos las credenciales en SharedPreferences
           await _saveCredentials(email, password, token);
           emit(LoginState(isLogin: true, userToken: token, isPreference: false));

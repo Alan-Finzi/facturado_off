@@ -172,44 +172,50 @@ class NuevaVentaPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BuscarClienteWidget(),
-          const SizedBox(height: 16.0),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 1,
-                child: BuscarProductoScanner(),
-              ),
-              const SizedBox(width: 8.0), // Espaciado entre widgets
-              Expanded(
-                flex: 1,
-                child: BuscarProductoWidget(),
-              ),
-            ],
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => CatalogoPage()),
-              );
-              if (result != null) {
-                context.read<ProductosCubit>().agregarProducto(result);
-              }
-            },
-            child: const Text('Ver catálogo'),
-          ),
-          const SizedBox(height: 16.0),
-          const Text('Lista de precios: Precio base'),
-          const SizedBox(height: 16.0),
-          ListaPrecios(),
-          const SizedBox(height: 16.0),
-          _buildNotasYObservaciones(),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BuscarClienteWidget(),
+            const SizedBox(height: 16.0),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: BuscarProductoScanner(),
+                ),
+                const SizedBox(width: 8.0), // Espaciado entre widgets
+                Expanded(
+                  flex:2,
+                  child: BuscarProductoWidget(),
+                ),
+                Expanded(
+                  flex: 1,
+                  child:     ElevatedButton(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => CatalogoPage()),
+                      );
+                      if (result != null) {
+                        context.read<ProductosCubit>().agregarProducto(result);
+                      }
+                    },
+                    child: const Text('Ver catálogo'),
+                  ),
+                )
+              ],
+            ),
+
+            const SizedBox(height: 16.0),
+            const Text('Lista de precios: Precio base'),
+            const SizedBox(height: 16.0),
+            ListaPrecios(),
+            const SizedBox(height: 16.0),
+            _buildNotasYObservaciones(),
+          ],
+        ),
       ),
     );
   }
