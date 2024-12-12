@@ -26,6 +26,7 @@ class ApiServices{
   final  String apiUrlProductoStockSucursals = 'https://api.flamincoapp.com.ar/api/producto-stock-sucursals';
   final  String apiUrlListaPrecios = 'https://api.flamincoapp.com.ar/api/lista-precios';
   final  String apiUrlCategoria = 'https://api.flamincoapp.com.ar/api/categories';
+  final  String apiUrlDatosFacturacion = 'https://api.flamincoapp.com.ar/api/dato-facturacions';
 
 
   late  String tokenUser = '';
@@ -146,6 +147,8 @@ class ApiServices{
       throw Exception('Error al cargar los datos de la API');
     }
   }
+
+
 
   // Función para obtener clientes de la API y guardarlos en la base de datos
   Future<void> fetchClientesMostrador(String token) async {
@@ -274,6 +277,33 @@ class ApiServices{
 
     } else {
       throw Exception('Error al cargar los datos de la API');
+    }
+  }
+
+  Future<void> fetchDatosFacturacion(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse(apiUrlDatosFacturacion),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+
+        // Mapear la respuesta al modelo DatosFacturacionModel
+       // List<DatosFacturacionModel> datosFacturacion = data.map((json) => DatosFacturacionModel.fromMap(json)).toList();
+
+        // Insertar o actualizar los datos en la base de datos
+       // await DatabaseHelper.instance.insertOrUpdateDatosFacturacion(datosFacturacion);
+      } else {
+        throw Exception('Error al cargar los datos de facturación. Código: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error en fetchDatosFacturacion: $e');
+      throw Exception('Error al cargar los datos de facturación.');
     }
   }
 

@@ -20,13 +20,8 @@ class DatabaseHelper {
   static Database? _database;
 
   Future<Database> get database async {
-    // Si la base de datos ya está inicializada, retornamos la instancia
     if (_database != null) return _database!;
-
-    // Si no está inicializada, eliminamos la base de datos existente antes de crearla
     await deleteDatabaseIfExists();
-
-    // Inicializamos la base de datos
     _database = await _initDatabase();
     return _database!;
   }
@@ -36,11 +31,6 @@ class DatabaseHelper {
     await deleteDatabase(path);
   }
 
-
-  Future<void> insertUser(User user) async {
-    final db = await database;
-    await db.insert('users', user.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
-  }
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'flaminco_appv2_DB.db');
     print('La base de datos se guarda en la siguiente ruta: $path');
@@ -48,163 +38,7 @@ class DatabaseHelper {
       path,
       version: 18,
       onCreate: (db, version) async {
-        // Crear tablas
-        await db.execute('''
-        CREATE TABLE users(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT,
-          password TEXT ,
-          nombre_usuario TEXT,
-          apellido_usuario TEXT,
-          cantidad_sucursales INTEGER,
-          cantidad_empleados INTEGER,
-          name TEXT,
-          sucursal INTEGER,
-          email TEXT,
-          profile TEXT,
-          status TEXT,
-          external_auth TEXT,
-          external_id TEXT,
-          email_verified_at TEXT,
-          confirmed_at TEXT,
-          plan INTEGER,
-          last_login TEXT,
-          cantidad_login INTEGER,
-          comercio_id INTEGER,
-          cliente_id INTEGER,
-          image TEXT,
-          casa_central_user_id INTEGER,
-          id_lista_precio INTEGER
-        )
-      ''');
-
-        await db.execute('''
-        CREATE TABLE productos(
-          id INTEGER,
-          producto_id INTEGER,
-          name TEXT,
-          tipo_producto TEXT,
-          producto_tipo TEXT,
-          precio_interno REAL,
-          barcode TEXT,
-          cost REAL,
-          alerts REAL,
-          image TEXT,
-          category_id INTEGER,
-          marca_id INTEGER,
-          comercio_id INTEGER,
-          stock_descubierto TEXT,
-          proveedor_id INTEGER,
-          eliminado INTEGER,
-          unidad_medida INTEGER,
-          wc_product_id INTEGER,
-          wc_push INTEGER,
-          wc_image TEXT,
-          etiquetas TEXT,
-          mostrador_canal INTEGER,
-          ecommerce_canal INTEGER,
-          wc_canal INTEGER,
-          descripcion TEXT,
-          receta_id INTEGER
-        )
-      ''');
-
-        await db.execute('''
-        CREATE TABLE lista_precios(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          nombre TEXT,
-          comercio_id INTEGER,
-          descripcion TEXT,
-          eliminado INTEGER,
-          wc_key TEXT
-        )
-      ''');
-
-        await db.execute('''
-        CREATE TABLE Clientes_mostrador(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          creador_id INTEGER,
-          id_cliente TEXT,
-          activo INTEGER,
-          nombre TEXT,
-          sucursal_id INTEGER,
-          lista_precio INTEGER,
-          comercio_id INTEGER,
-          last_sale TEXT,
-          recontacto TEXT,
-          plazo_cuenta_corriente INTEGER,
-          monto_maximo_cuenta_corriente REAL,
-          saldo_inicial_cuenta_corriente REAL,
-          fecha_inicial_cuenta_corriente TEXT,
-          pais TEXT,
-          codigo_postal TEXT,
-          depto TEXT,
-          piso TEXT,
-          altura TEXT,
-          eliminado INTEGER,
-          email TEXT,
-          telefono TEXT,
-          observaciones TEXT,
-          localidad TEXT,
-          barrio TEXT,
-          provincia TEXT,
-          direccion TEXT,
-          dni TEXT,
-          status TEXT,
-          image TEXT,
-          wc_customer_id TEXT
-        )
-      ''');
-
-        // Crear la tabla productos_stock_sucursales
-        await db.execute('''
-        CREATE TABLE productos_stock_sucursales(
-          product_id INTEGER,
-          referencia_variacion TEXT,
-          comercio_id INTEGER,
-          sucursal_id INTEGER,
-          almacen_id INTEGER,
-          stock INTEGER,
-          stock_real INTEGER,
-          eliminado INTEGER,
-          PRIMARY KEY (product_id, referencia_variacion, comercio_id, sucursal_id, almacen_id)
-        )
-      ''');
-        await db.execute('''
-        CREATE TABLE productos_lista_precios(
-        product_id INTEGER,
-        referencia_variacion TEXT,
-        lista_id INTEGER,
-        precio_lista REAL,
-        comercio_id INTEGER,
-        eliminado INTEGER,
-        PRIMARY KEY (product_id, referencia_variacion, lista_id, comercio_id)
-       )
-      ''');
-
-        await db.execute('''
-CREATE TABLE categorias(
-  id INTEGER PRIMARY KEY,
-  comercio_id TEXT,
-  name TEXT,
-  image TEXT,
-  wc_category_id TEXT,
-  eliminado INTEGER,
-  created_at TEXT,
-  updated_at TEXT
-)
-''');
-// Crear la tabla productos_ivas actualizada
-        await db.execute('''
-CREATE TABLE productos_ivas(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  product_id INTEGER,       -- ID del producto
-  comercio_id INTEGER,       -- ID de la casa central
-  sucursal_id INTEGER,       -- ID de la sucursal
-  iva REAL,                  -- IVA en decimales (ej. 0.21 para 21%)
-  porcentaje REAL            -- Porcentaje del IVA en decimales
-)
-''');
+        await _createTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 4) {
@@ -214,111 +48,213 @@ CREATE TABLE productos_ivas(
     );
   }
 
-  // Métodos relacionados con la tabla users
-  Future<User?> getUser(String username) async {
-    Database db = await database;
-    List<Map<String, dynamic>> maps = await db.query(
-      'users',
-      where: 'username = ?',
-      whereArgs: [username],
-    );
-    if (maps.isNotEmpty) {
-      return User.fromJson(maps.first);
-    }
-    return null;
+  Future<void> _createTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        password TEXT,
+        nombre_usuario TEXT,
+        apellido_usuario TEXT,
+        cantidad_sucursales INTEGER,
+        cantidad_empleados INTEGER,
+        name TEXT,
+        sucursal INTEGER,
+        email TEXT,
+        profile TEXT,
+        status TEXT,
+        external_auth TEXT,
+        external_id TEXT,
+        email_verified_at TEXT,
+        confirmed_at TEXT,
+        plan INTEGER,
+        last_login TEXT,
+        cantidad_login INTEGER,
+        comercio_id INTEGER,
+        cliente_id INTEGER,
+        image TEXT,
+        casa_central_user_id INTEGER,
+        id_lista_precio INTEGER
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE productos(
+        id INTEGER,
+        producto_id INTEGER,
+        name TEXT,
+        tipo_producto TEXT,
+        producto_tipo TEXT,
+        precio_interno REAL,
+        barcode TEXT,
+        cost REAL,
+        alerts REAL,
+        image TEXT,
+        category_id INTEGER,
+        marca_id INTEGER,
+        comercio_id INTEGER,
+        stock_descubierto TEXT,
+        proveedor_id INTEGER,
+        eliminado INTEGER,
+        unidad_medida INTEGER,
+        wc_product_id INTEGER,
+        wc_push INTEGER,
+        wc_image TEXT,
+        etiquetas TEXT,
+        mostrador_canal INTEGER,
+        ecommerce_canal INTEGER,
+        wc_canal INTEGER,
+        descripcion TEXT,
+        receta_id INTEGER
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE lista_precios(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        comercio_id INTEGER,
+        descripcion TEXT,
+        eliminado INTEGER,
+        wc_key TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE Clientes_mostrador(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        creador_id INTEGER,
+        id_cliente TEXT,
+        activo INTEGER,
+        nombre TEXT,
+        sucursal_id INTEGER,
+        lista_precio INTEGER,
+        comercio_id INTEGER,
+        last_sale TEXT,
+        recontacto TEXT,
+        plazo_cuenta_corriente INTEGER,
+        monto_maximo_cuenta_corriente REAL,
+        saldo_inicial_cuenta_corriente REAL,
+        fecha_inicial_cuenta_corriente TEXT,
+        pais TEXT,
+        codigo_postal TEXT,
+        depto TEXT,
+        piso TEXT,
+        altura TEXT,
+        eliminado INTEGER,
+        email TEXT,
+        telefono TEXT,
+        observaciones TEXT,
+        localidad TEXT,
+        barrio TEXT,
+        provincia TEXT,
+        direccion TEXT,
+        dni TEXT,
+        status TEXT,
+        image TEXT,
+        wc_customer_id TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE productos_stock_sucursales(
+        product_id INTEGER,
+        referencia_variacion TEXT,
+        comercio_id INTEGER,
+        sucursal_id INTEGER,
+        almacen_id INTEGER,
+        stock INTEGER,
+        stock_real INTEGER,
+        eliminado INTEGER,
+        PRIMARY KEY (product_id, referencia_variacion, comercio_id, sucursal_id, almacen_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE productos_lista_precios(
+        product_id INTEGER,
+        referencia_variacion TEXT,
+        lista_id INTEGER,
+        precio_lista REAL,
+        comercio_id INTEGER,
+        eliminado INTEGER,
+        PRIMARY KEY (product_id, referencia_variacion, lista_id, comercio_id)
+      )
+    ''');
+    await db.execute('''
+  CREATE TABLE datos_facturacion(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER,
+    nombre_empresa TEXT,
+    cuit TEXT,
+    direccion TEXT,
+    telefono TEXT,
+    email TEXT,
+    tipo_factura TEXT,
+    localidad TEXT,
+    provincia TEXT,
+    pais TEXT,
+    codigo_postal TEXT,
+    imagen TEXT,
+    eliminado INTEGER
+  )
+''');
+    await db.execute('''
+      CREATE TABLE categorias(
+        id INTEGER PRIMARY KEY,
+        comercio_id TEXT,
+        name TEXT,
+        image TEXT,
+        wc_category_id TEXT,
+        eliminado INTEGER,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE productos_ivas(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        comercio_id INTEGER,
+        sucursal_id INTEGER,
+        iva REAL,
+        porcentaje REAL
+      )
+    ''');
   }
 
+  // Métodos para usuarios
+  Future<void> insertUser(User user) async {
+    final db = await database;
+    await db.insert('users', user.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
 
-  // Métodos relacionados con la tabla users
-  Future<User?> getUserByEmail(String email) async {
+  Future<User?> getUser(String username) async {
     Database db = await database;
-    List<Map<String, dynamic>> maps = await db.query(
-      'users',
-      where: 'email = ?',
-      whereArgs: [email],
-    );
-    if (maps.isNotEmpty) {
-      return User.fromJson(maps.first);
-    }
-    return null;
+    final maps = await db.query('users', where: 'username = ?', whereArgs: [username]);
+    return maps.isNotEmpty ? User.fromJson(maps.first) : null;
   }
 
   Future<List<User>> getUsers() async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('users');
+    final db = await database;
+    final maps = await db.query('users');
     return List.generate(maps.length, (i) => User.fromJson(maps[i]));
   }
 
-  // Métodos relacionados con la tabla productos
+  // Métodos para productos
   Future<void> insertProducto(ProductoModel producto) async {
-    Database db = await database;
-    await db.insert(
-      'productos',
-      producto.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final db = await database;
+    await db.insert('productos', producto.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
+
   Future<ProductoModel?> getProductoById(int id) async {
     final db = await database;
-    final result = await db.query(
-      'productos',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (result.isNotEmpty) {
-      return ProductoModel.fromMap(result.first); // Convertimos el resultado a ProductoModel
-    }
-
-    return null; // Retornamos null si no se encontró el producto
-  }
-
-// Función para actualizar un producto
-  Future<void> updateProducto(ProductoModel producto) async {
-    final db = await database;
-    await db.update(
-      'productos',
-      producto.toMap(), // Convertimos el producto a un mapa para la base de datos
-      where: 'id = ?',
-      whereArgs: [producto.id],
-    );
-  }
-
-  Future<void> insertOrUpdateProductos(List<ProductoModel> productos) async {
-    for (var producto in productos) {
-      final existingProduct = await getProductoById(producto.id!);
-
-      if (existingProduct != null) {
-        // Si el producto existe, actualizamos el registro
-        await updateProducto(producto);
-      } else {
-        // Si el producto no existe, lo insertamos
-        await insertProducto(producto);
-      }
-    }
-  }
-  Future<List<ProductoModel>> getProductos() async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('productos');
-    return List.generate(maps.length, (i) => ProductoModel.fromMap(maps[i]));
-  }
-
-  // Métodos relacionados con la tabla categorias
-  Future<void> insertCategoria(CategoriaModel categoria) async {
-    Database db = await database;
-    await db.insert(
-      'categorias',
-      categoria.toJson(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final maps = await db.query('productos', where: 'id = ?', whereArgs: [id]);
+    return maps.isNotEmpty ? ProductoModel.fromMap(maps.first) : null;
   }
 
   Future<void> insertCategorias(List<CategoriaModel> categorias) async {
-    for (var categoria in categorias) {
-      if(categoria.eliminado ==0){
-        await insertCategoria(categoria);
+    final db = await database;
+    await db.transaction((txn) async {
+      for (var categoria in categorias) {
+        await txn.insert('categorias', categoria.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
       }
-    }
+    });
   }
 
   Future<List<CategoriaModel>> getCategorias() async {
@@ -334,6 +270,25 @@ CREATE TABLE productos_ivas(
       listaPrecio.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<List<ProductoModel>> getProductos() async {
+    final db = await database;
+    final maps = await db.query('productos');
+    return maps.map((map) => ProductoModel.fromMap(map)).toList();
+  }
+
+  Future<void> insertOrUpdateProductos(List<ProductoModel> productos) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (var producto in productos) {
+        await txn.insert(
+          'productos',
+          producto.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   Future<void> insertListaPrecios(List<ListaPreciosModel> listaPrecios) async {
