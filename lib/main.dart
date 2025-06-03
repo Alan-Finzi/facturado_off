@@ -53,7 +53,7 @@ class BlocProviders extends StatelessWidget {
         BlocProvider(
             create: (context) {
               final loginCubit = BlocProvider.of<LoginCubit>(context);
-              return ProductosConPrecioYStockCubit(UserRepository(), loginCubit);
+              return ProductosMaestroCubit( );
             }
         ),
         BlocProvider(create: (context) => ProductosCubit(UserRepository(), currentListProductCubit: [])),

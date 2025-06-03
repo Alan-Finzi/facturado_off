@@ -58,12 +58,17 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
   }
 
 
-  void seleccionarCliente(ClientesMostrador cliente) {
+  void seleccionarCliente(ClientesMostrador cliente, bool value) {
+
+
     emit(state.copyWith(
       clienteSeleccionado: cliente,
-      buscarCliente: true,
+      buscarCliente: !value,
     ));
   }
+
+
+
 
   // Método para actualizar un cliente
   Future<void> updateCliente(ClientesMostrador cliente) async {

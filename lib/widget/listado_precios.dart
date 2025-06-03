@@ -91,8 +91,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
                 _controllers[index].text = producto.cantidad.toString();
                 return DataRow(
                   cells: [
-                    DataCell(Text(producto.producto.barcode ?? '')),
-                    DataCell(Text(producto.producto.name ?? '')),
+                    DataCell(Text(producto.datum?.barcode ?? 'Sin código')),
+                    DataCell(Text(producto.datum?.nombre ?? 'Sin nombre')),
+
                     DataCell(Text('\$ ${producto.precioLista ?? ''}')),
                     DataCell(
                       Row(

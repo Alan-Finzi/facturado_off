@@ -6,6 +6,7 @@ import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_login/login_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/lista_precio_model.dart';
+import '../models/productos_maestro.dart';
 import 'build_text_field.dart';
 class AltaClienteDialog extends StatefulWidget {
   @override
@@ -17,7 +18,7 @@ class _AltaClienteDialogState extends State<AltaClienteDialog> {
   String? _selectedPriceList;
   String? _selectedPriceListId;
 
-  List<ListaPreciosModel> _priceList = [];
+  List<Lista> _priceList = [];
   List<String> _provinces = [
     'Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
     'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza',
@@ -54,12 +55,12 @@ class _AltaClienteDialogState extends State<AltaClienteDialog> {
 
   void _fetchPriceList() async {
     // Asume que DatabaseHelper está configurado y tiene un método para obtener la lista de precios
-    List<ListaPreciosModel> priceList = await DatabaseHelper.instance.getListaPrecios();
+    List<Lista> priceList = await DatabaseHelper.instance.getListaPrecios();
     setState(() {
       _priceList = priceList;
       // Asegúrate de inicializar `_selectedPriceListId` con un valor válido si hay datos
       if (_priceList.isNotEmpty) {
-        _selectedPriceListId = _priceList[0].wcKey; // O cualquier valor que quieras usar como predeterminado
+        _selectedPriceListId = _priceList[0].id.toString(); // O cualquier valor que quieras usar como predeterminado
       }
     });
   }
@@ -193,9 +194,9 @@ class _AltaClienteDialogState extends State<AltaClienteDialog> {
                     onChanged: (newValue) => setState(() {
                       _selectedPriceListId = newValue;
                     }),
-                    items: _priceList.map<DropdownMenuItem<String>>((ListaPreciosModel model) {
+                    items: _priceList.map<DropdownMenuItem<String>>((Lista model) {
                       return DropdownMenuItem<String>(
-                        value: model.wcKey, // Suponiendo que el modelo tiene un campo `id`
+                        value: model.id.toString(), // Suponiendo que el modelo tiene un campo `id`
                         child: Text(model.nombre!),
                       );
                     }).toList(),

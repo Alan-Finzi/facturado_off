@@ -21,26 +21,29 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
       emit(SynchronizationInProgress(progress: 0.0, currentTask: "Iniciando sincronización"));
 
       await apiServices.fetchUsersData(token, email, loginCubit);
-      await apiServices.fetchProductos(token);
+      //await apiServices.fetchProductos(token);
 
       emit(const SynchronizationInProgress(progress: 0.1, currentTask: "Sincronización de Productos"));
 
       await apiServices.fetchProductosIvas(token);
       emit(const SynchronizationInProgress(progress: 0.2, currentTask: "Sincronización Productos Ivas"));
 
-      await apiServices.fetchProductosListaPrecio(token);
+      //await apiServices.fetchProductosListaPrecio(token);
       emit(const SynchronizationInProgress(progress: 0.3, currentTask: "Sincronización Productos Lista Precio"));
 
       await apiServices.fetchDatosFacturacion(token);
-      emit(const SynchronizationInProgress(progress: 0.4, currentTask: "Sincronización Datos Facturacion" ));
+      emit(const SynchronizationInProgress(progress: 0.4, currentTask: "Sincronización Datos variacion" ));
 
-      await apiServices.fetchProductosStockSucursals(token);
+      await apiServices.fetchVariaciones(token);
+      emit(const SynchronizationInProgress(progress: 0.5, currentTask: "Sincronización Datos Facturacion" ));
+
+      //await apiServices.fetchProductosStockSucursals(token);
       emit(const SynchronizationInProgress(progress: 0.6, currentTask: "Sincronización Stock Sucursales"));
 
       await apiServices.fetchClientesMostrador(token);
       emit(const SynchronizationInProgress(progress: 0.7, currentTask: "Sincronización Clientes"));
 
-      await apiServices.fetchListaPrecio(token);
+      //await apiServices.fetchListaPrecio(token);
       emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización Lista Precio"));
 
       await apiServices.fetchCategorias(token);
@@ -48,7 +51,7 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
       emit(SynchronizationInProgress(progress: 1, currentTask: "Sincronización completada"));
       final directory = await getApplicationDocumentsDirectory();
-      final path = join(directory.path, 'flaminco_appv1_DB.db');
+      final path = join(directory.path, 'flaminco_appv13_DB.db');
       print('------------------------------');
       print(path.toString());
       print('--------------------------------');

@@ -6,11 +6,13 @@ import '../bloc/cubit_login/login_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/categorias_model.dart';
 import '../models/clientes_mostrador.dart';
+import '../models/datos_facturacion_model.dart';
 import '../models/lista_precio_model.dart';
 import '../models/producto.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_lista_precios_model.dart';
+import '../models/productos_maestro.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
 
@@ -18,7 +20,8 @@ import '../models/user.dart';
 class ApiServices{
 
   final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users';
-  final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/cliente-mostradors';
+  //final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/cliente-mostradors';
+  final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/clientes?casa_central_id=362&comercio_id=362';
   final String apiUrlLogin = 'https://api.flamincoapp.com.ar/api/login';
   final String apiUrlProducto= 'https://api.flamincoapp.com.ar/api/products';
   final  String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
@@ -27,6 +30,7 @@ class ApiServices{
   final  String apiUrlListaPrecios = 'https://api.flamincoapp.com.ar/api/lista-precios';
   final  String apiUrlCategoria = 'https://api.flamincoapp.com.ar/api/categories';
   final  String apiUrlDatosFacturacion = 'https://api.flamincoapp.com.ar/api/dato-facturacions';
+  final  String apiUrlvariaciones = 'https://api.flamincoapp.com.ar/api/productos-ver';
 
 
   late  String tokenUser = '';
@@ -99,6 +103,7 @@ class ApiServices{
         } catch (e) {
           print('Error: No se encontró ningún usuario con el email: $email. Detalle: $e');
           loggedUser = null; // Opcional, si necesitas un valor nulo para manejarlo luego
+          return null;
         }
 
         // Emit the state with the logged user
@@ -149,6 +154,64 @@ class ApiServices{
   }
 
 
+  // api
+  Future<void> fetchVariaciones(String token) async {
+    try {
+      int currentPage = 1; // Página inicial
+      bool hasMorePages = true; // Indicador para continuar con la paginación
+      final String? comercioId = User.currencyUser?.comercioId;
+      final String? sucursalId = User.currencyUser?.id.toString();
+
+// Determinar si se usa sucursal o comercioId
+      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId!) : comercioId!;
+
+// Construir la URL
+      //final Uri apiUrl = Uri.parse('$apiUrlvariaciones?${'comercio_id'}=$idBusqueda');
+      //final Uri apiUrl = Uri.parse('https://api.flamincoapp.com.ar/api/productos-ver?comercio_id=295');
+      final Uri apiUrl = Uri.parse(apiUrlvariaciones);
+
+
+        final response = await http.get(
+          Uri.parse('$apiUrl'), // Agrega el parámetro de página
+          headers: {
+            'Authorization': 'Bearer $token', // Pasamos el token en el header
+            'Content-Type': 'application/json', // Opcional según la API
+          },
+        );
+
+        if (response.statusCode == 200) {
+          // Decodificar los datos de la respuesta
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+          // Procesar los datos de la página actual
+          final ProductoResponse productoResponse = ProductoResponse.fromJson(responseData);
+
+          // Validamos si alguno de los elementos en `data` cumple con la condición
+
+            try {
+              // Insertamos en la base de datos
+              await DatabaseHelper.instance.insertProductoResponse(productoResponse);
+              print("Inserción completada exitosamente.");
+
+            } catch (e) {
+              // Capturamos y mostramos cualquier error durante la inserción
+              print("Error al insertar ProductoResponse: $e");
+            }
+
+
+          // Verifica si hay más páginas
+          hasMorePages = responseData['next_page_url'] != null;
+          currentPage++; // Incrementa para la próxima página
+        } else {
+          // Manejo de errores
+          throw Exception('Error al cargar los datos de la API. Código: ${response.statusCode}');
+        }
+
+    } catch (e) {
+      print('Error al procesar las variaciones: $e');
+    }
+  }
+
 
   // Función para obtener clientes de la API y guardarlos en la base de datos
   Future<void> fetchClientesMostrador(String token) async {
@@ -166,7 +229,10 @@ class ApiServices{
 
       for (var cliente in clientes) {
         await DatabaseHelper.instance.insertCliente(cliente);
+
+
       }
+
     } else {
       throw Exception('Error al cargar los datos de cliente mostrador');
     }
@@ -294,10 +360,10 @@ class ApiServices{
         final List<dynamic> data = jsonDecode(response.body);
 
         // Mapear la respuesta al modelo DatosFacturacionModel
-       // List<DatosFacturacionModel> datosFacturacion = data.map((json) => DatosFacturacionModel.fromMap(json)).toList();
+        List<DatosFacturacionModel> datosFacturacion = data.map((json) => DatosFacturacionModel.fromJson(json)).toList();
 
         // Insertar o actualizar los datos en la base de datos
-       // await DatabaseHelper.instance.insertOrUpdateDatosFacturacion(datosFacturacion);
+        await DatabaseHelper.instance.insertDatosFacturacionList(datosFacturacion);
       } else {
         throw Exception('Error al cargar los datos de facturación. Código: ${response.statusCode}');
       }

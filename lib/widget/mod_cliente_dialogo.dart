@@ -5,6 +5,7 @@ import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/lista_precio_model.dart';
+import '../models/productos_maestro.dart';
 import '../services/user_repository.dart';
 import 'build_text_field.dart';
 
@@ -37,7 +38,7 @@ class _Mod_baja_clienteState extends State<Mod_baja_cliente> {
   final UserRepository userRepository = UserRepository();
   String? _selectedProvince;
   String? _selectedPriceListId;
-  List<ListaPreciosModel> _priceList = [];
+  List<Lista> _priceList = [];
   List<String> _provinces = [
     'Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
     'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza',
@@ -53,11 +54,11 @@ class _Mod_baja_clienteState extends State<Mod_baja_cliente> {
   }
 
   void _fetchPriceList() async {
-    List<ListaPreciosModel> priceList = await DatabaseHelper.instance.getListaPrecios();
+    List<Lista> priceList = await DatabaseHelper.instance.getListaPrecios();
     setState(() {
       _priceList = priceList;
       if (_priceList.isNotEmpty) {
-        _selectedPriceListId = _priceList[0].wcKey;
+        _selectedPriceListId = _priceList[0].id.toString();
       }
     });
   }
@@ -332,9 +333,9 @@ class _Mod_baja_clienteState extends State<Mod_baja_cliente> {
                     onChanged: (newValue) => setState(() {
                       _selectedPriceListId = newValue;
                     }),
-                    items: _priceList.map<DropdownMenuItem<String>>((ListaPreciosModel value) {
+                    items: _priceList.map<DropdownMenuItem<String>>((Lista value) {
                       return DropdownMenuItem<String>(
-                        value: value.wcKey.toString(),
+                        value: value.id.toString(),
                         child: Text(value.nombre!),
                       );
                     }).toList(),

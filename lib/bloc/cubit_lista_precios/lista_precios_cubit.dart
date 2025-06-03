@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import '../../models/lista_precio_model.dart';
+import '../../models/productos_maestro.dart';
 import '../../services/user_repository.dart';
 import 'lista_precios_state.dart';
 
@@ -26,8 +27,8 @@ class ListaPreciosCubit extends Cubit<ListaPreciosState> {
     }
   }
 
-  void addListaPrecio(ListaPreciosModel listaPrecio) {
-    final updatedList = List<ListaPreciosModel>.from(state.currentList);
+  void addListaPrecio(Lista listaPrecio) {
+    final updatedList = List<Lista>.from(state.currentList);
     updatedList.add(listaPrecio);
     emit(state.copyWith(currentList: updatedList));
   }

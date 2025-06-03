@@ -73,8 +73,44 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
               final selectedCliente = clienteSugerencias.firstWhere(
                     (c) => c.searchKey == cliente.searchKey,
               );
-              print('Cliente seleccionado: ${selectedCliente.searchKey} - DNI: ${selectedCliente.item}');
-              _controller.text = selectedCliente.searchKey;
+              // Acceder al estado del ClientesMostradorCubit para obtener la lista de clientes
+              final clientes = context.read<ClientesMostradorCubit>().state.clientes;
+              final value = context.read<ClientesMostradorCubit>().state.buscarCliente;
+              // Buscar el cliente original en la lista de clientes basada en la búsqueda
+              final clienteCorrespondiente =clientes.firstWhere(
+                    (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
+              );
+
+              // Si se encontró el cliente correspondiente, seleccionarlo
+              if (clienteCorrespondiente != null) {
+                // Mostrar el pop-up para notificar al usuario que los productos se limpiarán
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Cambio de Cliente'),
+                      content: Text('Los productos seleccionados se limpiarán debido a la actualización de precios.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Cerrar el pop-up
+
+                            // Primero, actualizar el cliente seleccionado
+                            context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente,value);
+
+                            // Limpiar los productos seleccionados después de haber actualizado el cliente
+                            context.read<ProductosCubit>().limpiarProductosSeleccionados();
+                          },
+                          child: Text('Aceptar'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+                _controller.text = selectedCliente.searchKey;
+              } else {
+                print('Cliente no encontrado');
+              }
             },
           ),
           SizedBox(height: 16),

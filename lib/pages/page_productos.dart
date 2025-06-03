@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_thema/thema_cubit.dart';
 
 import '../helper/database_helper.dart';
+import '../models/productos_maestro.dart';
 class ProductSearchPage extends StatefulWidget {
   const ProductSearchPage({Key? key}) : super(key: key);
 
@@ -12,8 +13,8 @@ class ProductSearchPage extends StatefulWidget {
 }
 
 class _ProductSearchPageState extends State<ProductSearchPage> {
-  List<Product> products = [];
-  List<Product> filteredProducts = [];
+  List products = [];
+  List filteredProducts = [];
   TextEditingController nameSearchController = TextEditingController();
   TextEditingController codeSearchController = TextEditingController();
 
@@ -36,8 +37,8 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
 
     setState(() {
       filteredProducts = products.where((product) {
-        bool matchesName = product.name.toLowerCase().contains(nameQuery);
-        bool matchesCode = product.code.toLowerCase().contains(codeQuery);
+        bool matchesName = product.name!.toLowerCase().contains(nameQuery);
+        bool matchesCode = product.barcode!.toLowerCase().contains(codeQuery);
         return matchesName && matchesCode;
       }).toList();
     });
@@ -89,28 +90,9 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
               itemCount: filteredProducts.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  leading: Container(
-                    width: screenSize.width * 0.2,
-                    height: screenSize.height * 0.2,
-                    child: Center(
-                      child: Image.asset(
-                        filteredProducts[index].image,
-                        width: screenSize.width * 0.2,
-                        height: screenSize.height * 0.2,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.shopping_cart,
-                            size: screenSize.width * 0.05,
-                            color: Colors.grey,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  title: Text(filteredProducts[index].name),
+                  title: Text(filteredProducts[index].name!),
                   subtitle: Text(
-                    'Código: ${filteredProducts[index].code}\n\$${filteredProducts[index].price}\nStock: ${filteredProducts[index].stock}',
+                    'Código: ${filteredProducts[index].barcode}\nStock: ${filteredProducts[index].stocks}',
                     style: TextStyle(
                       color: themeCubit.state.isDark ? Colors.white : Colors.black,
                     ),

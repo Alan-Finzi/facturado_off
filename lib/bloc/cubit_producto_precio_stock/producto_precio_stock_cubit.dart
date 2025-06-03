@@ -7,53 +7,47 @@ import '../../model_relacion/producto_stock.dart';
 import '../../models/Producto_precio_stock.dart';
 import '../../models/producto.dart';
 import '../../models/productos_lista_precios_model.dart';
+import '../../models/productos_maestro.dart';
 import '../../models/productos_stock_sucursales.dart';
 import '../../services/user_repository.dart';
 import '../cubit_login/login_cubit.dart';
 
 part 'producto_precio_stock_state.dart';
-class ProductosConPrecioYStockCubit extends Cubit<ProductosConPrecioYStockState> {
-  final UserRepository userRepository;
-  final LoginCubit loginCubit; // Inyectamos el cubit de autenticación
+class ProductosMaestroCubit extends Cubit<ProductosMaestroState> {
+  ProductosMaestroCubit() : super(ProductosMaestroState());
 
-  ProductosConPrecioYStockCubit(this.userRepository, this.loginCubit)
-      : super(ProductosConPrecioYStockState(productos: [], filteredProductosConPrecioYStock: [], isLoading: false));
+  Future<void> cargarProductosConPrecioYStock(int listaId, int sucursalId) async {
+    emit(state.copyWith(isLoading: true));
 
-  Future<List<ProductoConPrecioYStock>> cargarProductosConPrecioYStock(int listaId, int sucursal) async {
-    emit(state.copyWith(isLoading: true, filteredProductosConPrecioYStock: []));
+    try {
+      final productoResponse = await DatabaseHelper.instance.getProductoResponseBySucursalId(sucursalId, listaId);
 
+      emit(state.copyWith(
+        isLoading: false,
+        productoResponse: productoResponse,
 
-    // Crear la lista de ProductoConPrecioYStock
-    List<ProductoConPrecioYStock> productosConPrecioYStock = await userRepository.addQueryProductoCatalogo(listaId: listaId, sucursalId:sucursal);
+      ));
 
-    emit(state.copyWith(isLoading: false, productos: productosConPrecioYStock, filteredProductosConPrecioYStock: [], ));
-
-    // Filtrar productos después de cargarlos
-    filterProductosConPrecioYStock('', ''); // Puedes ajustar los parámetros iniciales
-    return productosConPrecioYStock;
+      // Filtrar datos inicialmente si es necesario
+      filterProductosConPrecioYStock('', '');
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, errorMessage: 'Error al cargar productos: $e'));
+    }
   }
+  void filterProductosConPrecioYStock(String query, String categoriaName) {
+    final productos = state.productoResponse?.data ?? [];
 
-  void filterProductosConPrecioYStock(String query, String categoriaSeleccionada) {
-    final originalList = state.productos;
-    final categoria = categoriaSeleccionada.isNotEmpty ? categoriaSeleccionada : 'Todas las categorías';
+    final productosFiltrados = productos.where((producto) {
+      final nombre = producto.nombre?.toLowerCase() ?? '';
+      final codigo = producto.barcode?.toLowerCase() ?? '';
+      final categoria = producto.categoriaName?.toLowerCase() ?? '';
 
-    // Divide el query en palabras separadas por espacios
-    final queryKeywords = query.toLowerCase().split(' ').where((keyword) => keyword.isNotEmpty).toList();
+      final matchesCategoria = categoriaName.isEmpty || categoria == categoriaName.toLowerCase();
+      final matchesQuery = nombre.contains(query.toLowerCase()) || codigo.contains(query.toLowerCase());
 
-    final filteredList = originalList.where((productoConPrecioYStock) {
-      // Verifica si el nombre o el código de barras contiene todas las palabras
-      final matchesQuery = queryKeywords.isEmpty || queryKeywords.every((keyword) {
-        final nameMatches = productoConPrecioYStock.producto.name?.toLowerCase().contains(keyword) ?? false;
-        final barcodeMatches = productoConPrecioYStock.producto.barcode?.toLowerCase().contains(keyword) ?? false;
-        return nameMatches || barcodeMatches;
-      });
-
-      final matchesCategoria = categoria == 'Todas las categorías' ||
-          productoConPrecioYStock.categoria == categoria;
-
-      return matchesQuery && matchesCategoria;
+      return matchesCategoria && matchesQuery;
     }).toList();
 
-    emit(state.copyWith(filteredProductosConPrecioYStock: filteredList));
+    emit(state.copyWith(filteredProductoResponse: ProductoResponse(data: productosFiltrados)));
   }
 }

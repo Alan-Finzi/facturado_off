@@ -8,6 +8,7 @@ import '../models/clientes_mostrador.dart';
 import '../models/lista_precio_model.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_lista_precios_model.dart';
+import '../models/productos_maestro.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
 class UserRepository {
@@ -63,7 +64,7 @@ class UserRepository {
     return await _dbHelper.getProductosConPrecioYStockQuery(sucursalId: sucursalId,listaId: listaId);
   }
 
-  Future<List<ListaPreciosModel>> fetchListaPrecios() async {
+  Future<List<Lista>> fetchListaPrecios() async {
     return await _dbHelper.getListaPrecios();
   }
 
@@ -96,6 +97,8 @@ class UserRepository {
   Future<List<ProductosStockSucursalesModel>> fetchProductosStockSucursales({required int sucursal}) async {
     return await _dbHelper.getProductosStockSucursales(sucursalId: sucursal);
   }
+
+
 
   // Métodos relacionados con la tabla productos_ivas
   Future<void> addProductoIva(ProductosIvasModel productoIva) async {

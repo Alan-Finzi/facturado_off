@@ -5,6 +5,12 @@ import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
+import '../models/Producto_precio_stock.dart';
+import '../models/productos_maestro.dart';
+import '../models/user.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 class CatalogoPage extends StatefulWidget {
   @override
   _CatalogoPageState createState() => _CatalogoPageState();
@@ -14,57 +20,68 @@ class _CatalogoPageState extends State<CatalogoPage> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategoria = 'Todas las categorías';
   int limit = 100;
-  int? _listaId; // Almacena el valor de listaId seleccionado
+  int? _listaId;
 
   @override
   void initState() {
     super.initState();
     _initializeListaId();
-    _searchController.addListener(() {
-      final query = _searchController.text.toLowerCase();
-      context.read<ProductosConPrecioYStockCubit>().filterProductosConPrecioYStock(
-        query,
-        _selectedCategoria == 'Todas las categorías' ? '' : _selectedCategoria,
-      );
-    });
-  }
-
-  void _initializeListaId() {
-    final clientesMostradorCubit = context.read<ClientesMostradorCubit>();
-    final loginCubit = context.read<LoginCubit>();
-
-    // Determina el listaId basado en el cliente seleccionado o el usuario
-    final listaId = (clientesMostradorCubit.state.clienteSeleccionado?.listaPrecio ??
-        loginCubit.state.user?.idListaPrecio) ?? 1;
-
-    // Actualiza _listaId solo si es diferente para evitar recargas innecesarias
-    if (_listaId != listaId) {
-      setState(() {
-        _listaId = listaId;
-      });
-
-      // Cargar los productos con el listaId actualizado
-      context.read<ProductosConPrecioYStockCubit>().cargarProductosConPrecioYStock(_listaId!,loginCubit.state.user!.sucursal!);
-    }
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _initializeListaId(); // Verifica y actualiza _listaId cada vez que cambian las dependencias
+    _initializeListaId();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _initializeListaId() {
+    final clientesMostradorCubit = context.read<ClientesMostradorCubit>();
+    final loginCubit = context.read<LoginCubit>();
+    final user = User.currencyUser;
+
+    final sucursalId = int.tryParse(user?.sucursal?.toString() ?? '') ?? 0;
+
+
+    final listaId = (clientesMostradorCubit.state.clienteSeleccionado?.listaPrecio ??
+        loginCubit.state.user?.idListaPrecio) ??
+        1;
+
+    if (_listaId != listaId) {
+      setState(() {
+        _listaId = listaId;
+      });
+
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_listaId!, sucursalId);
+    }
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    context.read<ProductosMaestroCubit>().filterProductosConPrecioYStock(
+      query,
+      _selectedCategoria == 'Todas las categorías' ? '' : _selectedCategoria,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Catálogo'),
+        title: const Text('Catálogo'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Search Field
               TextField(
                 controller: _searchController,
                 decoration: const InputDecoration(
@@ -72,119 +89,36 @@ class _CatalogoPageState extends State<CatalogoPage> {
                   prefixIcon: Icon(Icons.search),
                 ),
               ),
-              SizedBox(height: 16.0),
-              BlocBuilder<ProductosConPrecioYStockCubit, ProductosConPrecioYStockState>(
-                builder: (context, productosConPrecioYStockState) {
-                  final categorias = productosConPrecioYStockState.productos
-                      .map((productoConPrecioYStock) => productoConPrecioYStock.categoria ?? 'Sin categoría')
-                      .toSet()
-                      .toList();
+              const SizedBox(height: 16.0),
 
-                  return DropdownSearch<String>(
-                    items: ['Todas las categorías', ...categorias],
-                    dropdownDecoratorProps: const DropDownDecoratorProps(
-                      dropdownSearchDecoration: InputDecoration(
-                        labelText: "Seleccionar categoría",
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 40),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    selectedItem: _selectedCategoria,
-                    onChanged: (categoria) {
-                      if (categoria != null) {
-                        setState(() {
-                          _selectedCategoria = categoria;
-                        });
-                        context.read<ProductosConPrecioYStockCubit>().filterProductosConPrecioYStock(
-                          _searchController.text.toLowerCase(),
-                          categoria == 'Todas las categorías' ? '' : categoria,
-                        );
-                      }
-                    },
-                    popupProps: PopupProps.menu(
-                      showSearchBox: true,
-                      searchFieldProps: const TextFieldProps(
-                        decoration: InputDecoration(
-                          hintText: "Buscar categoría",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      itemBuilder: (context, item, isSelected) {
-                        return ListTile(
-                          title: Text(item),
-                        );
-                      },
-                    ),
-                  );
+              // Dropdown for Categories
+              _buildCategoryDropdown(),
+
+              const SizedBox(height: 16.0),
+
+              // Product Table
+              _buildProductTable(),
+
+              const SizedBox(height: 16.0),
+
+              // Load More Button
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    limit += 100;
+                  });
                 },
+                child: const Text('Cargar más productos'),
               ),
-              SizedBox(height: 16.0),
-              BlocBuilder<ProductosConPrecioYStockCubit, ProductosConPrecioYStockState>(
-                builder: (context, productosConPrecioYStockState) {
-                  if (productosConPrecioYStockState.isLoading) {
-                    return Center(child: CircularProgressIndicator());
-                  }
 
-                  if (productosConPrecioYStockState.errorMessage != null) {
-                    return Text('Error: ${productosConPrecioYStockState.errorMessage}');
-                  }
+              const SizedBox(height: 16.0),
 
-                  final productos = productosConPrecioYStockState.filteredProductosConPrecioYStock.isNotEmpty
-                      ? productosConPrecioYStockState.filteredProductosConPrecioYStock
-                      : productosConPrecioYStockState.productos;
-
-                  final limitedList = productos.take(limit).map((productoConPrecioYStock) {
-                    return DataRow(cells: [
-                      DataCell(Text(productoConPrecioYStock.producto.name ?? '')),
-                      DataCell(Text(productoConPrecioYStock.producto.barcode ?? '')),
-                      DataCell(Text('\$${productoConPrecioYStock.precioLista?.toStringAsFixed(2) ?? '0.00'}')),
-                      DataCell(Text('${productoConPrecioYStock.stock ?? 0}')),
-                      DataCell(Text(productoConPrecioYStock.categoria ?? 'Sin categoría')),
-                      DataCell(
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context, {
-                              'productoConPrecioYStock': productoConPrecioYStock,
-                            });
-                          },
-                          child: Text('Agregar'),
-                        ),
-                      ),
-                    ]);
-                  }).toList();
-
-                  return Column(
-                    children: [
-                      DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Producto')),
-                          DataColumn(label: Text('Código')),
-                          DataColumn(label: Text('Precio de Lista')),
-                          DataColumn(label: Text('Stock')),
-                          DataColumn(label: Text('Categoría')),
-                          DataColumn(label: Text('Acción')),
-                        ],
-                        rows: limitedList,
-                      ),
-                      SizedBox(height: 16.0),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            limit += 100;
-                          });
-                        },
-                        child: Text('Cargar más productos'),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              SizedBox(height: 16.0),
+              // Close Button
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: Text('Cerrar'),
+                child: const Text('Cerrar'),
               ),
             ],
           ),
@@ -192,4 +126,216 @@ class _CatalogoPageState extends State<CatalogoPage> {
       ),
     );
   }
+
+  Widget _buildCategoryDropdown() {
+    return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state.errorMessage != null) {
+          return Text('Error: ${state.errorMessage}');
+        }
+
+        final productos = state.filteredProductoResponse?.data ?? [];
+
+        // Obtener nombres únicos de categoría
+        final categorias = productos
+            .map((producto) => producto.categoriaName ?? 'Sin categoría')
+            .toSet()
+            .toList();
+
+        return DropdownSearch<String>(
+          items: ['Todas las categorías', ...categorias],
+          selectedItem: _selectedCategoria,
+          dropdownDecoratorProps: const DropDownDecoratorProps(
+            dropdownSearchDecoration: InputDecoration(
+              labelText: "Seleccionar categoría",
+              contentPadding: EdgeInsets.symmetric(horizontal: 10),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          onChanged: (categoria) {
+            if (categoria != null) {
+              setState(() {
+                _selectedCategoria = categoria;
+              });
+              context.read<ProductosMaestroCubit>().filterProductosConPrecioYStock(
+                _searchController.text.toLowerCase(),
+                categoria == 'Todas las categorías' ? '' : categoria,
+              );
+            }
+          },
+          popupProps: PopupProps.menu(
+            showSearchBox: true,
+            searchFieldProps: const TextFieldProps(
+              decoration: InputDecoration(
+                hintText: "Buscar categoría",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            itemBuilder: (context, item, isSelected) {
+              return ListTile(title: Text(item));
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductTable() {
+    return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state.errorMessage != null) {
+          return Center(
+            child: Text(
+              'Error: ${state.errorMessage}',
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final productos = state.filteredProductoResponse?.data?.isNotEmpty == true
+            ? state.filteredProductoResponse!.data!
+            : state.productoResponse?.data ?? [];
+
+        if (productos.isEmpty) {
+          return const Center(child: Text('No hay productos disponibles.'));
+        }
+
+        return Column(
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('Producto')),
+                  DataColumn(label: Text('Código')),
+                  DataColumn(label: Text('Precio de Lista')),
+                  DataColumn(label: Text('Stock')),
+                  DataColumn(label: Text('Categoría')),
+                  DataColumn(label: Text('Acción')),
+                ],
+                rows: productos.take(20).map((producto) {
+                  final listaPrecio = (producto.productosVariaciones?.any((v) => v.listasPrecios?.isNotEmpty == true) ?? false)
+                      ? "producto con variacion"
+                      : (producto.listasPrecios?.isNotEmpty == true
+                      ? (producto.listasPrecios!
+                      .firstWhere(
+                       (lp) => lp.listaId == 0,
+                      // (lp) => lp.listaId == listaId, id lista de cliente
+                    orElse: () => ListasPrecio(precioLista: '0.0'),
+                  )
+                      .precioLista ?? '0.0')
+                      : '0.0');
+                  final stock = producto.stocks?.isNotEmpty == true
+                      ? producto.stocks!.first.stock.toString()
+                      : '0';
+                  final categoria = producto.categoriaName?.toString() ?? 'Sin categoría';
+
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(producto.nombre ?? 'N/A')),
+                      DataCell(Text(producto.barcode ?? 'N/A')),
+                      DataCell(Text(listaPrecio)),
+                      DataCell(Text(stock)),
+                      DataCell(Text(categoria)),
+                      DataCell(
+                        ElevatedButton(
+                          onPressed: () async {
+                            if ((producto.productosVariaciones?.isNotEmpty ?? false)) {
+                              await mostrarVariacionesPopup(context, producto, 0 ,317);
+                            } else {
+                              // No tiene variaciones, se agrega directo
+                              Navigator.pop(context, {
+                                'productoSeleccionado': producto,
+                                'variacionSeleccionada': null,
+                              });
+                            }
+                          },
+                          child: const Text("Agregar Producto"),
+                        ),
+
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  Future<void> mostrarVariacionesPopup(
+      BuildContext context,
+      Datum producto,
+      int listaId,
+      int sucursalId,
+      ) async {
+    final variacionSeleccionada = await showDialog<ProductosVariacione>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Seleccionar Variación"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: producto.productosVariaciones?.length ?? 0,
+              itemBuilder: (context, index) {
+                final variacion = producto.productosVariaciones![index];
+
+                // Filtrar el stock por sucursal
+                final stock = variacion.stocks
+                    ?.firstWhere((s) => s.sucursalId == sucursalId, orElse: () => Stock(stock: "0")) ??
+                    Stock(stock: "0");
+
+                // Filtrar el precio por lista
+                final precio = variacion.listasPrecios
+                    ?.firstWhere((lp) => lp.listaId == listaId, orElse: () => ListasPrecio(precioLista: "0")) ??
+                    ListasPrecio(precioLista: "0");
+
+                return ListTile(
+                  title: Text(variacion.variaciones ?? "Sin descripción"),
+                  subtitle: Text("Stock: ${stock.stock}, Precio: \$${precio.precioLista}"),
+                  onTap: () => Navigator.pop(context, variacion),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+
+    if (variacionSeleccionada != null) {
+      // Devolver producto con solo la variación seleccionada
+      final productoConUnaSolaVariacion = Datum(
+        id: producto.id,
+        nombre: producto.nombre,
+        barcode: producto.barcode,
+        productoTipo: producto.productoTipo,
+        categoryId: producto.categoryId,
+        marcaId: producto.marcaId,
+        proveedorId: producto.proveedorId,
+        comercioId: producto.comercioId,
+        productosVariaciones: [variacionSeleccionada],
+        stocks: [], // Podés agregar acá también si necesitás incluirlo
+        listasPrecios: [],
+      );
+
+      Navigator.pop(context, {'productoSeleccionado': productoConUnaSolaVariacion});
+    }
+  }
+
 }
+
+
+

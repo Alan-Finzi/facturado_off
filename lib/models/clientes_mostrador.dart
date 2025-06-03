@@ -61,44 +61,81 @@ class ClientesMostrador {
     this.wcCustomerId,
     this.activo = 1, // Valor por defecto para indicar que el cliente está activo
   });
-
   factory ClientesMostrador.fromJson(Map<String, dynamic> json) {
-    return ClientesMostrador(
-      creadorId: json['creador_id'],
-      idCliente: json['id_cliente'].toString(),
-      nombre: json['nombre'],
-      sucursalId: json['sucursal_id'],
-      listaPrecio: json['lista_precio'],
-      comercioId: json['comercio_id'],
-     // recontacto: json['recontacto'] != null ? DateTime.parse(json['recontacto']) : null,
-      plazoCuentaCorriente: json['plazo_cuenta_corriente'],
-      montoMaximoCuentaCorriente: json['monto_maximo_cuenta_corriente'] != null
-          ? json['monto_maximo_cuenta_corriente'].toDouble()
-          : 0.0,
-      saldoInicialCuentaCorriente: json['saldo_inicial_cuenta_corriente'] != null
-          ? json['saldo_inicial_cuenta_corriente'].toDouble()
-          : 0.0,
-      fechaInicialCuentaCorriente: json['fecha_inicial_cuenta_corriente'] != null ? DateTime.parse(json['fecha_inicial_cuenta_corriente']) : null,
-      pais: json['pais'],
-      codigoPostal: json['codigo_postal'],
-      depto: json['depto'],
-      piso: json['piso'],
-      altura: json['altura'],
-      eliminado: json['eliminado'],
-      email: json['email'],
-      telefono: json['telefono'],
-      observaciones: json['observaciones'],
-      localidad: json['localidad'],
-      barrio: json['barrio'],
-      provincia: json['provincia'],
-      direccion: json['direccion'],
-      dni: json['dni'],
-      status: json['status'],
-      image: json['image'],
-      wcCustomerId: json['wc_customer_id'],
-      activo: json['activo'] ?? 1, // Valor por defecto para clientes nuevos
-    );
+    try {
+      double montoMaximo = 0.0;
+      try {
+        final dynamic raw = json['monto_maximo_cuenta_corriente'];
+        if (raw != null) {
+          if (raw is double) {
+            montoMaximo = raw;
+          } else if (raw is int) {
+            montoMaximo = raw.toDouble();
+          } else if (raw is String) {
+            montoMaximo = double.tryParse(raw) ?? 0.0;
+          } else {
+            print('Tipo inesperado en "monto_maximo_cuenta_corriente" del cliente ${json['id_cliente']}: ${raw.runtimeType}');
+          }
+        }
+      } catch (e) {
+        print('Error en campo "monto_maximo_cuenta_corriente" del cliente ${json['id_cliente']}: $e');
+      }
+
+      double saldoInicial = 0.0;
+      try {
+        saldoInicial = json['saldo_inicial_cuenta_corriente'] != null
+            ? double.tryParse(json['saldo_inicial_cuenta_corriente'].toString()) ?? 0.0
+            : 0.0;
+      } catch (e) {
+        print('Error en campo "saldo_inicial_cuenta_corriente" del cliente ${json['id_cliente']}: $e');
+      }
+
+      DateTime? fechaInicial;
+      try {
+        fechaInicial = json['fecha_inicial_cuenta_corriente'] != null
+            ? DateTime.parse(json['fecha_inicial_cuenta_corriente'])
+            : null;
+      } catch (e) {
+        print('Error en campo "fecha_inicial_cuenta_corriente" del cliente ${json['id_cliente']}: $e');
+      }
+
+      return ClientesMostrador(
+        creadorId: json['creador_id'],
+        idCliente: json['id_cliente'].toString(),
+        nombre: json['nombre'],
+        sucursalId: json['sucursal_id'],
+        listaPrecio: json['lista_precio'],
+        comercioId: json['comercio_id'],
+        plazoCuentaCorriente: json['plazo_cuenta_corriente'],
+        montoMaximoCuentaCorriente: montoMaximo,
+        saldoInicialCuentaCorriente: saldoInicial,
+        fechaInicialCuentaCorriente: fechaInicial,
+        pais: json['pais'],
+        codigoPostal: json['codigo_postal'],
+        depto: json['depto'],
+        piso: json['piso'],
+        altura: json['altura'],
+        eliminado: json['eliminado'],
+        email: json['email'],
+        telefono: json['telefono'],
+        observaciones: json['observaciones'],
+        localidad: json['localidad'],
+        barrio: json['barrio'],
+        provincia: json['provincia'],
+        direccion: json['direccion'],
+        dni: json['dni'],
+        status: json['status'],
+        image: json['image'],
+        wcCustomerId: json['wc_customer_id'],
+        activo: json['activo'] ?? 1,
+      );
+    } catch (e) {
+      print('Error general al deserializar cliente con ID: ${json['id_cliente']}, error: $e');
+      rethrow;
+    }
   }
+
+
 
   Map<String, dynamic> toJson() {
     return {

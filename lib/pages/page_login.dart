@@ -1,8 +1,11 @@
 import 'package:facturador_offline/pages/page_synchronization.dart';
 import 'package:facturador_offline/pages/root_navegator.dart';
 import 'package:flutter/material.dart';
-import 'package:facturador_offline/bloc/cubit_login/login_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../bloc/cubit_login/login_cubit.dart';
+
 
 
 class LoginScreen extends StatefulWidget {
@@ -16,10 +19,37 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   late LoginCubit loginCubit;
+  bool rememberUser = false;
+
   @override
   void initState() {
     super.initState();
     loginCubit = BlocProvider.of<LoginCubit>(context);
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('remembered_email');
+    final savedPassword = prefs.getString('remembered_password');
+    if (savedEmail != null && savedPassword != null) {
+      setState(() {
+        emailController.text = savedEmail;
+        passwordController.text = savedPassword;
+        rememberUser = true;
+      });
+    }
+  }
+
+  Future<void> _saveOrRemoveCredentials(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (rememberUser) {
+      await prefs.setString('remembered_email', email);
+      await prefs.setString('remembered_password', password);
+    } else {
+      await prefs.remove('remembered_email');
+      await prefs.remove('remembered_password');
+    }
   }
 
   @override
@@ -40,31 +70,54 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: const InputDecoration(labelText: 'Contraseña'),
               obscureText: true,
             ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Checkbox(
+                  value: rememberUser,
+                  onChanged: (value) {
+                    setState(() {
+                      rememberUser = value ?? false;
+                    });
+                  },
+                ),
+                const Text('Recordar usuario'),
+              ],
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                // Si el usuario ha ingresado credenciales
                 final username = emailController.text.isNotEmpty ? emailController.text : null;
                 final password = passwordController.text.isNotEmpty ? passwordController.text : null;
 
-                // Intentamos hacer login con las credenciales proporcionadas o las guardadas en SharedPreferences
+                if (username == null || password == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Ingrese email y contraseña')),
+                  );
+                  return;
+                }
+
                 await loginCubit.login(username, password);
 
                 if (loginCubit.state.isLogin) {
+                  await _saveOrRemoveCredentials(username, password);
 
                   if (loginCubit.state.isPreference) {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => RootNavScreen()),
                     );
-
-                  }else{
+                  } else {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => SynchronizationPage(token: loginCubit.state.userToken!,email: username!)),
+                      MaterialPageRoute(
+                        builder: (context) => SynchronizationPage(
+                          token: loginCubit.state.userToken!,
+                          email: username,
+                        ),
+                      ),
                     );
                   }
-
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Acceso denegado')),

@@ -1,35 +1,33 @@
 
 
 part of 'producto_precio_stock_cubit.dart';
-
-
-class ProductosConPrecioYStockState extends Equatable {
-  final List<ProductoConPrecioYStock> productos;
-  final List<ProductoConPrecioYStock> filteredProductosConPrecioYStock; // Lista filtrada
+class ProductosMaestroState extends Equatable {
+  final ProductoResponse? productoResponse;
+  final ProductoResponse? filteredProductoResponse;
   final bool isLoading;
   final String? errorMessage;
 
-  ProductosConPrecioYStockState({
-    required this.productos,
-    this.filteredProductosConPrecioYStock = const [], // Inicializar como lista vacía
+  ProductosMaestroState({
+    this.productoResponse,
+    this.filteredProductoResponse,
     this.isLoading = false,
     this.errorMessage,
   });
 
-  ProductosConPrecioYStockState copyWith({
-    List<ProductoConPrecioYStock>? productos,
-    List<ProductoConPrecioYStock>? filteredProductosConPrecioYStock,
+  ProductosMaestroState copyWith({
+    ProductoResponse? productoResponse,
+    ProductoResponse? filteredProductoResponse,
     bool? isLoading,
     String? errorMessage,
   }) {
-    return ProductosConPrecioYStockState(
-      productos: productos ?? this.productos,
-      filteredProductosConPrecioYStock: filteredProductosConPrecioYStock ?? this.filteredProductosConPrecioYStock,
+    return ProductosMaestroState(
+      productoResponse: productoResponse ?? this.productoResponse,
+      filteredProductoResponse: filteredProductoResponse ?? this.filteredProductoResponse,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [productos, filteredProductosConPrecioYStock, isLoading, errorMessage];
+  List<Object?> get props => [productoResponse, filteredProductoResponse, isLoading, errorMessage];
 }
