@@ -16,6 +16,9 @@ class ProductosState extends Equatable {
  /// Categoría IVA del usuario (Ej: Monotributo, Responsable Inscripto)
  final String categoriaIvaUser;
 
+ /// Tipo de factura (Ej: Factura A, Factura B, Factura C)
+ final String? tipoFactura;
+
  /// Flag para forzar recálculo o redibujo de precios totales (usado en la UI)
  final bool precioTotal;
 
@@ -29,6 +32,7 @@ class ProductosState extends Equatable {
   required this.currentListProductCubit,
   this.filteredListProductCubit,
   this.categoriaIvaUser = "Seleccionar",
+  this.tipoFactura = "Factura C",
   this.datosFacturacionModel = const [],
   this.categorias = const [],
   this.categoriaSeleccionada = '',
@@ -44,6 +48,7 @@ class ProductosState extends Equatable {
   List<String>? categorias,
   String? categoriaSeleccionada,
   String? categoriaIvaUser,
+  String? tipoFactura,
   bool? precioTotal,
   List<ProductoConPrecioYStock>? productosSeleccionados,
  }) {
@@ -53,6 +58,7 @@ class ProductosState extends Equatable {
    datosFacturacionModel: datosFacturacionModel ?? this.datosFacturacionModel,
    categorias: categorias ?? this.categorias,
    categoriaIvaUser: categoriaIvaUser ?? this.categoriaIvaUser,
+   tipoFactura: tipoFactura ?? this.tipoFactura,
    categoriaSeleccionada: categoriaSeleccionada ?? this.categoriaSeleccionada,
    productosSeleccionados: productosSeleccionados ?? this.productosSeleccionados,
    precioTotal: precioTotal ?? this.precioTotal,
@@ -70,5 +76,6 @@ class ProductosState extends Equatable {
   precioTotal,
   productosSeleccionados,
   categoriaIvaUser,
+  tipoFactura,
  ];
 }
