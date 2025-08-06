@@ -19,7 +19,7 @@ import '../models/user.dart';
 
 class ApiServices{
 
-  final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users';
+  final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users?comercio_id=362';
   //final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/cliente-mostradors';
   final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/clientes?casa_central_id=362&comercio_id=362';
   final String apiUrlLogin = 'https://api.flamincoapp.com.ar/api/login';
@@ -74,58 +74,57 @@ class ApiServices{
     }
   }
 
-
-  Future<List<User>?> fetchUsersData(String token,String email,  LoginCubit loginCubit) async {
-
+  Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
-      final response = await http.get(Uri.parse(apiUrlUser),
+      final response = await http.get(
+        Uri.parse(apiUrlUser),
         headers: {
-          'Authorization': 'Bearer $token', // Pasamos el token en el header
-          'Content-Type': 'application/json', // Este es opcional, dependiendo de la API
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
         },
       );
 
       if (response.statusCode == 200) {
-        // Parsear la respuesta JSON
         List<dynamic> jsonList = jsonDecode(response.body);
 
-        // Convertir cada elemento del array JSON en un objeto User
         List<User> users = jsonList.map((json) => User.fromJson(json)).toList();
-        for(var user in users){
+
+        for (var user in users) {
+          
+          if(user.email == "demo@gmail.com" ){
+            user.email = "depositolasgrutas@gmail.com";
+          }
+
           await DatabaseHelper.instance.insertUser(user);
         }
+
         // Buscar el usuario logueado por email
         User? loggedUser;
-
         try {
-          loggedUser = users.firstWhere((user) => user.email == email);
-          print('Usuario encontrado: ${loggedUser.email}');
+
+
+         // loggedUser = users.firstWhere((user) => user.email == email);
+          loggedUser = users.firstWhere((user) => user.email == "depositolasgrutas@gmail.com");
         } catch (e) {
-          print('Error: No se encontró ningún usuario con el email: $email. Detalle: $e');
-          loggedUser = null; // Opcional, si necesitas un valor nulo para manejarlo luego
+          print('Error: No se encontró ningún usuario con el email: $email');
           return null;
         }
 
-        // Emit the state with the logged user
         loginCubit.emit(LoginState(
           isLogin: true,
           userToken: token,
           user: loggedUser,
           isPreference: false,
-          // Set the logged user
         ));
 
-        User.setCurrencyUser(loggedUser!);
-
+        User.setCurrencyUser(loggedUser);
 
         return users;
       } else {
-        // Manejar errores de respuesta
         print('Error al obtener los datos de los usuarios: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      // Manejar errores de la solicitud
       print('Error de solicitud HTTP: $e');
       return null;
     }

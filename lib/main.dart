@@ -15,25 +15,30 @@ import '../services/user_repository.dart';
 import 'bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
 import 'data/database_seeder.dart';
 import 'helper/database_helper.dart';
-import 'package:desktop_window/desktop_window.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 void main() async {
   sqfliteFfiInit();
   WidgetsFlutterBinding.ensureInitialized();
-    // Initialize FFI
-    databaseFactory = databaseFactoryFfi;
+  databaseFactory = databaseFactoryFfi;
 
-  // Elimina la base de datos si existe y crea una nueva
-  await DatabaseHelper.instance.deleteDatabaseIfExists();
-  await DatabaseHelper.instance.database; // Crea la base de datos
+  final prefs = await SharedPreferences.getInstance();
+  final isFirstSyncDone = prefs.getBool('isFirstSyncDone') ?? false;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      //DatabaseHelper.instance.deleteDatabaseIfExists();
-     FocusManager.instance.primaryFocus?.unfocus();
-    });
+  if (!isFirstSyncDone) {
+    // 🔥 Solo borra la DB la primera vez
+    await DatabaseHelper.instance.deleteDatabaseIfExists();
+    await prefs.setBool('isFirstSyncDone', true);
+  }
+
+  await DatabaseHelper.instance.database; // Siempre inicializa la base
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    FocusManager.instance.primaryFocus?.unfocus();
+  });
+
   runApp(BlocProviders());
-
 }
 
 

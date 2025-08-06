@@ -116,6 +116,7 @@ class DatabaseHelper {
         direccion TEXT,
         dni TEXT,
         status TEXT,
+        modificado INTEGER,
         image TEXT,
         wc_customer_id TEXT
       )
@@ -698,10 +699,21 @@ class DatabaseHelper {
     });
   }
 
-  // Métodos para usuarios
+// Métodos para usuarios
   Future<void> insertUser(User user) async {
-    final db = await database;
-    await db.insert('users', user.toJson(), conflictAlgorithm: ConflictAlgorithm.replace);
+    try {
+      final db = await database;
+      await db.insert(
+        'users',
+        user.toJson(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e, stackTrace) {
+      print('Error al insertar el usuario: $e');
+      print('StackTrace: $stackTrace');
+      // Podés lanzar el error si querés que se propague hacia arriba
+      // throw Exception('Fallo al insertar usuario');
+    }
   }
 
   Future<User?> getUser(String username) async {
@@ -833,6 +845,19 @@ class DatabaseHelper {
     );
     return result.isNotEmpty;
   }
+
+
+ Future<List<ClientesMostrador>> getClientesModificados() async {
+   final db = await instance.database;
+   final maps = await db.query('clientes_mostrador', where: 'modificado = 1');
+   return maps.map((e) => ClientesMostrador.fromJson(e)).toList();
+ }
+
+   Future<void> marcarClienteSincronizado(String? idCliente) async {
+   final db = await instance.database;
+   await db.update('clientes_mostrador', {'modificado': 0}, where: 'id_cliente = ?', whereArgs: [idCliente]);
+ }
+
 
   Future<void> updateCliente(ClientesMostrador cliente) async {
     Database db = await database;

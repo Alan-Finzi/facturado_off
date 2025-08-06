@@ -1,3 +1,4 @@
+import 'package:facturador_offline/pages/page_clientes_sincronizacion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
@@ -30,7 +31,7 @@ class _ClientesListPageState extends State<ClientesListPage> {
   void _filterClients() {
     final nameQuery = _nameController.text;
     final dniQuery = _dniController.text;
-    final priceListQuery = _selectedPriceList?.id ?? 1;
+    final priceListQuery = _selectedPriceList?.id ?? 0;
     final isActive = _selectedStatus == 'Activos' ? 1 : 0;
 
     context.read<ClientesMostradorCubit>().filterClientes(
@@ -71,92 +72,121 @@ class _ClientesListPageState extends State<ClientesListPage> {
     );
   }
   Widget _buildFilters() {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children: [
-        SizedBox(
-          width: 250,
-          child: CustomTextField(
-            controller: _nameController,
-            labelText: 'Buscar por Nombre',
-            hintText: 'Ej: Juan Perez',
-            onChanged: (_) => _filterClients(),
-          ),
-        ),
-        SizedBox(
-          width: 200,
-          child: CustomTextField(
-            controller: _dniController,
-            labelText: 'Buscar por CUIT/DNI',
-            hintText: 'Ej: 12345678901',
-            onChanged: (_) => _filterClients(),
-          ),
-        ),
-        SizedBox(
-          width: 300,
-          child: BlocBuilder<ListaPreciosCubit, ListaPreciosState>(
-            builder: (context, state) {
-              if (state.currentList.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return DropdownButtonFormField<Lista>(
-                value: _selectedPriceList,
-                isExpanded: true, // <-- Esto permite que el menú ocupe todo el ancho
-                items: state.currentList.map((lista) {
-                  return DropdownMenuItem<Lista>(
-                    value: lista,
-                    child: Text(
-                      lista.nombre ?? 'Sin nombre',
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 600;
+        final double itemWidth = constraints.maxWidth / (isSmallScreen ? 1.5 : 4);
+        final fieldTextStyle = const TextStyle(fontSize: 12);
+
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: itemWidth,
+                child: CustomTextField(
+                  controller: _nameController,
+                  labelText: 'Nombre',
+                  hintText: 'Ej: Juan Perez',
+                  onChanged: (_) => _filterClients(),
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: CustomTextField(
+                  controller: _dniController,
+                  labelText: 'CUIT/DNI',
+                  hintText: 'Ej: 12345678901',
+                  onChanged: (_) => _filterClients(),
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: BlocBuilder<ListaPreciosCubit, ListaPreciosState>(
+                  builder: (context, state) {
+                    if (state.currentList.isEmpty) {
+                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    }
+                    return DropdownButtonFormField<Lista>(
+                      value: _selectedPriceList,
+                      isExpanded: true,
+                      style: fieldTextStyle,
+                      items: state.currentList.map((lista) {
+                        return DropdownMenuItem<Lista>(
+                          value: lista,
+                          child: Text(
+                            lista.nombre ?? 'Sin nombre',
+                            overflow: TextOverflow.ellipsis,
+                            style: fieldTextStyle,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedPriceList = value);
+                        _filterClients();
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Lista de Precios',
+                        border: OutlineInputBorder(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: itemWidth,
+                child: DropdownButtonFormField<String>(
+                  value: _selectedStatus,
+                  isExpanded: true,
+                  style: fieldTextStyle,
+                  items: ['Activos', 'Inactivos'].map((status) {
+                    return DropdownMenuItem<String>(
+                      value: status,
+                      child: Text(status, style: fieldTextStyle),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => _selectedStatus = value!);
+                    _filterClients();
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Estado',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                onPressed: _resetFilters,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                ),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.sync_alt, size: 16),
+                label: const Text('Sincronizar', style: TextStyle(fontSize: 12)),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ClientesSincronizacionPage(),
                     ),
                   );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedPriceList = value;
-                  });
-                  _filterClients();
                 },
-                decoration: const InputDecoration(
-                  labelText: 'Lista de Precios',
-                  border: OutlineInputBorder(),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ),
-        SizedBox(
-          width: 150,
-          child: DropdownButtonFormField<String>(
-            value: _selectedStatus,
-            items: ['Activos', 'Inactivos'].map((status) {
-              return DropdownMenuItem<String>(
-                value: status,
-                child: Text(status),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedStatus = value!;
-              });
-              _filterClients();
-            },
-            decoration: const InputDecoration(
-              labelText: 'Estado',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: _resetFilters,
-          icon: const Icon(Icons.refresh),
-          label: const Text('Limpiar filtros'),
-        ),
-      ],
+        );
+      },
     );
   }
+
+
 
   Widget _buildClientList() {
     return BlocBuilder<ClientesMostradorCubit, ClientesMostradorState>(
@@ -181,13 +211,16 @@ class _ClientesListPageState extends State<ClientesListPage> {
               subtitle: Text(
                 'CUIT/DNI: ${cliente.dni ?? ''}\nLista de Precios: $listaPrecioNombre',
               ),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => ModBajaCliente(cliente: cliente),
                   ),
                 );
+                if (result == true) {
+                  context.read<ClientesMostradorCubit>().getClientesBD();
+                }
               },
             );
           },

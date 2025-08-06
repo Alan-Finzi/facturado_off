@@ -1,3 +1,4 @@
+import 'package:facturador_offline/pages/page_clientes_sincronizacion.dart';
 import 'package:flutter/material.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../helper/database_helper.dart';
@@ -279,11 +280,61 @@ class _ModBajaClienteState extends State<ModBajaCliente> {
               decoration: const InputDecoration(labelText: 'Lista de precios'),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // guardar lógica aquí
-              },
-              child: const Text('Guardar Cambios'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    // Modificamos directamente el objeto `cliente`
+                    ClientesMostrador cliente = widget.cliente;
+                    cliente.idCliente =_codClienteController.text;
+                    cliente.nombre = _nombreController.text;
+                    cliente.telefono = _telefonoController.text;
+                    cliente.email = _emailController.text;
+                    cliente.dni = _cuitController.text;
+                    cliente.pais = _paisController.text;
+                    cliente.localidad = _ciudadController.text;
+                    cliente.barrio = _barrioController.text;
+                    cliente.direccion = _calleController.text;
+                    cliente.altura = _alturaController.text;
+                    cliente.piso = _pisoController.text;
+                    cliente.depto = _deptoController.text;
+                    cliente.codigoPostal = _codPostalController.text;
+                    cliente.provincia = _selectedProvince;
+                    cliente.listaPrecio = int.tryParse(_selectedPriceListId ?? '');
+                    cliente.sucursalId = int.tryParse(_sucursalController.text);
+                    cliente.plazoCuentaCorriente = int.tryParse(_plazoCtaCteController.text);
+                    cliente.montoMaximoCuentaCorriente = double.tryParse(_montoMaximoCtaCteController.text);
+                    cliente.saldoInicialCuentaCorriente = double.tryParse(_saldoInicialCtaCteController.text);
+                    cliente.fechaInicialCuentaCorriente = _fechaSaldoInicialCtaCteController.text.isNotEmpty
+                        ? DateTime.tryParse(_fechaSaldoInicialCtaCteController.text)
+                        : null;
+                    cliente.observaciones = _observacionesController.text;
+
+                    // Marcamos como modificado
+                    cliente.modificado = 1;
+
+                    // Guardamos en la base de datos
+                    await DatabaseHelper.instance.updateCliente(cliente);
+
+                    print("cliente modificado");
+                    print(cliente.idCliente);
+                    print(cliente.modificado);
+
+                    print(cliente.toString());
+                    // Cerramos el diálogo
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text('Guardar Cambios'),
+                ),
+
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Cierra el popup
+                  },
+                  child: const Text('Cancelar'),
+                ),
+              ],
             ),
           ],
         ),

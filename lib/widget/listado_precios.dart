@@ -24,6 +24,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
       ivaIncl: true,
       subtotal: 0,
       totalFacturar: 0,
+      totalSinDescuento: 0,
+      percepciones: 0,
+      totalConDescuentoYPercepciones: 0,
     );
     _initializeControllers(productosCubit.state.productosSeleccionados);
   }
@@ -67,6 +70,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
           ivaIncl: true,
           subtotal: 0,
           totalFacturar: sumaTotal,
+          totalSinDescuento: 0,
+          percepciones: 0,
+          totalConDescuentoYPercepciones: 0,
         );
 
         return SingleChildScrollView(
@@ -108,7 +114,7 @@ class _ListaPreciosState extends State<ListaPrecios> {
                               controller: _controllers[index],
                               keyboardType: TextInputType.number,
                               onChanged: (value) {
-                                final cantidad = double.parse(value);
+                                final cantidad = int.parse(value);
                                 context.read<ProductosCubit>().precioTotal(index, cantidad);
                               },
                             ),

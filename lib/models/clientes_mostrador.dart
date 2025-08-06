@@ -1,34 +1,35 @@
 class ClientesMostrador {
   static ClientesMostrador currentCompany = ClientesMostrador();
-  final int? creadorId;
-  final String? idCliente;
-  final String? nombre;
-  final int? sucursalId;
-  final int? listaPrecio;
-  final int? comercioId;
-  final DateTime? recontacto;
-  final int? plazoCuentaCorriente;
-  final double? montoMaximoCuentaCorriente;
-  final double? saldoInicialCuentaCorriente;
-  final DateTime? fechaInicialCuentaCorriente;
-  final String? pais;
-  final String? codigoPostal;
-  final String? depto;
-  final String? piso;
-  final String? altura;
-  final int? eliminado;
-  final String? email;
-  final String? telefono;
-  final String? observaciones;
-  final String? localidad;
-  final String? barrio;
-  final String? provincia;
-  final String? direccion;
-  final String? dni;
-  final String? status;
-  final String? image;
-  final String? wcCustomerId;
-  final int? activo;  // Campo añadido para el estado del cliente
+  late  int? creadorId;
+  late  String? idCliente;
+  late  String? nombre;
+  late  int? sucursalId;
+  late  int? listaPrecio;
+  late  int? comercioId;
+  late  DateTime? recontacto;
+  late  int? plazoCuentaCorriente;
+  late  double? montoMaximoCuentaCorriente;
+  late  double? saldoInicialCuentaCorriente;
+  late  DateTime? fechaInicialCuentaCorriente;
+  late  String? pais;
+  late  String? codigoPostal;
+  late  String? depto;
+  late  String? piso;
+  late  String? altura;
+  late  int? eliminado;
+  late  String? email;
+  late  String? telefono;
+  late  String? observaciones;
+  late  String? localidad;
+  late  String? barrio;
+  late  String? provincia;
+  late  String? direccion;
+  late  String? dni;
+  late  String? status;
+  late  String? image;
+  late  String? wcCustomerId;
+  late  int? modificado;
+  late  int? activo;  // Campo añadido para el estado del cliente
 
   ClientesMostrador({
     this.creadorId,
@@ -59,6 +60,7 @@ class ClientesMostrador {
     this.status,
     this.image,
     this.wcCustomerId,
+    this.modificado,
     this.activo = 1, // Valor por defecto para indicar que el cliente está activo
   });
   factory ClientesMostrador.fromJson(Map<String, dynamic> json) {
@@ -127,6 +129,7 @@ class ClientesMostrador {
         status: json['status'],
         image: json['image'],
         wcCustomerId: json['wc_customer_id'],
+        modificado: json['modificado'] ?? 0,
         activo: json['activo'] ?? 1,
       );
     } catch (e) {
@@ -201,6 +204,7 @@ class ClientesMostrador {
       'dni': dni,
       'status': status,
       'image': image,
+      'modificado':modificado,
       'wc_customer_id': wcCustomerId,
       'activo': activo, // Añadir estado en el mapeo
     };

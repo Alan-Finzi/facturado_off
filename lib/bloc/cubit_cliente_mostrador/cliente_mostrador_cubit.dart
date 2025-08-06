@@ -105,11 +105,17 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
 
   // Método para filtrar los clientes
   void filterClientes(String nameQuery, String dniQuery, int priceListQuery, int isActivo) {
-    if (isActivo == 1) {
       final filteredClientes = state.clientes.where((cliente) {
         bool matches = true;
 
-        if (nameQuery.isNotEmpty) {
+        // Filtro por estado activo o inactivo
+        if (isActivo == 1) {
+          matches = matches && (cliente.activo == 1);
+        } else if (isActivo == 0) {
+          matches = matches && (cliente.activo == 0);
+        }
+
+        if (nameQuery.isNotEmpty ||nameQuery != "") {
           matches = matches && (cliente.nombre?.toLowerCase().contains(nameQuery.toLowerCase()) ?? false);
         }
 
@@ -126,6 +132,6 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
       }).toList();
 
       emit(state.copyWith(filteredClientes: filteredClientes));
-    }
+
   }
 }

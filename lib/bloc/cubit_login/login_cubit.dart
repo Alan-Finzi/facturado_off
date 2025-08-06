@@ -44,65 +44,93 @@ class LoginCubit extends Cubit<LoginState> {
     }
   }
 
+  ///login
   Future<void> login(String? email, String? password) async {
     ApiServices apiServices = ApiServices();
 
     try {
       // Validación de email o password vacíos
-      if (email == null || email.isEmpty || password == null || password.isEmpty) {
+      if ((email?.isEmpty ?? true) || (password?.isEmpty ?? true)) {
         print("Acceso denegado: Email o contraseña vacíos.");
         emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
         return;
       }
 
-      // Si no tenemos email y password (significa que el usuario no ha ingresado credenciales)
-      if (email == null || password == null) {
-        final credentialsList = await _getCredentials();
+      // Intentamos obtener credenciales guardadas (por email si está presente)
+      final credentialsList = await _getCredentials();
+      final userCredentials = credentialsList.firstWhere(
+            (user) => user['email'] == email,
+        orElse: () => {},
+      );
 
-        // Verificamos si tenemos usuarios guardados en las preferencias
-        if (credentialsList.isNotEmpty) {
-          // Buscamos si existe el usuario con el email proporcionado
-          final userCredentials = credentialsList.firstWhere(
-                (user) => user['email'] == email,
-            orElse: () => {}, // Devuelve un mapa vacío si no se encuentra el usuario
-          );
+      // Si el usuario tiene credenciales guardadas, intentamos usarlas primero
+      if (userCredentials.isNotEmpty) {
+        final savedToken = userCredentials['token'];
+        final savedPassword = userCredentials['password'];
 
-          if (userCredentials.isNotEmpty) {
-            password = userCredentials['password'];
-            final savedToken = userCredentials['token'];
-
-            // Si ya tenemos un token guardado, lo usamos directamente
-            if (savedToken != null) {
-
-              emit(LoginState(isLogin: true, userToken: savedToken,isPreference: false,user: User(username: email, password: password)));
-              return;
-            }
-          }
+        // Si ya hay un token guardado y no se ingresó manualmente password, lo usamos
+        if (savedToken != null && (password == null || password.isEmpty)) {
+          emit(LoginState(
+            isLogin: true,
+            userToken: savedToken,
+            isPreference: true,
+            user: User(username: email, password: savedPassword),
+          ));
+          return;
         }
       }
 
-      // Si es la primera vez (el usuario ha proporcionado email y password), llamamos a la API
-      if (email != null && password != null) {
-        final token = await apiServices.loginUser(email, password);
-        if (token != null) {
+      // Si tenemos email y password (ingresados manualmente o de SharedPreferences), llamamos a la API
+      final token = await apiServices.loginUser(email!, password!);
 
-          // Guardamos las credenciales en SharedPreferences
-          await _saveCredentials(email, password, token);
-          emit(LoginState(isLogin: true, userToken: token, isPreference: false));
+      if (token != null) {
+        // Autenticación exitosa: Guardamos credenciales y emitimos el estado
+        await _saveCredentials(email!, password!, token);
+        emit(LoginState(
+          isLogin: true,
+          userToken: token,
+          isPreference: false,
+          user: User(username: email, password: password),
+        ));
+      } else {
+        // Fallo en la autenticación: pero si hay token viejo, lo usamos temporalmente
+        if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
+          print("⚠️ Login API falló, usando token guardado temporalmente.");
+          emit(LoginState(
+            isLogin: true,
+            userToken: userCredentials['token'],
+            isPreference: true,
+            user: User(username: email, password: userCredentials['password']),
+          ));
         } else {
-          // Fallo en la autenticación
-          emit(const LoginState(isLogin: false, userToken: null,isPreference: false));
+          emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
           print("Acceso denegado: Credenciales incorrectas.");
         }
-      } else {
-        // Si no hay credenciales ni en el input ni en SharedPreferences
-        emit(const LoginState(isLogin: false, userToken: null,isPreference: false));
       }
     } catch (e) {
       print("Error durante el login: $e");
-      emit(const LoginState(isLogin: false, userToken: null,isPreference: false)); // Emitir estado de error
+
+      // En caso de error inesperado, intentamos emitir un acceso temporal si hay token guardado
+      final credentialsList = await _getCredentials();
+      final userCredentials = credentialsList.firstWhere(
+            (user) => user['email'] == email,
+        orElse: () => {},
+      );
+
+      if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
+        print("⚠️ Error en login, usando token guardado temporalmente.");
+        emit(LoginState(
+          isLogin: true,
+          userToken: userCredentials['token'],
+          isPreference: true,
+          user: User(username: email, password: userCredentials['password']),
+        ));
+      } else {
+        emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
+      }
     }
   }
+
 
   Future<List<Map<String, String>>> _getCredentials() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

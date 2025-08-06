@@ -1,0 +1,207 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/cubit_login/login_cubit.dart';
+import '../bloc/cubit_productos/productos_cubit.dart';
+import '../helper/database_helper.dart';
+import '../models/datos_facturacion_model.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/cubit_productos/productos_cubit.dart';
+import '../helper/database_helper.dart';
+import '../models/datos_facturacion_model.dart';
+
+class VentaDropdownsWidget extends StatelessWidget {
+    final String comercioId;
+
+    const VentaDropdownsWidget({super.key, required this.comercioId});
+
+    @override
+    Widget build(BuildContext context) {
+        return FutureBuilder<List<DatosFacturacionModel>>(
+            future: DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId)),
+            builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                    return const Center(child: Text('Error al cargar datos'));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                        child: Text('No hay datos de facturación', style: TextStyle(color: Colors.black)),
+                    );
+                }
+
+                final datosFacturacion = snapshot.data!;
+
+                // Si no hay uno seleccionado aún, tomamos el primero por defecto
+                if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+                    DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
+                }
+
+                // Accedemos al cubit
+                final productosCubit = context.watch<ProductosCubit>();
+                final state = productosCubit.state;
+
+                return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                        // ▼ Dropdown de Datos de Facturación
+                        const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                                'Seleccione un dato de facturación:',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                        ),
+                        DropButtonDatosFact(datosFacturacion: datosFacturacion),
+
+                        const SizedBox(height: 16.0),
+
+                        // ▼ Categoría IVA
+                        const Text("Categoría IVA:"),
+                        DropdownButton<String>(
+                            value: state.categoriaIvaUser ?? 'Seleccionar',
+                            onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                    productosCubit.updateCategoriaIvaUser(newValue);
+                                }
+                            },
+                            items: ['Monotributo', 'Responsable Inscripto', 'Consumidor Final']
+                                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                                .toList(),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // ▼ Tipo de Factura
+                        const Text("Tipo de factura:"),
+                        DropdownButton<String>(
+                            value: state.tipoFactura ?? 'Factura C',
+                            onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                    productosCubit.updateTipoFactura(newValue);
+                                }
+                            },
+                            items: ['Factura A', 'Factura B', 'Factura C']
+                                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                                .toList(),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // ▼ Caja seleccionada
+                        const Text("Caja:"),
+                        DropdownButton<String>(
+                            value: state.cajaSeleccionada ?? 'Caja seleccionada: # 1',
+                            onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                    productosCubit.updateCajaSeleccionada(newValue);
+                                }
+                            },
+                            items: [
+                                'Caja seleccionada: # 1',
+                                'Caja seleccionada: # 2',
+                                'Caja seleccionada: # 3',
+                            ].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // ▼ Estado del pedido (puede ser interactivo en el futuro)
+                        const Text('Estado del pedido:'),
+                        ElevatedButton(
+                            onPressed: () {}, // Lógica futura
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            child: const Text('Entregado'),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // ▼ Canal de venta
+                        const Text("Canal de venta:"),
+                        DropdownButton<String>(
+                            value: state.canalVenta ?? 'Mostrador',
+                            onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                    productosCubit.updateCanalVenta(newValue);
+                                }
+                            },
+                            items: ['Mostrador', 'Online', 'Teléfono']
+                                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                                .toList(),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // ▼ Descuento (texto sin lógica aún)
+                        const Text("Descuento:"),
+                        const TextField(
+                            decoration: InputDecoration(
+                                suffixText: '%',
+                                prefixIcon: Icon(Icons.discount),
+                            ),
+                            keyboardType: TextInputType.number,
+                        ),
+                    ],
+                );
+            },
+        );
+    }
+}
+
+/// Widget reutilizable para desplegar los datos de facturación en dropdown
+class DropButtonDatosFact extends StatelessWidget {
+    final List<DatosFacturacionModel> datosFacturacion;
+
+    const DropButtonDatosFact({super.key, required this.datosFacturacion});
+
+    @override
+    Widget build(BuildContext context) {
+        DatosFacturacionModel? selected =
+        DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty
+            ? DatosFacturacionModel.datosFacturacionCurrent.first
+            : null;
+
+        if (selected != null && !datosFacturacion.contains(selected)) {
+            selected = null;
+        }
+
+        return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DropdownButton<DatosFacturacionModel>(
+                value: selected,
+                onChanged: (DatosFacturacionModel? selectedFactura) {
+                    if (selectedFactura != null) {
+                        DatosFacturacionModel.datosFacturacionCurrent
+                            ..clear()
+                            ..add(selectedFactura);
+
+                        context.read<ProductosCubit>().updateDatosFacturacion([selectedFactura]);
+
+                        print("Seleccionado: ${selectedFactura.razonSocial} - ${selectedFactura.condicionIva}");
+                    }
+                },
+                items: datosFacturacion.map((factura) {
+                    String condicionIvaText =
+                        factura.condicionIva?.toString().split('.').last ?? 'IVA: No disponible';
+                    return DropdownMenuItem<DatosFacturacionModel>(
+                        value: factura,
+                        key: Key(factura.id.toString()),
+                        child: Text(
+                            '${factura.razonSocial?.isNotEmpty == true ? factura.razonSocial : 'Sin razón social'} - $condicionIvaText',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
+                        ),
+                    );
+                }).toList(),
+                isExpanded: false,
+                iconSize: 20,
+                style: const TextStyle(fontSize: 14),
+            ),
+        );
+    }
+}

@@ -11,7 +11,7 @@ class User {
   final int? sucursal;
   final String? profile;
   final String? status;
-  final String? email;
+   String? email;
   final String? externalAuth;
   final String? externalId;
   final DateTime? emailVerifiedAt;
