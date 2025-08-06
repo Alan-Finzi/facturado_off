@@ -19,6 +19,12 @@ class ProductosState extends Equatable {
  /// Tipo de factura (Ej: Factura A, Factura B, Factura C)
  final String? tipoFactura;
 
+ /// Caja seleccionada para la operación
+ final String? cajaSeleccionada;
+
+ /// Canal de venta (Ej: Mostrador, Online, Teléfono)
+ final String? canalVenta;
+
  /// Flag para forzar recálculo o redibujo de precios totales (usado en la UI)
  final bool precioTotal;
 
@@ -33,6 +39,8 @@ class ProductosState extends Equatable {
   this.filteredListProductCubit,
   this.categoriaIvaUser = "Seleccionar",
   this.tipoFactura = "Factura C",
+  this.cajaSeleccionada = "Caja seleccionada: # 1",
+  this.canalVenta = "Mostrador",
   this.datosFacturacionModel = const [],
   this.categorias = const [],
   this.categoriaSeleccionada = '',
@@ -49,6 +57,8 @@ class ProductosState extends Equatable {
   String? categoriaSeleccionada,
   String? categoriaIvaUser,
   String? tipoFactura,
+  String? cajaSeleccionada,
+  String? canalVenta,
   bool? precioTotal,
   List<ProductoConPrecioYStock>? productosSeleccionados,
  }) {
@@ -59,6 +69,8 @@ class ProductosState extends Equatable {
    categorias: categorias ?? this.categorias,
    categoriaIvaUser: categoriaIvaUser ?? this.categoriaIvaUser,
    tipoFactura: tipoFactura ?? this.tipoFactura,
+   cajaSeleccionada: cajaSeleccionada ?? this.cajaSeleccionada,
+   canalVenta: canalVenta ?? this.canalVenta,
    categoriaSeleccionada: categoriaSeleccionada ?? this.categoriaSeleccionada,
    productosSeleccionados: productosSeleccionados ?? this.productosSeleccionados,
    precioTotal: precioTotal ?? this.precioTotal,
@@ -77,5 +89,7 @@ class ProductosState extends Equatable {
   productosSeleccionados,
   categoriaIvaUser,
   tipoFactura,
+  cajaSeleccionada,
+  canalVenta,
  ];
 }

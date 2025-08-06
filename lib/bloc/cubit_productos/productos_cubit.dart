@@ -45,6 +45,14 @@ class ProductosCubit extends Cubit<ProductosState> {
   void updateTipoFactura(String tipoFactura) {
     emit(state.copyWith(tipoFactura: tipoFactura));
   }
+  
+  void updateCajaSeleccionada(String cajaSeleccionada) {
+    emit(state.copyWith(cajaSeleccionada: cajaSeleccionada));
+  }
+  
+  void updateCanalVenta(String canalVenta) {
+    emit(state.copyWith(canalVenta: canalVenta));
+  }
 
   void filterProducts(String query, String categoriaSeleccionada) {
     final originalList = state.currentListProductCubit;
