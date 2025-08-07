@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../calculos/calculo_iva.dart';
 import '../../models/Producto_precio_stock.dart';
 import '../../models/datos_facturacion_model.dart';
+import '../../models/lista_precio_model.dart';
 import '../../models/producto.dart';
 import '../../models/user.dart';
 import '../../services/user_repository.dart';
@@ -74,6 +75,10 @@ class ProductosCubit extends Cubit<ProductosState> {
   
   void updateCanalVenta(String canalVenta) {
     emit(state.copyWith(canalVenta: canalVenta));
+  }
+  
+  void updateListaPreciosInfo(int listaId, String nombre) {
+    emit(state.copyWith(listaPrecios: listaId, nombreListaPrecios: nombre));
   }
 
   /// Filtra la lista de productos por texto de búsqueda y categoría

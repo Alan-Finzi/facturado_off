@@ -36,6 +36,12 @@ class ProductosState extends Equatable {
  /// Lista de productos que el usuario ha seleccionado para vender/facturar
  final List<ProductoConPrecioYStock> productosSeleccionados;
 
+ /// ID de la lista de precios actualmente seleccionada
+ final int? listaPrecios;
+
+ /// Nombre de la lista de precios actualmente seleccionada
+ final String? nombreListaPrecios;
+
  /// Constructor del estado con valores por defecto para la mayoría de propiedades
  ProductosState({
   required this.currentListProductCubit,
@@ -49,6 +55,8 @@ class ProductosState extends Equatable {
   this.categoriaSeleccionada = '',
   this.precioTotal = false,
   this.productosSeleccionados = const [],
+  this.listaPrecios = 1,
+  this.nombreListaPrecios = 'Precio base',
  });
 
  /// Permite crear una nueva copia del estado con algunas propiedades actualizadas
@@ -64,6 +72,8 @@ class ProductosState extends Equatable {
   String? canalVenta,
   bool? precioTotal,
   List<ProductoConPrecioYStock>? productosSeleccionados,
+  int? listaPrecios,
+  String? nombreListaPrecios,
  }) {
   return ProductosState(
    currentListProductCubit: currentListProductCubit ?? this.currentListProductCubit,
@@ -76,6 +86,8 @@ class ProductosState extends Equatable {
    canalVenta: canalVenta ?? this.canalVenta,
    categoriaSeleccionada: categoriaSeleccionada ?? this.categoriaSeleccionada,
    productosSeleccionados: productosSeleccionados ?? this.productosSeleccionados,
+   listaPrecios: listaPrecios ?? this.listaPrecios,
+   nombreListaPrecios: nombreListaPrecios ?? this.nombreListaPrecios,
    precioTotal: precioTotal ?? this.precioTotal,
   );
  }
@@ -94,5 +106,7 @@ class ProductosState extends Equatable {
   tipoFactura,
   cajaSeleccionada,
   canalVenta,
+  listaPrecios,
+  nombreListaPrecios,
  ];
 }

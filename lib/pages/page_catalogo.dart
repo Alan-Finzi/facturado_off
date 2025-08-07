@@ -102,23 +102,53 @@ class _CatalogoPageState extends State<CatalogoPage> {
               const SizedBox(height: 16.0),
 
               // Load More Button
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    limit += 100;
-                  });
-                },
-                child: const Text('Cargar más productos'),
-              ),
+              if (productos.length > limit) 
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      limit += 100;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Cargar más productos (${productos.length - limit} restantes)'),
+                ),
 
               const SizedBox(height: 16.0),
 
-              // Close Button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Cerrar'),
+              // Buttons Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Close Button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  // Stats display
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'Mostrando ${productos.length < limit ? productos.length : limit} de ${productos.length} productos',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -140,45 +170,60 @@ class _CatalogoPageState extends State<CatalogoPage> {
 
         final productos = state.filteredProductoResponse?.data ?? [];
 
-        // Obtener nombres únicos de categoría
+        // Obtener nombres únicos de categoría y ordenarlos alfabéticamente
         final categorias = productos
             .map((producto) => producto.categoriaName ?? 'Sin categoría')
             .toSet()
-            .toList();
+            .toList()
+            ..sort(); // Ordenar alfabéticamente para mejor experiencia de usuario
 
-        return DropdownSearch<String>(
-          items: ['Todas las categorías', ...categorias],
-          selectedItem: _selectedCategoria,
-          dropdownDecoratorProps: const DropDownDecoratorProps(
-            dropdownSearchDecoration: InputDecoration(
-              labelText: "Seleccionar categoría",
-              contentPadding: EdgeInsets.symmetric(horizontal: 10),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          onChanged: (categoria) {
-            if (categoria != null) {
-              setState(() {
-                _selectedCategoria = categoria;
-              });
-              context.read<ProductosMaestroCubit>().filterProductosConPrecioYStock(
-                _searchController.text.toLowerCase(),
-                categoria == 'Todas las categorías' ? '' : categoria,
-              );
-            }
-          },
-          popupProps: PopupProps.menu(
-            showSearchBox: true,
-            searchFieldProps: const TextFieldProps(
-              decoration: InputDecoration(
-                hintText: "Buscar categoría",
-                border: OutlineInputBorder(),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Categorías de Productos', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            DropdownSearch<String>(
+              items: ['Todas las categorías', ...categorias],
+              selectedItem: _selectedCategoria,
+              dropdownDecoratorProps: const DropDownDecoratorProps(
+                dropdownSearchDecoration: InputDecoration(
+                  labelText: "Seleccionar categoría",
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              onChanged: (categoria) {
+                if (categoria != null) {
+                  setState(() {
+                    _selectedCategoria = categoria;
+                  });
+                  context.read<ProductosMaestroCubit>().filterProductosConPrecioYStock(
+                    _searchController.text.toLowerCase(),
+                    categoria == 'Todas las categorías' ? '' : categoria,
+                  );
+                }
+              },
+              popupProps: PopupProps.menu(
+                showSearchBox: true,
+                searchFieldProps: const TextFieldProps(
+                  decoration: InputDecoration(
+                    hintText: "Buscar categoría",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                itemBuilder: (context, item, isSelected) {
+                  return ListTile(
+                    title: Text(item),
+                    selected: isSelected,
+                    tileColor: isSelected ? Colors.grey[200] : null,
+                  );
+                },
               ),
             ),
-            itemBuilder: (context, item, isSelected) {
-              return ListTile(title: Text(item));
-            },
-          ),
+            const SizedBox(height: 8),
+            Text('${categorias.length} categorías disponibles', 
+                 style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          ],
         );
       },
     );
@@ -221,7 +266,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
                   DataColumn(label: Text('Categoría')),
                   DataColumn(label: Text('Acción')),
                 ],
-                rows: productos.take(20).map((producto) {
+                rows: productos.take(limit).map((producto) {
                   final listaPrecio = (producto.productosVariaciones?.any((v) => v.listasPrecios?.isNotEmpty == true) ?? false)
                       ? "producto con variacion"
                       : (producto.listasPrecios?.isNotEmpty == true

@@ -2,8 +2,10 @@
 
 import 'package:facturador_offline/models/producto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:searchfield/searchfield.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_login/login_cubit.dart';
@@ -98,9 +100,47 @@ class _BuscarProductoScannerState extends State<BuscarProductoScanner> {
                       textEditingController.clear();
                       _textEditingController.clear();// Ensure focus after submit
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Buscar Producto con Scanner',
                       prefixIcon: Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.qr_code_scanner),
+                        onPressed: () async {
+                          try {
+                            String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+                              '#ff6666', 
+                              'Cancelar', 
+                              true, 
+                              ScanMode.BARCODE
+                            );
+                            
+                            // Si el usuario cancela el escaneo, se devuelve -1
+                            if (barcodeScanRes != '-1') {
+                              // Buscar el producto por código de barras
+                              final matchedProduct = todosLosProductos.firstWhere(
+                                (producto) => producto['codigo'] == barcodeScanRes,
+                                orElse: () => {},
+                              );
+                              
+                              if (matchedProduct.isNotEmpty) {
+                                // Agregar el producto si se encuentra
+                                context.read<ProductosCubit>().agregarProducto(matchedProduct);
+                                context.read<ProductosCubit>().actualizarPrecioTotalProducto(matchedProduct);
+                              } else {
+                                // Mostrar mensaje si no se encuentra
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Producto con código $barcodeScanRes no encontrado')),
+                                );
+                              }
+                            }
+                          } on PlatformException {
+                            // Manejar errores de escaneo
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error al escanear código de barras')),
+                            );
+                          }
+                        },
+                      ),
                     ),
                   );
                 },

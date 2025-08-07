@@ -55,6 +55,8 @@ dependencies:
   sqlite3: ^2.4.7
   searchfield: ^1.1.7
   diacritic: ^0.1.3
+  flutter_barcode_scanner: ^2.0.0
+  collection: ^1.18.0
 
 dev_dependencies:
   flutter_test:

@@ -2,8 +2,10 @@ import 'package:facturador_offline/pages/page_catalogo.dart';
 import 'package:facturador_offline/pages/page_forma_cobro.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:collection/collection.dart';
 
 import '../bloc/cubit_login/login_cubit.dart';
+import '../bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../bloc/cubit_resumen/resumen_cubit.dart';
 import '../helper/database_helper.dart';
@@ -204,7 +206,27 @@ class NuevaVentaPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 16.0),
-            const Text('Lista de precios: Precio base'),
+            BlocBuilder<ClientesMostradorCubit, ClientesMostradorState>(
+              builder: (context, state) {
+                // Por defecto, mostrar 'Precio base'
+                String listaPrecioNombre = 'Precio base';
+                
+                // Si hay un cliente seleccionado, intentar obtener el nombre de su lista de precios
+                if (state.clienteSeleccionado != null && state.clienteSeleccionado!.listaPrecio != null) {
+                  // Usar el BLoC de listas de precios para encontrar el nombre
+                  final listaPrecios = context.read<ListaPreciosCubit>().state.currentList;
+                  final listaDelCliente = listaPrecios.firstWhereOrNull(
+                    (lista) => lista.id == state.clienteSeleccionado!.listaPrecio
+                  );
+                  
+                  if (listaDelCliente != null && listaDelCliente.nombre != null) {
+                    listaPrecioNombre = listaDelCliente.nombre!;
+                  }
+                }
+                
+                return Text('Lista de precios: $listaPrecioNombre');
+              },
+            ),
             const SizedBox(height: 16.0),
             ListaPrecios(),
             const SizedBox(height: 16.0),

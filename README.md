@@ -1,6 +1,6 @@
 # facturador_offline
 
-A new Flutter project.
+Alan Finzi
 
 ## Getting Started
 

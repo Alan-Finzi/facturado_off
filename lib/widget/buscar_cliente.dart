@@ -1,3 +1,4 @@
+import 'package:facturador_offline/bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/widget/mod_cliente_dialogo.dart';
 import 'package:flutter/material.dart';
@@ -26,8 +27,9 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
   @override
   void initState() {
     super.initState();
-    // Cargar clientes desde la base de datos al iniciar el widget
+    // Cargar clientes y listas de precios desde la base de datos al iniciar el widget
     context.read<ClientesMostradorCubit>().getClientesBD();
+    context.read<ListaPreciosCubit>().getListasPreciosBD();
   }
 
   /// Convierte la lista de clientes a un formato compatible con el campo de búsqueda
@@ -107,6 +109,22 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                             // Después limpiar los productos seleccionados
                             // Este orden es crucial para mantener la consistencia
                             context.read<ProductosCubit>().limpiarProductosSeleccionados();
+                            
+                            // Actualizar la información de la lista de precios del cliente
+                            if (clienteCorrespondiente.listaPrecio != null) {
+                              final listasPreciosCubit = context.read<ListaPreciosCubit>();
+                              final listaPrecios = listasPreciosCubit.state.currentList;
+                              final listaCliente = listaPrecios.firstWhere(
+                                (lista) => lista.id == clienteCorrespondiente.listaPrecio,
+                                orElse: () => Lista(id: 1, nombre: 'Precio base'),
+                              );
+                              
+                              // Actualizar la información de la lista de precios en ProductosCubit
+                              context.read<ProductosCubit>().updateListaPreciosInfo(
+                                clienteCorrespondiente.listaPrecio!,
+                                listaCliente.nombre ?? 'Precio base',
+                              );
+                            }
                             
                             // Aquí podría agregarse actualización de precios basados en la lista del cliente
                             // Ejemplo: context.read<ProductosCubit>().actualizarPreciosSegunCliente(clienteCorrespondiente.listaPrecio);
