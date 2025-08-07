@@ -102,19 +102,28 @@ class _CatalogoPageState extends State<CatalogoPage> {
               const SizedBox(height: 16.0),
 
               // Load More Button
-              if (productos.length > limit) 
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      limit += 100;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text('Cargar más productos (${productos.length - limit} restantes)'),
-                ),
+              BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
+                builder: (context, state) {
+                  final productos = state.filteredProductoResponse?.data?.isNotEmpty == true
+                    ? state.filteredProductoResponse!.data!
+                    : state.productoResponse?.data ?? [];
+                    
+                  return productos.length > limit
+                    ? ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            limit += 100;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Cargar más productos (${productos.length - limit} restantes)'),
+                      )
+                    : SizedBox();
+                },
+              ),
 
               const SizedBox(height: 16.0),
 
@@ -141,9 +150,16 @@ class _CatalogoPageState extends State<CatalogoPage> {
                     child: Card(
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          'Mostrando ${productos.length < limit ? productos.length : limit} de ${productos.length} productos',
-                          textAlign: TextAlign.center,
+                        child: BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
+                          builder: (context, state) {
+                            final productsCount = state.filteredProductoResponse?.data?.length ?? 
+                                                state.productoResponse?.data?.length ?? 0;
+                            
+                            return Text(
+                              'Mostrando ${productsCount < limit ? productsCount : limit} de $productsCount productos',
+                              textAlign: TextAlign.center,
+                            );
+                          },
                         ),
                       ),
                     ),
