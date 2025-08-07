@@ -6,6 +6,7 @@ import '../../models/datos_facturacion_model.dart';
 import '../../models/producto.dart';
 import '../../models/user.dart';
 import '../../services/user_repository.dart';
+import '../../util/logger.dart';
 
 part 'productos_state.dart';
 
@@ -32,10 +33,20 @@ class ProductosCubit extends Cubit<ProductosState> {
           filteredListProductCubit: listProduct,
           categorias: ['Todas las categorías'] + _extractCategorias(listProduct),
         ));
+      } else {
+        // Manejar el caso cuando no hay productos
+        print("No se encontraron productos");
+        // Aquí podrías emitir un estado que indique que no hay productos
+        // emit(ProductosErrorState('No se encontraron productos'));
       }
     } catch (e) {
-      print("Error al obtener productos: $e");
-      // Considerar emitir un estado de error para notificar al UI
+      log.e("ProductosCubit", "Error al obtener productos", e);
+      // Emitir un estado con datos vacíos pero manteniendo el estado anterior
+      // para evitar romper la interfaz
+      emit(state.copyWith(
+        currentListProductCubit: state.currentListProductCubit,
+        filteredListProductCubit: [],
+      ));
     }
   }
 
@@ -154,11 +165,14 @@ class ProductosCubit extends Cubit<ProductosState> {
         // Buscar el IVA correspondiente al producto
         try {
           ivaEncontrado = productosIvas.firstWhere(
-                (iva) => iva.sucursalId.toString() == sucursalId.toString() && iva.productId.toString() == productoSeleccionado.id.toString(),
+                (iva) => iva.sucursalId.toString() == sucursalId.toString() && 
+                       iva.productId.toString() == productoSeleccionado.id.toString(),
           ).iva;
         } catch (e) {
           // Si no se encuentra, usar 0.0 como valor predeterminado
           ivaEncontrado = 0.0;
+          // Registrar el error pero continuar con la operación
+          log.w("ProductosCubit", "No se encontró IVA para el producto ${productoSeleccionado.id}, usando 0.0 por defecto");
         }
 
         // Calcular IVA según condición fiscal del cliente

@@ -1,0 +1,84 @@
+From 6692b32f35f68159480eafa64b9aa790c14d25fd Mon Sep 17 00:00:00 2001
+From: Alan Finzi <alan.finzi@example.com>
+Date: Wed, 6 Aug 2025 23:37:06 +0000
+Subject: [PATCH] =?UTF-8?q?Agregado=20tipoFactura=20al=20state=20y=20m?=
+ =?UTF-8?q?=C3=A9todo=20updateTipoFactura?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Añadida propiedad tipoFactura en productos_state.dart
+- Implementado método updateTipoFactura en productos_cubit.dart
+- Actualizado el método copyWith para incluir tipoFactura
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ lib/bloc/cubit_productos/productos_cubit.dart | 4 ++++
+ lib/bloc/cubit_productos/productos_state.dart | 7 +++++++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/lib/bloc/cubit_productos/productos_cubit.dart b/lib/bloc/cubit_productos/productos_cubit.dart
+index 5c631aa..33fac69 100644
+--- a/lib/bloc/cubit_productos/productos_cubit.dart
++++ b/lib/bloc/cubit_productos/productos_cubit.dart
+@@ -41,6 +41,10 @@ class ProductosCubit extends Cubit<ProductosState> {
+   void updateCategoriaIvaUser(String categoriaIvaUser) {
+     emit(state.copyWith(categoriaIvaUser: categoriaIvaUser));
+   }
++  
++  void updateTipoFactura(String tipoFactura) {
++    emit(state.copyWith(tipoFactura: tipoFactura));
++  }
+ 
+   void filterProducts(String query, String categoriaSeleccionada) {
+     final originalList = state.currentListProductCubit;
+diff --git a/lib/bloc/cubit_productos/productos_state.dart b/lib/bloc/cubit_productos/productos_state.dart
+index 96059cd..e1e7eba 100644
+--- a/lib/bloc/cubit_productos/productos_state.dart
++++ b/lib/bloc/cubit_productos/productos_state.dart
+@@ -16,6 +16,9 @@ class ProductosState extends Equatable {
+  /// Categoría IVA del usuario (Ej: Monotributo, Responsable Inscripto)
+  final String categoriaIvaUser;
+ 
++ /// Tipo de factura (Ej: Factura A, Factura B, Factura C)
++ final String? tipoFactura;
++
+  /// Flag para forzar recálculo o redibujo de precios totales (usado en la UI)
+  final bool precioTotal;
+ 
+@@ -29,6 +32,7 @@ class ProductosState extends Equatable {
+   required this.currentListProductCubit,
+   this.filteredListProductCubit,
+   this.categoriaIvaUser = "Seleccionar",
++  this.tipoFactura = "Factura C",
+   this.datosFacturacionModel = const [],
+   this.categorias = const [],
+   this.categoriaSeleccionada = '',
+@@ -44,6 +48,7 @@ class ProductosState extends Equatable {
+   List<String>? categorias,
+   String? categoriaSeleccionada,
+   String? categoriaIvaUser,
++  String? tipoFactura,
+   bool? precioTotal,
+   List<ProductoConPrecioYStock>? productosSeleccionados,
+  }) {
+@@ -53,6 +58,7 @@ class ProductosState extends Equatable {
+    datosFacturacionModel: datosFacturacionModel ?? this.datosFacturacionModel,
+    categorias: categorias ?? this.categorias,
+    categoriaIvaUser: categoriaIvaUser ?? this.categoriaIvaUser,
++   tipoFactura: tipoFactura ?? this.tipoFactura,
+    categoriaSeleccionada: categoriaSeleccionada ?? this.categoriaSeleccionada,
+    productosSeleccionados: productosSeleccionados ?? this.productosSeleccionados,
+    precioTotal: precioTotal ?? this.precioTotal,
+@@ -70,5 +76,6 @@ class ProductosState extends Equatable {
+   precioTotal,
+   productosSeleccionados,
+   categoriaIvaUser,
++  tipoFactura,
+  ];
+ }
+-- 
+2.43.0
+

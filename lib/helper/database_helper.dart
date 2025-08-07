@@ -23,11 +23,40 @@ class DatabaseHelper {
 
   static Database? _database;
 
+  // Cache en memoria para consultas frecuentes
+  final Map<String, dynamic> _queryCache = {};
+  final Duration _cacheDuration = Duration(minutes: 10);
+  final Map<String, DateTime> _cacheTimestamps = {};
+
+  /// Obtiene una instancia de la base de datos, inicializándola si es necesario
+  /// La base de datos se mantiene como singleton para eficiencia
   Future<Database> get database async {
     if (_database != null) return _database!;
     await deleteDatabaseIfExists();
     _database = await _initDatabase();
     return _database!;
+  }
+  
+  /// Limpia la caché después de que expire el tiempo
+  void _cleanExpiredCache() {
+    final now = DateTime.now();
+    _cacheTimestamps.removeWhere((key, timestamp) {
+      final isExpired = now.difference(timestamp) > _cacheDuration;
+      if (isExpired) _queryCache.remove(key);
+      return isExpired;
+    });
+  }
+  
+  /// Almacena un resultado en la caché
+  void _cacheResult(String key, dynamic result) {
+    _queryCache[key] = result;
+    _cacheTimestamps[key] = DateTime.now();
+  }
+  
+  /// Obtiene un resultado de la caché si está disponible y no ha expirado
+  dynamic _getCachedResult(String key) {
+    _cleanExpiredCache();
+    return _queryCache[key];
   }
 
   Future<void> deleteDatabaseIfExists() async {
@@ -775,10 +804,25 @@ class DatabaseHelper {
     );
   }
 
+  /// Obtiene todos los productos de la base de datos con caché para mejorar rendimiento
   Future<List<ProductoModel>> getProductos() async {
+    const cacheKey = 'all_productos';
+    
+    // Verificar si existe en caché
+    final cachedResult = _getCachedResult(cacheKey);
+    if (cachedResult != null) {
+      return cachedResult as List<ProductoModel>;
+    }
+    
+    // Consultar la base de datos
     final db = await database;
     final maps = await db.query('productos');
-    return maps.map((map) => ProductoModel.fromMap(map)).toList();
+    final result = maps.map((map) => ProductoModel.fromMap(map)).toList();
+    
+    // Guardar en caché
+    _cacheResult(cacheKey, result);
+    
+    return result;
   }
 
   Future<void> insertOrUpdateProductos(List<ProductoModel> productos) async {
@@ -878,10 +922,25 @@ class DatabaseHelper {
     );
   }
 
+  /// Obtiene todos los clientes de la base de datos con caché para mejorar rendimiento
   Future<List<ClientesMostrador>> getClientesDB() async {
+    const cacheKey = 'all_clientes';
+    
+    // Verificar si existe en caché
+    final cachedResult = _getCachedResult(cacheKey);
+    if (cachedResult != null) {
+      return cachedResult as List<ClientesMostrador>;
+    }
+    
+    // Consultar la base de datos
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('Clientes_mostrador');
-    return List.generate(maps.length, (i) => ClientesMostrador.fromJson(maps[i]));
+    final result = List.generate(maps.length, (i) => ClientesMostrador.fromJson(maps[i]));
+    
+    // Guardar en caché
+    _cacheResult(cacheKey, result);
+    
+    return result;
   }
 
   // Métodos relacionados con la tabla productos_stock_sucursales

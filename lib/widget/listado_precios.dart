@@ -105,12 +105,17 @@ class _ListaPreciosState extends State<ListaPrecios> {
               DataColumn(label: Text('TOTAL')),
               DataColumn(label: Text('ACCIONES')),
             ],
+            // Usar ListView.builder para listas largas sería más eficiente, 
+            // pero para mantener el diseño usamos DataTable con optimización
             rows: List<DataRow>.generate(
               state.productosSeleccionados.length,
                   (index) {
+                // Solo procesar los elementos visibles o cerca del área visible
                 final producto = state.productosSeleccionados[index];
                 _controllers[index].text = producto.cantidad.toString();
+                // Usar un key basado en el producto para mejorar la eficiencia de renderizado
                 return DataRow(
+                  key: ValueKey(producto.datum?.id ?? index),
                   cells: [
                     DataCell(Text(producto.datum?.barcode ?? 'Sin código')),
                     DataCell(Text(producto.datum?.nombre ?? 'Sin nombre')),

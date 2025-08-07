@@ -1,5 +1,7 @@
 part of 'productos_cubit.dart';
 
+/// Estado para el cubit de productos que almacena toda la información necesaria
+/// para la gestión de productos, facturación y ventas
 class ProductosState extends Equatable {
  /// Lista completa de productos obtenidos (sin filtrar)
  final List<ProductoModel> currentListProductCubit;
@@ -34,6 +36,7 @@ class ProductosState extends Equatable {
  /// Lista de productos que el usuario ha seleccionado para vender/facturar
  final List<ProductoConPrecioYStock> productosSeleccionados;
 
+ /// Constructor del estado con valores por defecto para la mayoría de propiedades
  ProductosState({
   required this.currentListProductCubit,
   this.filteredListProductCubit,

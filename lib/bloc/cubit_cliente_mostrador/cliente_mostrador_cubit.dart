@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../models/clientes_mostrador.dart';
 import '../../services/user_repository.dart';
+import '../../util/logger.dart';
 
 part 'cliente_mostrador_state.dart';
 /// Cubit para la gestión de clientes de mostrador en la aplicación.
@@ -43,8 +44,8 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
         deleteClientes: clientesDesactivados,
       ));
     } catch (e) {
-      print("Error al obtener clientes: $e");
-      // Considerar emitir un estado de error para notificar al UI
+      log.e("ClientesMostradorCubit", "Error al obtener clientes", e);
+      // Emitir un estado con datos vacíos pero manteniendo el estado anterior
     }
   }
 

@@ -177,6 +177,10 @@ class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
     );
   }
 
+  /// Carga las sugerencias de productos basadas en la consulta del usuario
+  /// Optimizado para listas grandes con un límite de resultados
+  /// @param query Texto de búsqueda ingresado por el usuario
+  /// @param productos Datos de productos disponibles
   void cargarSugerencias(String query, ProductoResponse? productos) {
     if (productos == null || productos.data == null) {
       productoSugerencias = [];
@@ -185,11 +189,21 @@ class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
     }
 
     final keywords = query.toLowerCase().split(' ');
-
+    
+    // Limitar la cantidad de resultados para mejor rendimiento
+    const int maxResults = 50;
+    
+    // Implementar búsqueda optimizada
+    int count = 0;
     productoSugerencias = productos.data!
         .where((dato) {
+      // Si ya encontramos suficientes resultados, dejar de buscar
+      if (count >= maxResults) return false;
+          
       final textoProducto = '${dato.nombre ?? ''} ${dato.barcode ?? ''}'.toLowerCase();
-      return keywords.every((keyword) => textoProducto.contains(keyword));
+      final match = keywords.every((keyword) => textoProducto.contains(keyword));
+      if (match) count++;
+      return match;
     })
         .map((dato) => SearchFieldListItem<String>(
       dato.nombre ?? 'Sin nombre',
