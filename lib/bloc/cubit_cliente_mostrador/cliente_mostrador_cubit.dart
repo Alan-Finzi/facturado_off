@@ -5,13 +5,19 @@ import '../../models/clientes_mostrador.dart';
 import '../../services/user_repository.dart';
 
 part 'cliente_mostrador_state.dart';
+/// Cubit para la gestión de clientes de mostrador en la aplicación.
+/// Maneja la carga, filtrado, selección y actualización de clientes.
 class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
+  /// Repositorio para acceso a datos de clientes
   final UserRepository userRepository;
 
+  /// Constructor que inicializa el Cubit con un estado vacío
+  /// @param userRepository Repositorio para acceso a datos
   ClientesMostradorCubit(this.userRepository)
       : super(const ClientesMostradorState(clientes: [], filteredClientes: []));
 
-  // Método para deseleccionar un cliente
+  /// Deselecciona el cliente actualmente seleccionado
+  /// Reinicia el estado de búsqueda de cliente a falso
   void deseleccionarCliente() {
     emit(state.copyWith(
       clienteSeleccionado: null,
@@ -19,7 +25,8 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
     ));
   }
 
-  // Método para obtener los clientes desde la base de datos
+  /// Obtiene los clientes desde la base de datos y actualiza el estado
+  /// Los clientes se filtran en activos y desactivados basados en el campo activo
   Future<void> getClientesBD() async {
     try {
       // Obtener todos los clientes de la base de datos
@@ -37,30 +44,36 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
       ));
     } catch (e) {
       print("Error al obtener clientes: $e");
-      // Aquí podrías emitir un estado de error si es necesario
+      // Considerar emitir un estado de error para notificar al UI
     }
   }
 
-// Método para buscar un cliente
+  /// Busca clientes que coincidan con el texto de búsqueda proporcionado
+  /// @param query Texto a buscar en nombre, DNI o código de cliente
   Future<void> buscarCliente(String query) async {
     try {
+      // Filtrar clientes que coincidan con la búsqueda
       final filteredClientes = state.clientes.where((cliente) {
         final nombre = cliente.nombre?.toLowerCase() ?? '';
         final dni = cliente.dni ?? '';
         final codigoCliente = cliente.idCliente ?? '';
-        return nombre.contains(query.toLowerCase()) || dni.contains(query) || codigoCliente.contains(query);
+        return nombre.contains(query.toLowerCase()) || 
+               dni.contains(query) || 
+               codigoCliente.contains(query);
       }).toList();
 
+      // Actualizar solo la lista filtrada, manteniendo el resto del estado
       emit(state.copyWith(filteredClientes: filteredClientes));
     } catch (e) {
       print("Error al buscar cliente: $e");
     }
   }
-
-
+  /// Selecciona un cliente y actualiza el estado de búsqueda
+  /// @param cliente Cliente a seleccionar
+  /// @param value Estado actual de búsqueda que se invertirá
+  /// Este método es clave para la integración con listas de precios, ya que al seleccionar
+  /// un cliente se debe actualizar la lista de precios según su configuración
   void seleccionarCliente(ClientesMostrador cliente, bool value) {
-
-
     emit(state.copyWith(
       clienteSeleccionado: cliente,
       buscarCliente: !value,

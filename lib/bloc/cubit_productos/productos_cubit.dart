@@ -9,12 +9,20 @@ import '../../services/user_repository.dart';
 
 part 'productos_state.dart';
 
+/// Cubit encargado de gestionar el estado de los productos en la aplicación.
+/// Maneja la lista de productos, filtrado, selección y cálculos de precios.
 class ProductosCubit extends Cubit<ProductosState> {
+  /// Repositorio para acceder a datos de productos desde la base de datos o API
   final UserRepository userRepository;
 
+  /// Constructor que inicializa el Cubit con un estado inicial y el repositorio necesario
+  /// @param userRepository Repositorio para acceso a datos
+  /// @param currentListProductCubit Lista inicial de productos
   ProductosCubit(this.userRepository, {required List<ProductoModel> currentListProductCubit})
       : super(ProductosState(currentListProductCubit: currentListProductCubit, categoriaIvaUser: 'Monotributo'));
 
+  /// Obtiene productos desde la base de datos y actualiza el estado
+  /// Este método recupera todos los productos, inicializa las listas de productos y categorias
   Future<void> getProductsBD() async {
     try {
       final listProduct = await userRepository.fetchProductos();
@@ -27,9 +35,12 @@ class ProductosCubit extends Cubit<ProductosState> {
       }
     } catch (e) {
       print("Error al obtener productos: $e");
+      // Considerar emitir un estado de error para notificar al UI
     }
   }
 
+  /// Limpia la lista de productos seleccionados en el estado actual
+  /// Utilizado cuando se cambia de cliente o se reinicia una venta
   void limpiarProductosSeleccionados() {
     emit(state.copyWith(productosSeleccionados: []));
   }
@@ -54,10 +65,14 @@ class ProductosCubit extends Cubit<ProductosState> {
     emit(state.copyWith(canalVenta: canalVenta));
   }
 
+  /// Filtra la lista de productos por texto de búsqueda y categoría
+  /// @param query Texto para buscar en nombre o código de barras
+  /// @param categoriaSeleccionada Categoría para filtrar productos
   void filterProducts(String query, String categoriaSeleccionada) {
     final originalList = state.currentListProductCubit;
     final categoria = categoriaSeleccionada.isNotEmpty ? categoriaSeleccionada : 'Todas las categorías';
 
+    // Filtrado por nombre, código de barras y categoría
     final filteredList = originalList.where((producto) {
       final matchesQuery = query.isEmpty ||
           (producto.name?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
@@ -74,7 +89,9 @@ class ProductosCubit extends Cubit<ProductosState> {
     filterProducts('', categoria);
   }
 
-  void agregarProducto(Map<String, dynamic> data) async {
+  /// Agrega un producto a la lista de productos seleccionados o incrementa su cantidad
+  /// @param data Datos del producto a agregar, puede contener 'productoSeleccionado' o 'productoConPrecioYStock'
+  Future<void> agregarProducto(Map<String, dynamic> data) async {
     try {
       final user = User.currencyUser;
       if (user == null) {
@@ -82,7 +99,10 @@ class ProductosCubit extends Cubit<ProductosState> {
         return;
       }
 
+      // Determinar la sucursal activa
       final sucursalId = user.comercioId == 1 ? user.sucursal : user.comercioId;
+      
+      // Obtener datos necesarios para el cálculo de IVA
       final productosIvas = await userRepository.fetchProductosIvas();
       final condIva = state.datosFacturacionModel?[0].condicionIva;
       final relacionPrecioIva = state.datosFacturacionModel?[0].relacionPrecioIva;
@@ -90,8 +110,10 @@ class ProductosCubit extends Cubit<ProductosState> {
       ProductoConPrecioYStock? productoAgregar;
       double? ivaEncontrado = 0.0;
 
+      // Crear una copia de la lista actual para modificarla
       final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
 
+      // Obtener el código de barras del producto a agregar
       final String? barcode;
       if (data.containsKey('productoSeleccionado')) {
         final producto = data['productoSeleccionado'];
@@ -102,8 +124,10 @@ class ProductosCubit extends Cubit<ProductosState> {
         barcode = null;
       }
 
+      // Verificar si el producto ya está en la lista
       final existingProductIndex = updatedList.indexWhere((p) => p.producto?.barcode == barcode);
 
+      // Si el producto ya existe, incrementar cantidad y recalcular precio
       if (existingProductIndex >= 0) {
         final existingProduct = updatedList[existingProductIndex];
         existingProduct.cantidad = (existingProduct.cantidad ?? 0.0) + 1.0;
@@ -117,21 +141,27 @@ class ProductosCubit extends Cubit<ProductosState> {
         return;
       }
 
+      // Si es un producto nuevo, agregarlo a la lista
       if (data.containsKey('productoSeleccionado')) {
         final productoSeleccionado = data['productoSeleccionado'];
+        
+        // Obtener el precio de lista del producto
         double precioLista = 0.0;
         if (productoSeleccionado.listasPrecios != null && productoSeleccionado.listasPrecios!.isNotEmpty) {
           precioLista = double.parse(productoSeleccionado.listasPrecios!.first.precioLista ?? '0');
         }
 
+        // Buscar el IVA correspondiente al producto
         try {
           ivaEncontrado = productosIvas.firstWhere(
                 (iva) => iva.sucursalId.toString() == sucursalId.toString() && iva.productId.toString() == productoSeleccionado.id.toString(),
           ).iva;
         } catch (e) {
+          // Si no se encuentra, usar 0.0 como valor predeterminado
           ivaEncontrado = 0.0;
         }
 
+        // Calcular IVA según condición fiscal del cliente
         final resultadoIva = calcularIva(
           precioProducto: precioLista,
           alicuotaIva: ivaEncontrado!,
@@ -140,6 +170,7 @@ class ProductosCubit extends Cubit<ProductosState> {
           ivaProducto: ivaEncontrado,
         );
 
+        // Crear objeto de producto con precio y stock
         productoAgregar = ProductoConPrecioYStock(
           datum: productoSeleccionado,
           precioLista: precioLista,
@@ -154,11 +185,13 @@ class ProductosCubit extends Cubit<ProductosState> {
           detalleCalculoIva: resultadoIva.detalleCalculo,
         );
 
+        // Agregar el producto a la lista y emitir el nuevo estado
         updatedList.add(productoAgregar);
         emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
       }
     } catch (e) {
       print('Error al agregar producto: $e');
+      // Considerar emitir un estado de error para mostrar en UI
     }
   }
 
@@ -198,16 +231,21 @@ class ProductosCubit extends Cubit<ProductosState> {
     emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
   }
 
+  /// Actualiza los precios de los productos seleccionados según una nueva lista de precios
+  /// @param listaPrecios Mapa de códigos de barras a nuevos precios
+  /// Este método es clave para sincronizar los cambios de lista de precios cuando se cambia de cliente
   void actualizarPreciosConLista(Map<String, double> listaPrecios) {
     final updatedList = state.productosSeleccionados.map((producto) {
       final codigo = producto.producto?.barcode;
       if (listaPrecios.containsKey(codigo)) {
         final nuevoPrecio = listaPrecios[codigo];
         producto.precioLista = nuevoPrecio;
+        // Recalcular el precio final con la cantidad actual
         producto.precioFinal = (nuevoPrecio ?? 0) * (producto.cantidad ?? 1);
       }
       return producto;
     }).toList();
+    // Emitir nuevo estado con precios actualizados y flag de precio total activado
     emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: true));
   }
 

@@ -5,6 +5,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../bloc/cubit_resumen/resumen_cubit.dart';
 import '../models/Producto_precio_stock.dart';
+
+/// Este archivo contiene la implementación del widget que muestra la lista de precios
+/// y permite manipular productos seleccionados, cantidades y precios.
+/// Es clave en la sincronización de precios cuando se selecciona un cliente.
+/// Widget que muestra y gestiona la lista de productos seleccionados con sus precios
+/// Permite modificar cantidades, eliminar productos y actualiza automáticamente el total
 class ListaPrecios extends StatefulWidget {
   @override
   _ListaPreciosState createState() => _ListaPreciosState();
@@ -31,6 +37,8 @@ class _ListaPreciosState extends State<ListaPrecios> {
     _initializeControllers(productosCubit.state.productosSeleccionados);
   }
 
+  /// Inicializa los controladores de texto para las cantidades de productos
+  /// @param productosSeleccionados Lista de productos seleccionados
   void _initializeControllers(List<ProductoConPrecioYStock> productosSeleccionados) {
     _controllers = List.generate(
       productosSeleccionados.length,
@@ -40,6 +48,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
     );
   }
 
+  /// Calcula la suma total de precios finales de los productos seleccionados
+  /// @param productosSeleccionados Lista de productos seleccionados
+  /// @return Suma total de los precios finales
   double _calcularSumaTotal(List<ProductoConPrecioYStock> productosSeleccionados) {
     return productosSeleccionados.fold(0.0, (total, producto) {
       return total + (producto.precioFinal ?? 0.0);
@@ -62,14 +73,18 @@ class _ListaPreciosState extends State<ListaPrecios> {
           _initializeControllers(state.productosSeleccionados);
         }
 
+        // Calcular el total y actualizar el estado del resumen
         double sumaTotal = _calcularSumaTotal(state.productosSeleccionados);
+        
+        // Sincronizar el total calculado con el Cubit de resumen
+        // Esta actualización asegura que el UI refleje el precio total correcto
         context.read<ResumenCubit>().changResumen(
           descuentoPromoTotal: 0,
           descuentoTotal: 0,
           ivaTotal: 0,
           ivaIncl: true,
           subtotal: 0,
-          totalFacturar: sumaTotal,
+          totalFacturar: sumaTotal,  // El precio total a facturar
           totalSinDescuento: 0,
           percepciones: 0,
           totalConDescuentoYPercepciones: 0,

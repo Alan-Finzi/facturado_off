@@ -10,6 +10,9 @@ import '../models/clientes_mostrador.dart';
 import 'widget_alta_clientes.dart';
 import 'package:flutter/material.dart';
 import 'package:searchfield/searchfield.dart';
+/// Widget para la búsqueda y selección de clientes
+/// Permite buscar clientes por nombre o DNI y seleccionarlos
+/// Cuando se selecciona un cliente, actualiza la lista de precios y limpia los productos
 class BuscarClienteWidget extends StatefulWidget {
   @override
   _BuscarClienteWidgetState createState() => _BuscarClienteWidgetState();
@@ -23,19 +26,21 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
   @override
   void initState() {
     super.initState();
-    // Llama al método para cargar los clientes al iniciar el widget
+    // Cargar clientes desde la base de datos al iniciar el widget
     context.read<ClientesMostradorCubit>().getClientesBD();
   }
 
+  /// Convierte la lista de clientes a un formato compatible con el campo de búsqueda
+  /// @param clientes Lista de clientes a convertir
   void cargarSugerencias(List<ClientesMostrador> clientes) {
-    // Convierte la lista de ClientesMostrador a SearchFieldListItem
+    // Convertir la lista de ClientesMostrador a SearchFieldListItem
     clienteSugerencias = clientes.map((cliente) {
       return SearchFieldListItem<String>(
         cliente.nombre ?? 'Sin nombre',
-        item: cliente.dni ?? cliente.idCliente ?? 'Sin DNI',
+        item: cliente.dni ?? cliente.idCliente ?? 'Sin DNI', // Usar DNI o ID como identificador
       );
     }).toList();
-    setState(() {}); // Actualiza el estado para mostrar las sugerencias cargadas
+    setState(() {}); // Actualizar el estado para mostrar las sugerencias cargadas
   }
 
   @override
@@ -95,11 +100,16 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                           onPressed: () {
                             Navigator.of(context).pop(); // Cerrar el pop-up
 
-                            // Primero, actualizar el cliente seleccionado
+                            // IMPORTANTE: Primero actualizar el cliente seleccionado
+                            // Esto es clave para la sincronización con la lista de precios
                             context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente,value);
 
-                            // Limpiar los productos seleccionados después de haber actualizado el cliente
+                            // Después limpiar los productos seleccionados
+                            // Este orden es crucial para mantener la consistencia
                             context.read<ProductosCubit>().limpiarProductosSeleccionados();
+                            
+                            // Aquí podría agregarse actualización de precios basados en la lista del cliente
+                            // Ejemplo: context.read<ProductosCubit>().actualizarPreciosSegunCliente(clienteCorrespondiente.listaPrecio);
                           },
                           child: Text('Aceptar'),
                         ),
