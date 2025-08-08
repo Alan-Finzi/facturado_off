@@ -38,9 +38,16 @@ class VentaDropdownsWidget extends StatelessWidget {
 
                 final datosFacturacion = snapshot.data!;
 
-                // Si no hay uno seleccionado aún, tomamos el primero por defecto
-                if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+                // Obtener datos del estado si están disponibles, sino usar el primero por defecto
+                if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
+                    // Actualizamos datosFacturacionCurrent desde el estado guardado
+                    DatosFacturacionModel.datosFacturacionCurrent.clear();
+                    DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
+                } else if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+                    // Si no hay datos en el estado ni en la variable estática, usar el primero
                     DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
+                    // Y guardarlo también en el estado
+                    productosCubit.updateDatosFacturacion([datosFacturacion.first]);
                 }
 
                 // Accedemos al cubit
@@ -162,18 +169,32 @@ class DropButtonDatosFact extends StatelessWidget {
 
     @override
     Widget build(BuildContext context) {
-        DatosFacturacionModel? selected =
-        DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty
-            ? DatosFacturacionModel.datosFacturacionCurrent.first
-            : null;
+        return BlocBuilder<ProductosCubit, ProductosState>(
+          builder: (context, state) {
+            // Obtener el valor seleccionado, priorizando el estado del cubit
+            DatosFacturacionModel? selected;
+            
+            if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
+                // Usar el valor del estado
+                selected = state.datosFacturacionModel!.first;
+            } else if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty) {
+                // Si no hay en el estado, usar la variable estática
+                selected = DatosFacturacionModel.datosFacturacionCurrent.first;
+            }
+            
+            // Verificar que el valor seleccionado esté en la lista disponible
+            if (selected != null && !datosFacturacion.contains(selected)) {
+                // Si no está en la lista, intentar encontrar uno por ID
+                final matchById = datosFacturacion.firstWhere(
+                  (df) => df.id == selected!.id,
+                  orElse: () => datosFacturacion.isNotEmpty ? datosFacturacion.first : selected,
+                );
+                selected = datosFacturacion.contains(matchById) ? matchById : null;
+            }
 
-        if (selected != null && !datosFacturacion.contains(selected)) {
-            selected = null;
-        }
-
-        return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DropdownButton<DatosFacturacionModel>(
+            return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DropdownButton<DatosFacturacionModel>(
                 value: selected,
                 onChanged: (DatosFacturacionModel? selectedFactura) {
                     if (selectedFactura != null) {
@@ -201,7 +222,9 @@ class DropButtonDatosFact extends StatelessWidget {
                 isExpanded: false,
                 iconSize: 20,
                 style: const TextStyle(fontSize: 14),
-            ),
+                ),
+            );
+          },
         );
     }
 }
