@@ -37,6 +37,10 @@ class VentaDropdownsWidget extends StatelessWidget {
                 }
 
                 final datosFacturacion = snapshot.data!;
+                
+                // Accedemos al cubit
+                final productosCubit = context.watch<ProductosCubit>();
+                final state = productosCubit.state;
 
                 // Obtener datos del estado si están disponibles, sino usar el primero por defecto
                 if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
@@ -49,10 +53,6 @@ class VentaDropdownsWidget extends StatelessWidget {
                     // Y guardarlo también en el estado
                     productosCubit.updateDatosFacturacion([datosFacturacion.first]);
                 }
-
-                // Accedemos al cubit
-                final productosCubit = context.watch<ProductosCubit>();
-                final state = productosCubit.state;
 
                 return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
