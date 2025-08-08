@@ -185,11 +185,22 @@ class DropButtonDatosFact extends StatelessWidget {
             // Verificar que el valor seleccionado esté en la lista disponible
             if (selected != null && !datosFacturacion.contains(selected)) {
                 // Si no está en la lista, intentar encontrar uno por ID
-                final matchById = datosFacturacion.firstWhere(
-                  (df) => df.id == selected!.id,
-                  orElse: () => datosFacturacion.isNotEmpty ? datosFacturacion.first : selected,
-                );
-                selected = datosFacturacion.contains(matchById) ? matchById : null;
+                try {
+                  // Intentar encontrar por ID
+                  if (selected!.id != null) {
+                    final matchById = datosFacturacion.firstWhere(
+                      (df) => df.id == selected.id,
+                      orElse: () => datosFacturacion.first,
+                    );
+                    selected = matchById;
+                  } else {
+                    // Si no tiene ID, usar el primero
+                    selected = datosFacturacion.isNotEmpty ? datosFacturacion.first : null;
+                  }
+                } catch (e) {
+                  // En caso de error, asignar el primer elemento si existe
+                  selected = datosFacturacion.isNotEmpty ? datosFacturacion.first : null;
+                }
             }
 
             return SingleChildScrollView(
