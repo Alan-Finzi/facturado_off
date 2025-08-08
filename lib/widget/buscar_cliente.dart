@@ -35,13 +35,25 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
   /// Convierte la lista de clientes a un formato compatible con el campo de búsqueda
   /// @param clientes Lista de clientes a convertir
   void cargarSugerencias(List<ClientesMostrador> clientes) {
-    // Convertir la lista de ClientesMostrador a SearchFieldListItem
-    clienteSugerencias = clientes.map((cliente) {
+    // Filtrar clientes nulos o sin identificadores
+    final clientesFiltrados = clientes.where(
+      (cliente) => cliente.nombre != null && (cliente.dni != null || cliente.idCliente != null)
+    ).toList();
+    
+    // Convertir la lista filtrada a SearchFieldListItem
+    clienteSugerencias = clientesFiltrados.map((cliente) {
+      // Crear un texto más descriptivo para mostrar
+      final String displayText = '${cliente.nombre ?? 'Sin nombre'} ${cliente.dni != null ? '- DNI: ${cliente.dni}' : ''}';
+      
+      // Crear identificador único
+      final String identifier = cliente.idCliente ?? cliente.dni ?? 'ID-${cliente.nombre}';
+      
       return SearchFieldListItem<String>(
-        cliente.nombre ?? 'Sin nombre',
-        item: cliente.dni ?? cliente.idCliente ?? 'Sin DNI', // Usar DNI o ID como identificador
+        displayText,
+        item: identifier,
       );
     }).toList();
+    
     setState(() {}); // Actualizar el estado para mostrar las sugerencias cargadas
   }
 
@@ -77,19 +89,52 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
             maxSuggestionsInViewPort: 5,
             itemHeight: 50,
             onSuggestionTap: (cliente) {
-              final selectedCliente = clienteSugerencias.firstWhere(
-                    (c) => c.searchKey == cliente.searchKey,
-              );
+              SearchFieldListItem<String>? selectedCliente;
+              
+              try {
+                // Buscar el cliente seleccionado en las sugerencias
+                selectedCliente = clienteSugerencias.firstWhere(
+                  (c) => c.searchKey == cliente.searchKey,
+                );
+              } catch (e) {
+                print('Error al encontrar la sugerencia seleccionada: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error al seleccionar el cliente')),
+                );
+                return;
+              }
+              
+              if (selectedCliente == null) {
+                print('Cliente seleccionado no encontrado');
+                return;
+              }
               // Acceder al estado del ClientesMostradorCubit para obtener la lista de clientes
               final clientes = context.read<ClientesMostradorCubit>().state.clientes;
               final value = context.read<ClientesMostradorCubit>().state.buscarCliente;
               // Buscar el cliente original en la lista de clientes basada en la búsqueda
-              final clienteCorrespondiente =clientes.firstWhere(
-                    (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
-              );
+              ClientesMostrador? clienteCorrespondiente;
+              try {
+                // Intentar encontrar el cliente en la lista
+                clienteCorrespondiente = clientes.firstWhere(
+                  (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
+                );
+              } catch (e) {
+                // Si no se encuentra, asignamos null
+                clienteCorrespondiente = null;
+                print('Error al buscar cliente: $e');
+              }
+              
+              // Verificar si se encontró el cliente
+              if (clienteCorrespondiente == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Cliente no encontrado')),
+                );
+                return;
+              }
 
               // Si se encontró el cliente correspondiente, seleccionarlo
-              if (clienteCorrespondiente != null) {
+              // Como clienteCorrespondiente nunca será null (debido a firstWhere sin orElse), no necesitamos verificarlo
+              try {
                 // Mostrar el pop-up para notificar al usuario que los productos se limpiarán
                 showDialog(
                   context: context,
@@ -136,8 +181,11 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                   },
                 );
                 _controller.text = selectedCliente.searchKey;
-              } else {
-                print('Cliente no encontrado');
+              } catch (e) {
+                print('Cliente no encontrado: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('No se pudo seleccionar el cliente. Inténtelo de nuevo.')),
+                );
               }
             },
           ),
