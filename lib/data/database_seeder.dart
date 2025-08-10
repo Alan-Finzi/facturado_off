@@ -44,7 +44,7 @@ class DatabaseSeeder {
         externalId: '',
         emailVerifiedAt: DateTime.now(),
         confirmedAt: DateTime.now(),
-        confirmed: true,
+
         plan: 1,
         lastLogin: DateTime.now(),
         cantidadLogin: 5,
@@ -65,7 +65,6 @@ class DatabaseSeeder {
       sucursalId: 1,
       listaPrecio:2,
       comercioId: 1,
-      lastSale: DateTime.now(),
       recontacto: DateTime.now().add(Duration(days: 30)),
       plazoCuentaCorriente: 30,
       montoMaximoCuentaCorriente: 10000.0,
@@ -98,7 +97,6 @@ class DatabaseSeeder {
       sucursalId: 1,
       listaPrecio: 1,
       comercioId: 1,
-      lastSale: DateTime.now(),
       recontacto: DateTime.now().add(Duration(days: 30)),
       plazoCuentaCorriente: 30,
       montoMaximoCuentaCorriente: 10000.0,
@@ -132,7 +130,6 @@ class DatabaseSeeder {
       sucursalId: 1,
       listaPrecio: 1,
       comercioId: 1,
-      lastSale: DateTime.now(),
       recontacto: DateTime.now().add(Duration(days: 30)),
       plazoCuentaCorriente: 30,
       montoMaximoCuentaCorriente: 10000.0,
@@ -165,7 +162,6 @@ class DatabaseSeeder {
       sucursalId: 1,
       listaPrecio: 1,
       comercioId: 1,
-      lastSale: DateTime.now(),
       recontacto: DateTime.now().add(Duration(days: 30)),
       plazoCuentaCorriente: 30,
       montoMaximoCuentaCorriente: 10000.0,
@@ -341,8 +337,8 @@ class DatabaseSeeder {
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: randomStock1,
-      stockReal: (randomStock1 * 0.9).floor(), // 90% del stock
+      stock: 200,
+      stockReal: 200, // 90% del stock
       eliminado: 0,
     ));
 
@@ -373,15 +369,14 @@ class DatabaseSeeder {
       eliminado: 0,
     ));
 
-    final randomStock1 = getRandomStock();
     await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
       productId: 1,
       referenciaVariacion: 'Var1',
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: randomStock1,
-      stockReal: (randomStock1 * 0.9).floor(), // 90% del stock
+      stock: 200,
+      stockReal: 200, // 90% del stock
       eliminado: 0,
     ));
     final randomStock3 = getRandomStock();
@@ -391,8 +386,8 @@ class DatabaseSeeder {
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: randomStock3,
-      stockReal: (randomStock3 * 0.9).floor(), // 90% del stock
+      stock: 200,
+      stockReal: 200, // 90% del stock
       eliminado: 0,
     ));
     final randomStock2 = getRandomStock();
@@ -402,8 +397,8 @@ class DatabaseSeeder {
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: randomStock2,
-      stockReal: (randomStock2 * 0.9).floor(), // 90% del stock
+      stock: 200,
+      stockReal: 200, // 90% del stock
       eliminado: 0,
     ));
   }
