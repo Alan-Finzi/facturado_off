@@ -41,60 +41,6 @@ class _CatalogoPageState extends State<CatalogoPage> {
     super.dispose();
   }
   
-  /// Resalta los términos de búsqueda en el texto del producto
-  /// @param texto El texto completo del producto
-  /// @param consulta Los términos de búsqueda ingresados por el usuario
-  Widget _highlightSearchTerms(String texto, String consulta) {
-    // Si no hay consulta, devolver el texto normal
-    if (consulta.isEmpty) {
-      return Text(texto);
-    }
-    
-    // Dividir la consulta en palabras clave
-    final keywords = consulta.toLowerCase().split(' ')
-      .where((keyword) => keyword.isNotEmpty)
-      .toList();
-    
-    // Si no hay palabras clave válidas, devolver el texto normal
-    if (keywords.isEmpty) {
-      return Text(texto);
-    }
-    
-    // Crear una expresión regular para buscar todas las palabras clave
-    // independientemente de mayúsculas/minúsculas
-    final pattern = RegExp(
-      keywords.map((keyword) => RegExp.escape(keyword)).join('|'),
-      caseSensitive: false,
-    );
-    
-    // Dividir el texto en partes que coinciden y no coinciden con la expresión regular
-    final spans = <TextSpan>[];
-    int lastMatchEnd = 0;
-    
-    // Buscar todas las coincidencias en el texto
-    for (final match in pattern.allMatches(texto)) {
-      // Añadir el texto anterior a la coincidencia
-      if (match.start > lastMatchEnd) {
-        spans.add(TextSpan(text: texto.substring(lastMatchEnd, match.start)));
-      }
-      
-      // Añadir el texto resaltado
-      spans.add(TextSpan(
-        text: texto.substring(match.start, match.end),
-        style: TextStyle(fontWeight: FontWeight.bold, backgroundColor: Colors.yellow.withOpacity(0.3)),
-      ));
-      
-      lastMatchEnd = match.end;
-    }
-    
-    // Añadir el texto restante después de la última coincidencia
-    if (lastMatchEnd < texto.length) {
-      spans.add(TextSpan(text: texto.substring(lastMatchEnd)));
-    }
-    
-    // Crear el RichText con los spans
-    return RichText(text: TextSpan(children: spans, style: DefaultTextStyle.of(context).style));
-  }
 
   void _initializeListaId() {
     final clientesMostradorCubit = context.read<ClientesMostradorCubit>();
@@ -370,7 +316,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
 
                   return DataRow(
                     cells: [
-                      DataCell(_highlightSearchTerms(producto.nombre ?? 'N/A', _searchController.text)),
+                      DataCell(Text(producto.nombre ?? 'N/A')),
                       DataCell(Text(producto.barcode ?? 'N/A')),
                       DataCell(Text(listaPrecio)),
                       DataCell(Text(stock)),
