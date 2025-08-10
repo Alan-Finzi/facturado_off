@@ -8,6 +8,7 @@ import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
+import '../models/productos_maestro.dart';
 import 'widget_alta_clientes.dart';
 import 'package:flutter/material.dart';
 import 'package:searchfield/searchfield.dart';
@@ -116,7 +117,7 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
               try {
                 // Intentar encontrar el cliente en la lista
                 clienteCorrespondiente = clientes.firstWhere(
-                  (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
+                  (c) => c.dni == selectedCliente?.item || c.idCliente == selectedCliente?.item,
                 );
               } catch (e) {
                 // Si no se encuentra, asignamos null
@@ -149,7 +150,7 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
 
                             // IMPORTANTE: Primero actualizar el cliente seleccionado
                             // Esto es clave para la sincronización con la lista de precios
-                            context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente,value);
+                            context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente!,value);
 
                             // Después limpiar los productos seleccionados
                             // Este orden es crucial para mantener la consistencia
@@ -160,7 +161,7 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                               final listasPreciosCubit = context.read<ListaPreciosCubit>();
                               final listaPrecios = listasPreciosCubit.state.currentList;
                               final listaCliente = listaPrecios.firstWhere(
-                                (lista) => lista.id == clienteCorrespondiente.listaPrecio,
+                                (lista) => lista.id == clienteCorrespondiente?.listaPrecio,
                                 orElse: () => Lista(id: 1, nombre: 'Precio base'),
                               );
                               

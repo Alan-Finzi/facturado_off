@@ -189,7 +189,7 @@ class DropButtonDatosFact extends StatelessWidget {
                   // Intentar encontrar por ID
                   if (selected!.id != null) {
                     final matchById = datosFacturacion.firstWhere(
-                      (df) => df.id == selected.id,
+                      (df) => df.id == selected?.id,
                       orElse: () => datosFacturacion.first,
                     );
                     selected = matchById;

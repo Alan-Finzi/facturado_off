@@ -72,7 +72,9 @@ class ProductosMaestroCubit extends Cubit<ProductosMaestroState> {
       // independientemente del orden
       final matchesNombre = keywords.every((keyword) => nombre.contains(keyword));
       
+
       return matchesNombre;
+
     }).toList();
 
     emit(state.copyWith(filteredProductoResponse: ProductoResponse(data: productosFiltrados)));
