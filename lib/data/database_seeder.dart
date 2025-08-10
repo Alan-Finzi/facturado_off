@@ -1,3 +1,4 @@
+import 'dart:math';
 
 import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
@@ -6,10 +7,21 @@ import '../models/producto.dart';
 import '../models/productos_lista_precios_model.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/user.dart';
-/**
-class DatabaseSeederss {
+class DatabaseSeeder {
   final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
+  final Random _random = Random();
+  
+  /// Genera un precio aleatorio menor a 1000
+  double getRandomPrice() {
+    return _random.nextDouble() * 999.0;
+  }
+  
+  /// Genera un stock aleatorio entre 1 y 100
+  int getRandomStock() {
+    return _random.nextInt(99) + 1; // Entre 1 y 100
+  }
+  
   Future<void> seedDatabase() async {
     final db = await dbHelper.database;
 
@@ -308,7 +320,7 @@ class DatabaseSeederss {
       productId: 1,
       referenciaVariacion: 'Var1',
       listaId: 1,
-      precioLista: 120.0,
+      precioLista: getRandomPrice(),
       comercioId: 1,
       eliminado: 0,
     ));
@@ -317,19 +329,20 @@ class DatabaseSeederss {
       productId: 1,
       referenciaVariacion: 'Var1',
       listaId: 2,
-      precioLista: 121.0,
+      precioLista: getRandomPrice(),
       comercioId: 1,
       eliminado: 0,
     ));
 
+    final randomStock1 = getRandomStock();
     await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
       productId: 1,
       referenciaVariacion: 'Var1',
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: 100,
-      stockReal: 90,
+      stock: randomStock1,
+      stockReal: (randomStock1 * 0.9).floor(), // 90% del stock
       eliminado: 0,
     ));
 
@@ -337,7 +350,7 @@ class DatabaseSeederss {
       productId: 2,
       referenciaVariacion: 'Var1',
       listaId: 1,
-      precioLista: 120.0,
+      precioLista: getRandomPrice(),
       comercioId: 1,
       eliminado: 0,
     ));
@@ -346,7 +359,7 @@ class DatabaseSeederss {
       productId: 4,
       referenciaVariacion: 'Var1',
       listaId: 2,
-      precioLista: 120.0,
+      precioLista: getRandomPrice(),
       comercioId: 1,
       eliminado: 0,
     ));
@@ -355,41 +368,43 @@ class DatabaseSeederss {
       productId: 4,
       referenciaVariacion: 'Var1',
       listaId:1,
-      precioLista: 120.0,
+      precioLista: getRandomPrice(),
       comercioId: 1,
       eliminado: 0,
     ));
 
+    final randomStock1 = getRandomStock();
     await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
       productId: 1,
       referenciaVariacion: 'Var1',
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: 100,
-      stockReal: 90,
+      stock: randomStock1,
+      stockReal: (randomStock1 * 0.9).floor(), // 90% del stock
       eliminado: 0,
     ));
+    final randomStock3 = getRandomStock();
     await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
       productId: 3,
       referenciaVariacion: 'Var1',
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: 100,
-      stockReal: 90,
+      stock: randomStock3,
+      stockReal: (randomStock3 * 0.9).floor(), // 90% del stock
       eliminado: 0,
     ));
+    final randomStock2 = getRandomStock();
     await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
       productId: 2,
       referenciaVariacion: 'Var1',
       comercioId: 1,
       sucursalId: 1,
       almacenId: 1,
-      stock: 100,
-      stockReal: 90,
+      stock: randomStock2,
+      stockReal: (randomStock2 * 0.9).floor(), // 90% del stock
       eliminado: 0,
     ));
   }
 }
-    **/
