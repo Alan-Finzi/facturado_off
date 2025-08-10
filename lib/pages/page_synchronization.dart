@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_synchronization/synchronization_cubit.dart';
-import '../data/database_seeder.dart';
 
 class SynchronizationPage extends StatelessWidget {
   final String token;
@@ -64,63 +63,6 @@ class SynchronizationPage extends StatelessWidget {
                       Text('${(state.progress * 100).toInt()}% completado', style: TextStyle(fontSize: 16)),
                       SizedBox(height: 20),
                       Text(state.currentTask, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 30),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                        onPressed: () async {
-                          try {
-                            // Mostrar diálogo de confirmación
-                            final confirmar = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text('Confirmar carga de datos de ejemplo'),
-                                content: Text('Esta acción actualizará los precios y stocks de los productos con valores aleatorios. ¿Desea continuar?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context, false),
-                                    child: Text('Cancelar'),
-                                  ),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                    onPressed: () => Navigator.pop(context, true),
-                                    child: Text('Continuar'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            
-                            if (confirmar == true) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Cargando datos de ejemplo...')),
-                              );
-                              
-                              // Ejecutar la carga de datos de ejemplo
-                              final seeder = DatabaseSeeder();
-                              await seeder.seedDatabase();
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Datos de ejemplo cargados correctamente')),
-                              );
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error al cargar datos de ejemplo: $e')),
-                            );
-                          }
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.dataset),
-                            SizedBox(width: 8),
-                            Text('Carga de datos ejemplo'),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 );
