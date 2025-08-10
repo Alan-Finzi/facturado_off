@@ -84,12 +84,20 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
               final clientes = context.read<ClientesMostradorCubit>().state.clientes;
               final value = context.read<ClientesMostradorCubit>().state.buscarCliente;
               // Buscar el cliente original en la lista de clientes basada en la búsqueda
-              final clienteCorrespondiente =clientes.firstWhere(
-                    (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
-              );
-
-              // Si se encontró el cliente correspondiente, seleccionarlo
-              if (clienteCorrespondiente != null) {
+              ClientesMostrador? clienteCorrespondiente;
+              try {
+                clienteCorrespondiente = clientes.firstWhere(
+                      (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
+                );
+              } catch (e) {
+                print('Error al buscar cliente: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Cliente no encontrado')),
+                );
+                return;
+              }
+              
+              // Continuar con el proceso ya que encontramos el cliente
                 // Mostrar el pop-up para notificar al usuario que los productos se limpiarán
                 showDialog(
                   context: context,
@@ -136,9 +144,7 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                   },
                 );
                 _controller.text = selectedCliente.searchKey;
-              } else {
-                print('Cliente no encontrado');
-              }
+              
             },
           ),
           SizedBox(height: 16),
