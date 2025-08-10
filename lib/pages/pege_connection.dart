@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/database_seeder.dart';
+import '../util/logger.dart';
 class ConnectionPage extends StatefulWidget {
   @override
   _ConnectionPageState createState() => _ConnectionPageState();
@@ -103,6 +104,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
               onPressed: () async {
                 try {
                   // Mostrar diálogo de confirmación
+                  log.i('ConnectionPage', 'Solicitando confirmación para cargar datos de ejemplo');
                   final confirmar = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -123,6 +125,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                   );
                   
                   if (confirmar == true) {
+                    log.i('ConnectionPage', 'Iniciando carga de datos de ejemplo');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Cargando datos de ejemplo...')),
                     );
@@ -131,13 +134,44 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     final seeder = DatabaseSeeder();
                     await seeder.seedDatabase();
                     
+                    log.i('ConnectionPage', 'Datos de ejemplo cargados correctamente');
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Datos de ejemplo cargados correctamente')),
                     );
+                  } else {
+                    log.i('ConnectionPage', 'Usuario canceló la carga de datos de ejemplo');
                   }
-                } catch (e) {
+                } catch (e, stackTrace) {
+                  // Registro detallado del error
+                  log.e('ConnectionPage', 'Error al cargar datos de ejemplo', e, stackTrace);
+                  
+                  // Mostrar mensaje al usuario
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al cargar datos de ejemplo: $e')),
+                    SnackBar(
+                      content: Text('Error al cargar datos de ejemplo'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 5),
+                      action: SnackBarAction(
+                        label: 'Detalles',
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Detalles del error'),
+                              content: SingleChildScrollView(
+                                child: Text('$e\n\n$stackTrace'),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text('Cerrar'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   );
                 }
               },
