@@ -36,25 +36,13 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
   /// Convierte la lista de clientes a un formato compatible con el campo de búsqueda
   /// @param clientes Lista de clientes a convertir
   void cargarSugerencias(List<ClientesMostrador> clientes) {
-    // Filtrar clientes nulos o sin identificadores
-    final clientesFiltrados = clientes.where(
-      (cliente) => cliente.nombre != null && (cliente.dni != null || cliente.idCliente != null)
-    ).toList();
-    
-    // Convertir la lista filtrada a SearchFieldListItem
-    clienteSugerencias = clientesFiltrados.map((cliente) {
-      // Crear un texto más descriptivo para mostrar
-      final String displayText = '${cliente.nombre ?? 'Sin nombre'} ${cliente.dni != null ? '- DNI: ${cliente.dni}' : ''}';
-      
-      // Crear identificador único
-      final String identifier = cliente.idCliente ?? cliente.dni ?? 'ID-${cliente.nombre}';
-      
+    // Convertir la lista de ClientesMostrador a SearchFieldListItem
+    clienteSugerencias = clientes.map((cliente) {
       return SearchFieldListItem<String>(
-        displayText,
-        item: identifier,
+        cliente.nombre ?? 'Sin nombre',
+        item: cliente.dni ?? cliente.idCliente ?? 'Sin DNI', // Usar DNI o ID como identificador
       );
     }).toList();
-    
     setState(() {}); // Actualizar el estado para mostrar las sugerencias cargadas
   }
 
@@ -90,104 +78,74 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
             maxSuggestionsInViewPort: 5,
             itemHeight: 50,
             onSuggestionTap: (cliente) {
-              SearchFieldListItem<String>? selectedCliente;
-              
-              try {
-                // Buscar el cliente seleccionado en las sugerencias
-                selectedCliente = clienteSugerencias.firstWhere(
-                  (c) => c.searchKey == cliente.searchKey,
-                );
-              } catch (e) {
-                print('Error al encontrar la sugerencia seleccionada: $e');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error al seleccionar el cliente')),
-                );
-                return;
-              }
-              
-              if (selectedCliente == null) {
-                print('Cliente seleccionado no encontrado');
-                return;
-              }
+              final selectedCliente = clienteSugerencias.firstWhere(
+                    (c) => c.searchKey == cliente.searchKey,
+              );
               // Acceder al estado del ClientesMostradorCubit para obtener la lista de clientes
               final clientes = context.read<ClientesMostradorCubit>().state.clientes;
               final value = context.read<ClientesMostradorCubit>().state.buscarCliente;
               // Buscar el cliente original en la lista de clientes basada en la búsqueda
               ClientesMostrador? clienteCorrespondiente;
               try {
-                // Intentar encontrar el cliente en la lista
                 clienteCorrespondiente = clientes.firstWhere(
-                  (c) => c.dni == selectedCliente?.item || c.idCliente == selectedCliente?.item,
+                      (c) => c.dni == selectedCliente.item || c.idCliente == selectedCliente.item,
                 );
               } catch (e) {
-                // Si no se encuentra, asignamos null
-                clienteCorrespondiente = null;
                 print('Error al buscar cliente: $e');
-              }
-              
-              // Verificar si se encontró el cliente
-              if (clienteCorrespondiente == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Cliente no encontrado')),
                 );
                 return;
               }
 
-              // Si se encontró el cliente correspondiente, seleccionarlo
-              // Como clienteCorrespondiente nunca será null (debido a firstWhere sin orElse), no necesitamos verificarlo
-              try {
-                // Mostrar el pop-up para notificar al usuario que los productos se limpiarán
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('Cambio de Cliente'),
-                      content: Text('Los productos seleccionados se limpiarán debido a la actualización de precios.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(); // Cerrar el pop-up
+              // Continuar con el proceso ya que encontramos el cliente
+              // Mostrar el pop-up para notificar al usuario que los productos se limpiarán
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Cambio de Cliente'),
+                    content: Text('Los productos seleccionados se limpiarán debido a la actualización de precios.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Cerrar el pop-up
 
-                            // IMPORTANTE: Primero actualizar el cliente seleccionado
-                            // Esto es clave para la sincronización con la lista de precios
-                            context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente!,value);
+                          // IMPORTANTE: Primero actualizar el cliente seleccionado
+                          // Esto es clave para la sincronización con la lista de precios
+                          context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente!,value);
 
-                            // Después limpiar los productos seleccionados
-                            // Este orden es crucial para mantener la consistencia
-                            context.read<ProductosCubit>().limpiarProductosSeleccionados();
-                            
-                            // Actualizar la información de la lista de precios del cliente
-                            if (clienteCorrespondiente.listaPrecio != null) {
-                              final listasPreciosCubit = context.read<ListaPreciosCubit>();
-                              final listaPrecios = listasPreciosCubit.state.currentList;
-                              final listaCliente = listaPrecios.firstWhere(
-                                (lista) => lista.id == clienteCorrespondiente?.listaPrecio,
-                                orElse: () => Lista(id: 1, nombre: 'Precio base'),
-                              );
-                              
-                              // Actualizar la información de la lista de precios en ProductosCubit
-                              context.read<ProductosCubit>().updateListaPreciosInfo(
-                                clienteCorrespondiente.listaPrecio!,
-                                listaCliente.nombre ?? 'Precio base',
-                              );
-                            }
-                            
-                            // Aquí podría agregarse actualización de precios basados en la lista del cliente
-                            // Ejemplo: context.read<ProductosCubit>().actualizarPreciosSegunCliente(clienteCorrespondiente.listaPrecio);
-                          },
-                          child: Text('Aceptar'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-                _controller.text = selectedCliente.searchKey;
-              } catch (e) {
-                print('Cliente no encontrado: $e');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('No se pudo seleccionar el cliente. Inténtelo de nuevo.')),
-                );
-              }
+                          // Después limpiar los productos seleccionados
+                          // Este orden es crucial para mantener la consistencia
+                          context.read<ProductosCubit>().limpiarProductosSeleccionados();
+
+                          // Actualizar la información de la lista de precios del cliente
+                          if (clienteCorrespondiente?.listaPrecio != null) {
+                            final listasPreciosCubit = context.read<ListaPreciosCubit>();
+                            final listaPrecios = listasPreciosCubit.state.currentList;
+                            final listaCliente = listaPrecios.firstWhere(
+                                  (lista) => lista.id == clienteCorrespondiente?.listaPrecio,
+                              orElse: () => Lista(id: 1, nombre: 'Precio base'),
+                            );
+
+                            // Actualizar la información de la lista de precios en ProductosCubit
+                            context.read<ProductosCubit>().updateListaPreciosInfo(
+                              clienteCorrespondiente!.listaPrecio!,
+                              listaCliente.nombre ?? 'Precio base',
+                            );
+                          }
+
+                          // Aquí podría agregarse actualización de precios basados en la lista del cliente
+                          // Ejemplo: context.read<ProductosCubit>().actualizarPreciosSegunCliente(clienteCorrespondiente.listaPrecio);
+                        },
+                        child: Text('Aceptar'),
+                      ),
+                    ],
+                  );
+                },
+              );
+              _controller.text = selectedCliente.searchKey;
+
             },
           ),
           SizedBox(height: 16),
