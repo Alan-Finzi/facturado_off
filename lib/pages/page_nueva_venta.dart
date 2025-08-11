@@ -207,24 +207,15 @@ class NuevaVentaPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 16.0),
-            BlocBuilder<ClientesMostradorCubit, ClientesMostradorState>(
+            // Usamos BlocBuilder con ProductosCubit ya que ahí almacenamos el nombre de la lista de precios
+            BlocBuilder<ProductosCubit, ProductosState>(
+              buildWhen: (previous, current) => 
+                // Reconstruir solo cuando cambia el nombre de la lista
+                previous.nombreListaPrecios != current.nombreListaPrecios,
               builder: (context, state) {
-                // Por defecto, mostrar 'Precio base'
-                String listaPrecioNombre = 'Precio base';
-                
-                // Si hay un cliente seleccionado, intentar obtener el nombre de su lista de precios
-                if (state.clienteSeleccionado != null && state.clienteSeleccionado!.listaPrecio != null) {
-                  // Usar el BLoC de listas de precios para encontrar el nombre
-                  final listaPrecios = context.read<ListaPreciosCubit>().state.currentList;
-                  final listaDelCliente = listaPrecios.firstWhereOrNull(
-                    (lista) => lista.id == state.clienteSeleccionado!.listaPrecio
-                  );
-                  
-                  if (listaDelCliente != null && listaDelCliente.nombre != null) {
-                    listaPrecioNombre = listaDelCliente.nombre!;
-                  }
-                }
-                
+                // Obtener el nombre de la lista de precio directamente desde el estado de ProductosCubit
+                final String listaPrecioNombre = state.nombreListaPrecios ?? 'Precio base';
+                print('Mostrando lista de precios: $listaPrecioNombre');
                 return Text('Lista de precios: $listaPrecioNombre');
               },
             ),
