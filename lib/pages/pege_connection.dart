@@ -1,5 +1,6 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
+import 'package:facturador_offline/bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -136,9 +137,33 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     await seeder.seedDatabase();
                     
                     log.i('ConnectionPage', 'Datos de ejemplo cargados correctamente');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Datos de ejemplo cargados correctamente')),
-                    );
+                    
+                    // Refrescar los datos en toda la aplicación
+                    // Esto garantiza que los nuevos precios y stocks se muestren correctamente
+                    try {
+                      // Actualizar listas de precios
+                      if (context.mounted) {
+                        context.read<ListaPreciosCubit>().getListasPreciosBD();
+                      }
+                      
+                      // Si hay otros Cubits que necesiten refrescarse después de actualizar datos, agregarlos aquí
+                      
+                      log.i('ConnectionPage', 'Datos refrescados en la interfaz');
+                      
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Datos de ejemplo cargados y actualizados correctamente')),
+                        );
+                      }
+                    } catch (refreshError) {
+                      log.w('ConnectionPage', 'Datos cargados pero hubo un error al refrescar la interfaz: $refreshError');
+                      
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Datos cargados pero se requiere reiniciar la aplicación')),
+                        );
+                      }
+                    }
                   } else {
                     log.i('ConnectionPage', 'Usuario canceló la carga de datos de ejemplo');
                   }
