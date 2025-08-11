@@ -188,218 +188,217 @@ class DatabaseSeeder {
 
 
     // Insertar productos
-    await dbHelper.insertProducto(ProductoModel(
-      id: 1,
-      idProducto: 1,
-      name: 'Producto agregado por codigo de barra',
-      tipoProducto: 'barcode',
-      productoTipo: 's',
-      precioInterno: 100.0,
-      barcode: '6920108163817',
-      cost: 50.0,
-      image: 'url_to_image',
-      categoryId: 1,
-      marcaId: 1,
-      comercioId: 1,
-      stockDescubierto: 'no',
-      proveedorId: 1,
-      unidadMedida: 1,
-      wcProductId: 1,
-      wcImage: 'url_to_wc_image',
-      etiquetas: 'etiqueta1, etiqueta2',
-      descripcion: 'Descripción del producto',
-      recetaId: 1,
-    ));
+    await db.insert('product', {
+      'id': 1,
+      'producto_id': 1,
+      'name': 'Producto agregado por codigo de barra',
+      'tipo_producto': 'barcode',
+      'producto_tipo': 's',
+      'precio_interno': 100.0,
+      'barcode': '6920108163817',
+      'cost': 50.0,
+      'image': 'url_to_image',
+      'category_id': 1,
+      'marca_id': 1,
+      'comercio_id': 1,
+      'stock_descubierto': 'no',
+      'proveedor_id': 1,
+      'unidad_medida': 1,
+      'wc_product_id': 1,
+      'wc_image': 'url_to_wc_image',
+      'etiquetas': 'etiqueta1, etiqueta2',
+      'descripcion': 'Descripción del producto',
+      'receta_id': 1,
+      'eliminado': 0,
+    });
 
-    await dbHelper.insertProducto(ProductoModel(
-      idProducto: 2,
-      id: 2,
-      name: 'Producto agregado por codigo de barra 2',
-      tipoProducto: 'barcode',
-      productoTipo: 's',
-      precioInterno: 100.0,
-      barcode: '6920108160380',
-      cost: 50.0,
-      image: 'url_to_image',
-      categoryId: 1,
-      marcaId: 1,
-      comercioId: 1,
-      stockDescubierto: 'no',
-      proveedorId: 1,
-      eliminado: 0,
-      unidadMedida: 1,
-      wcProductId: 1,
-      wcPush: 1,
-      wcImage: 'url_to_wc_image',
-      etiquetas: 'etiqueta1, etiqueta2',
-      mostradorCanal: 1,
-      ecommerceCanal: 1,
-      wcCanal: 1,
-      descripcion: 'Descripción del producto',
-      recetaId: 1,
-    ));
+    await db.insert('product', {
+      'id': 2,
+      'producto_id': 2,
+      'name': 'Producto agregado por codigo de barra 2',
+      'tipo_producto': 'barcode',
+      'producto_tipo': 's',
+      'precio_interno': 100.0,
+      'barcode': '6920108160380',
+      'cost': 50.0,
+      'image': 'url_to_image',
+      'category_id': 1,
+      'marca_id': 1,
+      'comercio_id': 1,
+      'stock_descubierto': 'no',
+      'proveedor_id': 1,
+      'eliminado': 0,
+      'unidad_medida': 1,
+      'wc_product_id': 1,
+      'wc_push': 1,
+      'wc_image': 'url_to_wc_image',
+      'etiquetas': 'etiqueta1, etiqueta2',
+      'mostrador_canal': 1,
+      'ecommerce_canal': 1,
+      'wc_canal': 1,
+      'descripcion': 'Descripción del producto',
+      'receta_id': 1,
+    });
 
-    await dbHelper.insertProducto(ProductoModel(
-      idProducto: 3,
-      id: 3,
-      name: 'Producto agregado por codigo de barra 2',
-      tipoProducto: 'barcode',
-      productoTipo: 's',
-      precioInterno: 100.0,
-      barcode: '6920108160380',
-      cost: 50.0,
-      image: 'url_to_image',
-      categoryId: 1,
-      marcaId: 1,
-      comercioId: 1,
-      stockDescubierto: 'no',
-      proveedorId: 1,
-      eliminado: 1,
-      unidadMedida: 1,
-      wcProductId: 1,
-      wcPush: 1,
-      wcImage: 'url_to_wc_image',
-      etiquetas: 'etiqueta1, etiqueta2',
-      mostradorCanal: 1,
-      ecommerceCanal: 1,
-      wcCanal: 1,
-      descripcion: 'Descripción del producto',
-      recetaId: 1,
-    ));
+    await db.insert('product', {
+      'id': 3,
+      'producto_id': 3,
+      'name': 'Producto agregado por codigo de barra 3',
+      'tipo_producto': 'barcode',
+      'producto_tipo': 's',
+      'precio_interno': 100.0,
+      'barcode': '6920108160380',
+      'cost': 50.0,
+      'image': 'url_to_image',
+      'category_id': 1,
+      'marca_id': 1,
+      'comercio_id': 1,
+      'stock_descubierto': 'no',
+      'proveedor_id': 1,
+      'eliminado': 1,
+      'unidad_medida': 1,
+      'wc_product_id': 1,
+      'wc_push': 1,
+      'wc_image': 'url_to_wc_image',
+      'etiquetas': 'etiqueta1, etiqueta2',
+      'mostrador_canal': 1,
+      'ecommerce_canal': 1,
+      'wc_canal': 1,
+      'descripcion': 'Descripción del producto',
+      'receta_id': 1,
+    });
 
-    await dbHelper.insertProducto(ProductoModel(
-      id: 4,
-      idProducto: 4,
-      name: 'Vino tinto',
-      tipoProducto: 'barcode',
-      productoTipo: 's',
-      precioInterno: 100.0,
-      barcode: '7798116190311',
-      cost: 50.0,
-      image: 'url_to_image',
-      categoryId: 1,
-      marcaId: 1,
-      comercioId: 1,
-      stockDescubierto: 'no',
-      proveedorId: 1,
-      eliminado: 0,
-      unidadMedida: 1,
-      wcProductId: 1,
-      wcPush: 1,
-      wcImage: 'url_to_wc_image',
-      etiquetas: 'etiqueta1, etiqueta2',
-      mostradorCanal: 1,
-      ecommerceCanal: 1,
-      wcCanal: 1,
-      descripcion: 'Descripción del producto',
-      recetaId: 1,
-    ));
+    await db.insert('product', {
+      'id': 4,
+      'producto_id': 4,
+      'name': 'Vino tinto',
+      'tipo_producto': 'barcode',
+      'producto_tipo': 's',
+      'precio_interno': 100.0,
+      'barcode': '7798116190311',
+      'cost': 50.0,
+      'image': 'url_to_image',
+      'category_id': 1,
+      'marca_id': 1,
+      'comercio_id': 1,
+      'stock_descubierto': 'no',
+      'proveedor_id': 1,
+      'eliminado': 0,
+      'unidad_medida': 1,
+      'wc_product_id': 1,
+      'wc_push': 1,
+      'wc_image': 'url_to_wc_image',
+      'etiquetas': 'etiqueta1, etiqueta2',
+      'mostrador_canal': 1,
+      'ecommerce_canal': 1,
+      'wc_canal': 1,
+      'descripcion': 'Descripción del producto',
+      'receta_id': 1,
+    });
 
     // Insertar listas de precios
-    await dbHelper.insertListaPrecio(ListaPreciosModel(
-      nombre: 'Lista General',
-      comercioId: 1,
-      descripcion: 'Lista de precios para todos los clientes',
-      eliminado: 0,
-      wcKey: '1',
-    ));
+    await db.insert('lista', {
+      'id': 1,
+      'nombre': 'Lista General',
+    });
 
-    await dbHelper.insertListaPrecio(ListaPreciosModel(
-      nombre: 'Lista General mayorista',
-      comercioId: 1,
-      descripcion: 'Lista de precios para todos los clientes',
-      eliminado: 0,
-      wcKey: '2',
-    ));
+    await db.insert('lista', {
+      'id': 2,
+      'nombre': 'Lista General mayorista',
+    });
 
-    await dbHelper.insertProductosListaPrecio(ProductosListaPreciosModel(
-      productId: 1,
-      referenciaVariacion: 'Var1',
-      listaId: 1,
-      precioLista: getRandomPrice(),
-      comercioId: 1,
-      eliminado: 0,
-    ));
+    await db.insert('productos_lista_precios', {
+      'product_id': 1,
+      'referencia_variacion': 'Var1',
+      'lista_id': 1,
+      'precio_lista': getRandomPrice(),
+      'comercio_id': 1,
+      'eliminado': 0,
+    });
 
-    await dbHelper.insertProductosListaPrecio(ProductosListaPreciosModel(
-      productId: 1,
-      referenciaVariacion: 'Var1',
-      listaId: 2,
-      precioLista: getRandomPrice(),
-      comercioId: 1,
-      eliminado: 0,
-    ));
+    await db.insert('productos_lista_precios', {
+      'product_id': 1,
+      'referencia_variacion': 'Var1',
+      'lista_id': 2,
+      'precio_lista': getRandomPrice(),
+      'comercio_id': 1,
+      'eliminado': 0,
+    });
 
     final randomStock1 = getRandomStock();
-    await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
-      productId: 1,
-      referenciaVariacion: 'Var1',
-      comercioId: 1,
-      sucursalId: 1,
-      almacenId: 1,
-      stock: 200,
-      stockReal: 200, // 90% del stock
-      eliminado: 0,
-    ));
+    await db.insert('productos_stock_sucursales', {
+      'product_id': 1,
+      'referencia_variacion': 'Var1',
+      'comercio_id': 1,
+      'sucursal_id': 1,
+      'almacen_id': 1,
+      'stock': randomStock1,
+      'stock_real': randomStock1,
+      'eliminado': 0,
+    });
 
-    await dbHelper.insertProductosListaPrecio(ProductosListaPreciosModel(
-      productId: 2,
-      referenciaVariacion: 'Var1',
-      listaId: 1,
-      precioLista: getRandomPrice(),
-      comercioId: 1,
-      eliminado: 0,
-    ));
+    await db.insert('productos_lista_precios', {
+      'product_id': 2,
+      'referencia_variacion': 'Var1',
+      'lista_id': 1,
+      'precio_lista': getRandomPrice(),
+      'comercio_id': 1,
+      'eliminado': 0,
+    });
 
-    await dbHelper.insertProductosListaPrecio(ProductosListaPreciosModel(
-      productId: 4,
-      referenciaVariacion: 'Var1',
-      listaId: 2,
-      precioLista: getRandomPrice(),
-      comercioId: 1,
-      eliminado: 0,
-    ));
+    await db.insert('productos_lista_precios', {
+      'product_id': 4,
+      'referencia_variacion': 'Var1',
+      'lista_id': 2,
+      'precio_lista': getRandomPrice(),
+      'comercio_id': 1,
+      'eliminado': 0,
+    });
 
-    await dbHelper.insertProductosListaPrecio(ProductosListaPreciosModel(
-      productId: 4,
-      referenciaVariacion: 'Var1',
-      listaId:1,
-      precioLista: getRandomPrice(),
-      comercioId: 1,
-      eliminado: 0,
-    ));
+    await db.insert('productos_lista_precios', {
+      'product_id': 4,
+      'referencia_variacion': 'Var1',
+      'lista_id': 1,
+      'precio_lista': getRandomPrice(),
+      'comercio_id': 1,
+      'eliminado': 0,
+    });
 
-    await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
-      productId: 1,
-      referenciaVariacion: 'Var1',
-      comercioId: 1,
-      sucursalId: 1,
-      almacenId: 1,
-      stock: 200,
-      stockReal: 200, // 90% del stock
-      eliminado: 0,
-    ));
+    // Ya se insertó el stock para el producto 1
     final randomStock3 = getRandomStock();
-    await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
-      productId: 3,
-      referenciaVariacion: 'Var1',
-      comercioId: 1,
-      sucursalId: 1,
-      almacenId: 1,
-      stock: 200,
-      stockReal: 200, // 90% del stock
-      eliminado: 0,
-    ));
+    await db.insert('productos_stock_sucursales', {
+      'product_id': 3,
+      'referencia_variacion': 'Var1',
+      'comercio_id': 1,
+      'sucursal_id': 1,
+      'almacen_id': 1,
+      'stock': randomStock3,
+      'stock_real': randomStock3,
+      'eliminado': 0,
+    });
     final randomStock2 = getRandomStock();
-    await dbHelper.insertProductosStockSucursal(ProductosStockSucursalesModel(
-      productId: 2,
-      referenciaVariacion: 'Var1',
-      comercioId: 1,
-      sucursalId: 1,
-      almacenId: 1,
-      stock: 200,
-      stockReal: 200, // 90% del stock
-      eliminado: 0,
-    ));
+    await db.insert('productos_stock_sucursales', {
+      'product_id': 2,
+      'referencia_variacion': 'Var1',
+      'comercio_id': 1,
+      'sucursal_id': 1,
+      'almacen_id': 1,
+      'stock': randomStock2,
+      'stock_real': randomStock2,
+      'eliminado': 0,
+    });
+    
+    // Stock para producto 4
+    final randomStock4 = getRandomStock();
+    await db.insert('productos_stock_sucursales', {
+      'product_id': 4,
+      'referencia_variacion': 'Var1',
+      'comercio_id': 1,
+      'sucursal_id': 1,
+      'almacen_id': 1,
+      'stock': randomStock4,
+      'stock_real': randomStock4,
+      'eliminado': 0,
+    });
   }
 }
