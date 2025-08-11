@@ -1,6 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/database_seeder.dart';
@@ -162,6 +163,20 @@ class _ConnectionPageState extends State<ConnectionPage> {
                                 child: Text('$e\n\n$stackTrace'),
                               ),
                               actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    // Copiar texto del error al portapapeles
+                                    Clipboard.setData(ClipboardData(text: '$e\n\n$stackTrace'));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error copiado al portapapeles')),
+                                    );
+                                  },
+                                  child: Row(children: [
+                                    Icon(Icons.copy, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('Copiar'),
+                                  ]),
+                                ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
                                   child: Text('Cerrar'),
