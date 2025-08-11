@@ -113,7 +113,7 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
 
                           // IMPORTANTE: Primero actualizar el cliente seleccionado
                           // Esto es clave para la sincronización con la lista de precios
-                          context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente!,value);
+                          context.read<ClientesMostradorCubit>().seleccionarCliente(clienteCorrespondiente!, value);
 
                           // Después limpiar los productos seleccionados
                           // Este orden es crucial para mantener la consistencia
@@ -123,20 +123,27 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                           if (clienteCorrespondiente?.listaPrecio != null) {
                             final listasPreciosCubit = context.read<ListaPreciosCubit>();
                             final listaPrecios = listasPreciosCubit.state.currentList;
-                            final listaCliente = listaPrecios.firstWhere(
-                                  (lista) => lista.id == clienteCorrespondiente?.listaPrecio,
-                              orElse: () => Lista(id: 1, nombre: 'Precio base'),
-                            );
+                            
+                            // Buscar el nombre de la lista de precio por ID
+                            Lista listaCliente;
+                            try {
+                              listaCliente = listaPrecios.firstWhere(
+                                (lista) => lista.id == clienteCorrespondiente?.listaPrecio,
+                              );
+                            } catch (e) {
+                              print('Lista de precio no encontrada, usando precio base: $e');
+                              listaCliente = Lista(id: 1, nombre: 'Precio base');
+                            }
 
                             // Actualizar la información de la lista de precios en ProductosCubit
                             context.read<ProductosCubit>().updateListaPreciosInfo(
                               clienteCorrespondiente!.listaPrecio!,
                               listaCliente.nombre ?? 'Precio base',
                             );
+                            
+                            // Forzar actualización de la UI para mostrar el cambio de lista de precios
+                            print('Actualizada lista de precios a: ${listaCliente.nombre} (ID: ${listaCliente.id})');
                           }
-
-                          // Aquí podría agregarse actualización de precios basados en la lista del cliente
-                          // Ejemplo: context.read<ProductosCubit>().actualizarPreciosSegunCliente(clienteCorrespondiente.listaPrecio);
                         },
                         child: Text('Aceptar'),
                       ),
@@ -145,7 +152,6 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
                 },
               );
               _controller.text = selectedCliente.searchKey;
-
             },
           ),
           SizedBox(height: 16),
