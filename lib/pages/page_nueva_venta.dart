@@ -207,16 +207,38 @@ class NuevaVentaPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 16.0),
-            // Usamos BlocBuilder con ProductosCubit ya que ahí almacenamos el nombre de la lista de precios
-            BlocBuilder<ProductosCubit, ProductosState>(
-              buildWhen: (previous, current) => 
-                // Reconstruir solo cuando cambia el nombre de la lista
-                previous.nombreListaPrecios != current.nombreListaPrecios,
-              builder: (context, state) {
-                // Obtener el nombre de la lista de precio directamente desde el estado de ProductosCubit
-                final String listaPrecioNombre = state.nombreListaPrecios ?? 'Precio base';
-                print('Mostrando lista de precios: $listaPrecioNombre');
-                return Text('Lista de precios: $listaPrecioNombre');
+            // Usamos dos BlocBuilders anidados para asegurar que siempre tenemos la información más actualizada
+            BlocBuilder<ClientesMostradorCubit, ClientesMostradorState>(
+              buildWhen: (previous, current) => previous.clienteSeleccionado?.listaPrecio != current.clienteSeleccionado?.listaPrecio,
+              builder: (context, clienteState) {
+                // BlocBuilder anidado para acceder también a la información de las listas de precios
+                return BlocBuilder<ListaPreciosCubit, ListaPreciosState>(
+                  builder: (context, listasState) {
+                    // Por defecto, mostrar 'Precio base'
+                    String listaPrecioNombre = 'Precio base';
+                    
+                    // Si hay un cliente seleccionado, intentar obtener el nombre de su lista de precios
+                    if (clienteState.clienteSeleccionado != null && clienteState.clienteSeleccionado!.listaPrecio != null) {
+                      final listaId = clienteState.clienteSeleccionado!.listaPrecio!;
+                      
+                      try {
+                        // Buscar la lista de precios por su ID
+                        final listaDelCliente = listasState.currentList.firstWhere(
+                          (lista) => lista.id == listaId,
+                        );
+                        
+                        if (listaDelCliente.nombre != null) {
+                          listaPrecioNombre = listaDelCliente.nombre!;
+                          print('Mostrando lista: ${listaDelCliente.nombre} (ID: ${listaDelCliente.id})');
+                        }
+                      } catch (e) {
+                        print('Lista de precio no encontrada: $e');
+                      }
+                    }
+                    
+                    return Text('Lista de precios: $listaPrecioNombre');
+                  },
+                );
               },
             ),
             const SizedBox(height: 16.0),
