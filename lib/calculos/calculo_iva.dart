@@ -18,7 +18,8 @@ ResultadoIva calcularIva({
     required double ivaProducto, // Si el IVA es proporcionado explícitamente para el producto
 }) {
     double ivaFinal = 0.0;
-    double porcentajeIva = 0.0;
+    // Usar el IVA por defecto (21%) si no está especificado o es 0
+    double porcentajeIva = (ivaProducto <= 0.0) ? 0.21 : alicuotaIva;
     String detalleCalculo = "";
 
     // 1. Determinar el IVA según la condición
@@ -26,9 +27,9 @@ ResultadoIva calcularIva({
         ivaFinal = 0.0;  // Si es null o Monotributo, no hay IVA
         detalleCalculo = "Sin IVA aplicado (Monotributo o condición no definida)";
     } else if (condicionIva == "IVA Responsable Inscripto") {
-        ivaFinal = ivaProducto;  // Si es Responsable Inscripto, el IVA es el del producto
-        porcentajeIva = alicuotaIva; // El porcentaje de IVA aplicado
-        detalleCalculo = "IVA Responsable Inscripto: \$${ivaProducto.toStringAsFixed(2)} (porcentaje: ${porcentajeIva}%)";
+        // Usar el porcentaje por defecto si no hay IVA específico para el producto
+        ivaFinal = (ivaProducto <= 0.0) ? 0.21 : ivaProducto;
+        detalleCalculo = "IVA Responsable Inscripto: \$${ivaFinal.toStringAsFixed(2)} (porcentaje: ${porcentajeIva * 100}%)";
     }
 
     // 2. Determinar el IVA según la relación del precio con IVA

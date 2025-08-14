@@ -303,14 +303,14 @@ class _CatalogoPageState extends State<CatalogoPage> {
                       : (producto.listasPrecios?.isNotEmpty == true
                       ? (producto.listasPrecios!
                       .firstWhere(
-                       (lp) => lp.listaId == 0,
-                      // (lp) => lp.listaId == listaId, id lista de cliente
+                       (lp) => lp.listaId == _listaId,
+                      // Usa la lista de precios del cliente seleccionado
                     orElse: () => ListasPrecio(precioLista: '0.0'),
                   )
                       .precioLista ?? '0.0')
                       : '0.0');
                   final stock = producto.stocks?.isNotEmpty == true
-                      ? producto.stocks!.first.stock.toString()
+                      ? (producto.stocks!.first.stock?.toString() ?? '0')
                       : '0';
                   final categoria = producto.categoriaName?.toString() ?? 'Sin categoría';
 
