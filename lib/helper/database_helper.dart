@@ -537,28 +537,28 @@ class DatabaseHelper {
       v.nombre AS variacion_nombre, 
 
       -- Stock
-      ps.id AS stock_id,
-      ps.stock AS stock,
-      ps.sucursal_id AS stock_sucursal_id,
+      pss.id AS stock_id,
+      pss.stock AS stock,
+      pss.stock_real AS stock_real,
+      pss.sucursal_id AS stock_sucursal_id,
 
       -- Lista de precios
-      lp.lista_id AS lista_precio_id,
-      lp.precio_lista AS lista_precio_precio,
+      plp.lista_id AS lista_precio_id,
+      plp.precio_lista AS lista_precio_precio,
       l.id AS lista_id, 
       l.nombre AS lista_nombre
 
     FROM product p
      LEFT JOIN categorias c ON p.category_id = c.id
     LEFT JOIN variacion v ON p.id = v.producto_id
-    LEFT JOIN stock ps 
-      ON p.id = ps.product_id 
-      AND ps.referencia_variacion = v.referencia_variacion
-      AND ps.sucursal_id = ?
-    LEFT JOIN lista_precio lp 
-      ON p.id = lp.product_id 
-      AND lp.referencia_variacion = v.referencia_variacion
-      AND lp.lista_id = ?
-    LEFT JOIN lista l ON lp.lista_id = l.id
+    LEFT JOIN productos_stock_sucursales pss 
+      ON p.id = pss.product_id 
+      AND (pss.sucursal_id = ? OR pss.sucursal_id IS NULL)
+    LEFT JOIN productos_lista_precios plp 
+      ON p.id = plp.product_id 
+      AND (plp.lista_id = ? OR plp.lista_id IS NULL)
+    LEFT JOIN lista l ON plp.lista_id = l.id
+    WHERE p.eliminado = 0 OR p.eliminado IS NULL
   ''', [sucursalId, listaId]);
 
     final Map<int, Datum> productosMap = {};

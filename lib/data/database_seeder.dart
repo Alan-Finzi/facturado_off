@@ -13,14 +13,14 @@ class DatabaseSeeder {
 
   final Random _random = Random();
   
-  /// Genera un precio aleatorio menor a 1000
+  /// Genera un precio aleatorio entre 500 y 5000
   double getRandomPrice() {
-    return _random.nextDouble() * 999.0;
+    return 500.0 + (_random.nextDouble() * 4500.0);
   }
   
-  /// Genera un stock aleatorio entre 1 y 100
+  /// Genera un stock aleatorio entre 10 y 500
   int getRandomStock() {
-    return _random.nextInt(99) + 1; // Entre 1 y 100
+    return _random.nextInt(490) + 10; // Entre 10 y 500
   }
   
   Future<void> seedDatabase() async {
