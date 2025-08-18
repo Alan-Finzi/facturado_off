@@ -554,11 +554,9 @@ class DatabaseHelper {
     LEFT JOIN productos_stock_sucursales pss 
       ON p.id = pss.product_id 
       AND pss.sucursal_id = ?
-      AND (pss.referencia_variacion = COALESCE(v.referencia_variacion, '0'))
     LEFT JOIN productos_lista_precios plp 
       ON p.id = plp.product_id 
       AND plp.lista_id = ?
-      AND (plp.referencia_variacion = COALESCE(v.referencia_variacion, '0'))
     LEFT JOIN lista l ON plp.lista_id = l.id
     WHERE p.eliminado = 0 OR p.eliminado IS NULL
   ''', [sucursalId, listaId]);
@@ -675,6 +673,16 @@ class DatabaseHelper {
       }
     }
 
+    // Agregar debug para ver qué datos estamos obteniendo
+    print('DEBUG: Número de productos encontrados: ${productosMap.length}');
+    
+    // Ver si hay productos con stocks y precios
+    for (var producto in productosMap.values) {
+      print('DEBUG: Producto ID ${producto.id}, Nombre: ${producto.nombre}');
+      print('DEBUG: Stocks: ${producto.stocks?.length ?? 0}');
+      print('DEBUG: Precios: ${producto.listasPrecios?.length ?? 0}');
+    }
+    
     return ProductoResponse(
       currentPage: 1,
       data: productosMap.values.toList(),
