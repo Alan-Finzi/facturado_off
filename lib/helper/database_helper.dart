@@ -553,12 +553,12 @@ class DatabaseHelper {
     LEFT JOIN variacion v ON p.id = v.producto_id
     LEFT JOIN productos_stock_sucursales pss 
       ON p.id = pss.product_id 
-      AND (pss.sucursal_id = ? OR pss.sucursal_id IS NULL)
-      AND (pss.referencia_variacion = v.referencia_variacion OR pss.referencia_variacion = '0' OR v.referencia_variacion IS NULL)
+      AND pss.sucursal_id = ?
+      AND (pss.referencia_variacion = COALESCE(v.referencia_variacion, '0'))
     LEFT JOIN productos_lista_precios plp 
       ON p.id = plp.product_id 
-      AND (plp.lista_id = ? OR plp.lista_id = 0)
-      AND (plp.referencia_variacion = v.referencia_variacion OR plp.referencia_variacion = '0' OR v.referencia_variacion IS NULL)
+      AND plp.lista_id = ?
+      AND (plp.referencia_variacion = COALESCE(v.referencia_variacion, '0'))
     LEFT JOIN lista l ON plp.lista_id = l.id
     WHERE p.eliminado = 0 OR p.eliminado IS NULL
   ''', [sucursalId, listaId]);

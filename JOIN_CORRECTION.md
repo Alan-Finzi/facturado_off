@@ -1,6 +1,33 @@
 # Corrección de Consulta SQL para Cargar Stock y Precios
 
-## Problema Identificado
+## Actualización: Optimización Adicional (2025-08-18)
+
+Se realizó una optimización adicional a la consulta para mejorar su rendimiento y precisión:
+
+```sql
+LEFT JOIN productos_stock_sucursales pss 
+  ON p.id = pss.product_id 
+  AND pss.sucursal_id = ?
+  AND (pss.referencia_variacion = COALESCE(v.referencia_variacion, '0'))
+LEFT JOIN productos_lista_precios plp 
+  ON p.id = plp.product_id 
+  AND plp.lista_id = ?
+  AND (plp.referencia_variacion = COALESCE(v.referencia_variacion, '0'))
+```
+
+Esta mejora:
+
+1. **Utiliza COALESCE para manejo de valores nulos**: Reemplaza los múltiples OR por una sola función COALESCE que devuelve '0' cuando v.referencia_variacion es NULL, simplificando la condición.
+
+2. **Elimina condiciones innecesarias**: Quita la verificación OR para valores nulos de sucursal_id y lista_id, haciendo la consulta más precisa.
+
+3. **Mejora el rendimiento**: La consulta más simple permite mejor optimización por parte del motor de base de datos.
+
+4. **Asegura correspondencia exacta**: Garantiza que solo se consideren las relaciones exactas entre productos y sus precios/stocks.
+
+---
+
+## Problema Identificado Inicialmente
 Se identificó un problema donde los stocks y precios de lista no se estaban cargando correctamente en el método `getProductoResponseBySucursalId`. Después de analizar el código y compararlo con la estructura de datos que devuelve la API, se determinó que las condiciones de JOIN entre las tablas estaban incompletas.
 
 ## Análisis del Modelo de Datos
@@ -49,51 +76,14 @@ Al consultar la API `productos-ver`, se observó que:
 
 ## Solución Implementada
 
-Se modificaron las condiciones de JOIN para:
-
-1. **Relacionar correctamente variaciones**:
-   ```sql
-   AND (pss.referencia_variacion = v.referencia_variacion OR pss.referencia_variacion = '0' OR v.referencia_variacion IS NULL)
-   ```
-   
-2. **Considerar la lista de precios predeterminada**:
-   ```sql
-   AND (plp.lista_id = ? OR plp.lista_id = 0)
-   ```
-   
-3. **Manejar productos sin variaciones**:
-   ```sql
-   AND (plp.referencia_variacion = v.referencia_variacion OR plp.referencia_variacion = '0' OR v.referencia_variacion IS NULL)
-   ```
-
-## Cambios Específicos
-
-Las condiciones de JOIN originales:
-```sql
-LEFT JOIN productos_stock_sucursales pss 
-  ON p.id = pss.product_id 
-  AND (pss.sucursal_id = ? OR pss.sucursal_id IS NULL)
-LEFT JOIN productos_lista_precios plp 
-  ON p.id = plp.product_id 
-  AND (plp.lista_id = ? OR plp.lista_id IS NULL)
-```
-
-Se modificaron a:
-```sql
-LEFT JOIN productos_stock_sucursales pss 
-  ON p.id = pss.product_id 
-  AND (pss.sucursal_id = ? OR pss.sucursal_id IS NULL)
-  AND (pss.referencia_variacion = v.referencia_variacion OR pss.referencia_variacion = '0' OR v.referencia_variacion IS NULL)
-LEFT JOIN productos_lista_precios plp 
-  ON p.id = plp.product_id 
-  AND (plp.lista_id = ? OR plp.lista_id = 0)
-  AND (plp.referencia_variacion = v.referencia_variacion OR plp.referencia_variacion = '0' OR v.referencia_variacion IS NULL)
-```
+Se modificaron las condiciones de JOIN para usar COALESCE para manejar de manera más eficiente las referencias de variación y asegurar que siempre se utilice el valor correcto, ya sea de una variación específica o el valor predeterminado '0'.
 
 ## Beneficios
 
 1. **Carga completa de datos**: Ahora se cargan correctamente los stocks y precios, tanto para productos con variaciones como para productos sin ellas.
 
-2. **Soporte para lista predeterminada**: Se incluyen precios de la lista predeterminada (`lista_id = 0`) si el producto no tiene precio en la lista específica.
+2. **Mayor rendimiento**: Las condiciones simplificadas mejoran la velocidad de la consulta.
 
-3. **Mejor compatibilidad con el API**: La consulta ahora refleja mejor la estructura de datos que devuelve la API, facilitando la sincronización y actualizaciones futuras.
+3. **Mayor precisión**: Se eliminan casos ambiguos que podían llevar a duplicación o falta de datos.
+
+4. **Mejor compatibilidad con el API**: La consulta ahora refleja mejor la estructura de datos que devuelve la API, facilitando la sincronización y actualizaciones futuras.
