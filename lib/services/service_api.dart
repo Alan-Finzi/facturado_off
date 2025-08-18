@@ -147,14 +147,13 @@ class ApiServices{
 // Determinar si se usa sucursal o comercioId
       final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId!) : comercioId!;
 
-// Construir la URL
-      //final Uri apiUrl = Uri.parse('$apiUrlvariaciones?${'comercio_id'}=$idBusqueda');
-      //final Uri apiUrl = Uri.parse('https://api.flamincoapp.com.ar/api/productos-ver?comercio_id=295');
-      final Uri apiUrl = Uri.parse(apiUrlProductosVer);
+// Construir la URL con el parámetro de comercio_id
+      final Uri apiUrl = Uri.parse('${apiUrlProductosVer}?comercio_id=$idBusqueda');
+      print('Obteniendo productos desde: $apiUrl');
 
 
         final response = await http.get(
-          Uri.parse('$apiUrl'), // Agrega el parámetro de página
+          apiUrl, // URL ya contiene los parámetros necesarios
           headers: {
             'Authorization': 'Bearer $token', // Pasamos el token en el header
             'Content-Type': 'application/json', // Opcional según la API
