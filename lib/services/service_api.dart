@@ -20,17 +20,18 @@ import '../models/user.dart';
 class ApiServices{
 
   final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users?comercio_id=362';
-  //final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/cliente-mostradors';
   final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/clientes?casa_central_id=362&comercio_id=362';
   final String apiUrlLogin = 'https://api.flamincoapp.com.ar/api/login';
-  final String apiUrlProducto= 'https://api.flamincoapp.com.ar/api/products';
-  final  String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
-  final  String apiUrlProductoListaPrecios = 'https://api.flamincoapp.com.ar/api/producto-lista-precios';
-  final  String apiUrlProductoStockSucursals = 'https://api.flamincoapp.com.ar/api/producto-stock-sucursals';
-  final  String apiUrlListaPrecios = 'https://api.flamincoapp.com.ar/api/lista-precios';
-  final  String apiUrlCategoria = 'https://api.flamincoapp.com.ar/api/categories';
-  final  String apiUrlDatosFacturacion = 'https://api.flamincoapp.com.ar/api/dato-facturacions';
-  final  String apiUrlvariaciones = 'https://api.flamincoapp.com.ar/api/productos-ver';
+  final String apiUrlProductosVer = 'https://api.flamincoapp.com.ar/api/productos-ver'; // Principal API para productos
+  final String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
+  final String apiUrlDatosFacturacion = 'https://api.flamincoapp.com.ar/api/dato-facturacions';
+  final String apiUrlCategoria = 'https://api.flamincoapp.com.ar/api/categories';
+  
+  // APIs que serán eliminadas/reemplazadas por apiUrlProductosVer
+  // final String apiUrlProducto = 'https://api.flamincoapp.com.ar/api/products';
+  // final String apiUrlProductoListaPrecios = 'https://api.flamincoapp.com.ar/api/producto-lista-precios';
+  // final String apiUrlProductoStockSucursals = 'https://api.flamincoapp.com.ar/api/producto-stock-sucursals';
+  // final String apiUrlListaPrecios = 'https://api.flamincoapp.com.ar/api/lista-precios';
 
 
   late  String tokenUser = '';
@@ -131,26 +132,8 @@ class ApiServices{
   }
 
 
-// api
-  Future<void> fetchProductos(String token) async {
-    final response = await http.get(
-      Uri.parse(apiUrlProducto),
-      headers: {
-        'Authorization': 'Bearer $token', // Pasamos el token en el header
-        'Content-Type': 'application/json', // Este es opcional, dependiendo de la API
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      // Aquí haces el mapeo correcto a tu modelo, por ejemplo ProductoModel
-      List<ProductoModel> productos = data.map((json) => ProductoModel.fromMap(json)).toList();
-
-      await DatabaseHelper.instance.insertOrUpdateProductos(productos);
-    } else {
-      throw Exception('Error al cargar los datos de la API');
-    }
-  }
+// Método eliminado - Reemplazado por fetchVariaciones
+  // Future<void> fetchProductos(String token) async { ... }
 
 
   // api
@@ -167,7 +150,7 @@ class ApiServices{
 // Construir la URL
       //final Uri apiUrl = Uri.parse('$apiUrlvariaciones?${'comercio_id'}=$idBusqueda');
       //final Uri apiUrl = Uri.parse('https://api.flamincoapp.com.ar/api/productos-ver?comercio_id=295');
-      final Uri apiUrl = Uri.parse(apiUrlvariaciones);
+      final Uri apiUrl = Uri.parse(apiUrlProductosVer);
 
 
         final response = await http.get(
@@ -214,26 +197,32 @@ class ApiServices{
 
   // Función para obtener clientes de la API y guardarlos en la base de datos
   Future<void> fetchClientesMostrador(String token) async {
-    final response = await http.get(
-      Uri.parse(apiUrlClienteMostrador),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
+    try {
+      final response = await http.get(
+        Uri.parse(apiUrlClienteMostrador),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      List<ClientesMostrador> clientes = data.map((json) => ClientesMostrador.fromJson(json)).toList();
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        List<ClientesMostrador> clientes = data.map((json) => ClientesMostrador.fromJson(json)).toList();
 
-      for (var cliente in clientes) {
-        await DatabaseHelper.instance.insertCliente(cliente);
-
-
+        // Insertar clientes en lote para mayor eficiencia
+        for (var cliente in clientes) {
+          await DatabaseHelper.instance.insertCliente(cliente);
+        }
+        
+        print('Clientes sincronizados: ${clientes.length}');
+      } else {
+        print('Error al cargar clientes: ${response.statusCode}');
+        throw Exception('Error al cargar los datos de cliente mostrador');
       }
-
-    } else {
-      throw Exception('Error al cargar los datos de cliente mostrador');
+    } catch (e) {
+      print('Error en fetchClientesMostrador: $e');
+      rethrow;
     }
   }
 
@@ -259,47 +248,11 @@ class ApiServices{
   }
 
 
-// api
-  Future<void> fetchProductosListaPrecio(String token) async {
-    final response = await http.get(
-      Uri.parse(apiUrlProductoListaPrecios),
-      headers: {
-        'Authorization': 'Bearer $token', // Pasamos el token en el header
-        'Content-Type': 'application/json', // Este es opcional, dependiendo de la API
-      },
-    );
+// Método eliminado - Reemplazado por fetchVariaciones
+  // Future<void> fetchProductosListaPrecio(String token) async { ... }
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      // Aquí haces el mapeo correcto a tu modelo, por ejemplo ProductoModel
-      List<ProductosListaPreciosModel> productosListaPreciosModel = data.map((json) => ProductosListaPreciosModel.fromMap(json)).toList();
-      await DatabaseHelper.instance.insertProductosListasPrecios(productosListaPreciosModel);
-
-    } else {
-      throw Exception('Error al cargar los datos de la API');
-    }
-  }
-
-// api
-  Future<void> fetchProductosStockSucursals(String token) async {
-    final response = await http.get(
-      Uri.parse(apiUrlProductoStockSucursals),
-      headers: {
-        'Authorization': 'Bearer $token', // Pasamos el token en el header
-        'Content-Type': 'application/json', // Este es opcional, dependiendo de la API
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      // Aquí haces el mapeo correcto a tu modelo, por ejemplo ProductoModel
-      List<ProductosStockSucursalesModel> productosStockSucursalesModel = data.map((json) => ProductosStockSucursalesModel.fromMap(json)).toList();
-      await DatabaseHelper.instance.insertProductosStockSucursales(productosStockSucursalesModel);
-
-    } else {
-      throw Exception('Error al cargar los datos de la API');
-    }
-  }
+// Método eliminado - Reemplazado por fetchVariaciones
+  // Future<void> fetchProductosStockSucursals(String token) async { ... }
 
 
   Future<void> fetchCategorias(String token) async {
@@ -324,26 +277,8 @@ class ApiServices{
     }
   }
 
-  // api
-  Future<void> fetchListaPrecio(String token) async {
-    final response = await http.get(
-      Uri.parse(apiUrlListaPrecios),
-      headers: {
-        'Authorization': 'Bearer $token', // Pasamos el token en el header
-        'Content-Type': 'application/json', // Este es opcional, dependiendo de la API
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      // Aquí haces el mapeo correcto a tu modelo, por ejemplo ProductoModel
-      List<ListaPreciosModel> listaPreciosModel = data.map((json) => ListaPreciosModel.fromMap(json)).toList();
-      await DatabaseHelper.instance.insertListaPrecios(listaPreciosModel);
-
-    } else {
-      throw Exception('Error al cargar los datos de la API');
-    }
-  }
+  // Método eliminado - Reemplazado por fetchVariaciones
+  // Future<void> fetchListaPrecio(String token) async { ... }
 
   Future<void> fetchDatosFacturacion(String token) async {
     try {

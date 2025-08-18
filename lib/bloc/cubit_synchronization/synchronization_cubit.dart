@@ -21,30 +21,25 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
       emit(SynchronizationInProgress(progress: 0.0, currentTask: "Iniciando sincronización"));
 
       await apiServices.fetchUsersData(token, email, loginCubit);
-      //await apiServices.fetchProductos(token);
-
       emit(const SynchronizationInProgress(progress: 0.1, currentTask: "Sincronización de Productos"));
 
       await apiServices.fetchProductosIvas(token);
       emit(const SynchronizationInProgress(progress: 0.2, currentTask: "Sincronización Productos Ivas"));
 
-      //await apiServices.fetchProductosListaPrecio(token);
-      emit(const SynchronizationInProgress(progress: 0.3, currentTask: "Sincronización Productos Lista Precio"));
+      emit(const SynchronizationInProgress(progress: 0.3, currentTask: "Sincronización en progreso"));
 
       await apiServices.fetchDatosFacturacion(token);
-      emit(const SynchronizationInProgress(progress: 0.4, currentTask: "Sincronización Datos variacion" ));
+      emit(const SynchronizationInProgress(progress: 0.4, currentTask: "Sincronización de Productos" ));
 
-      await apiServices.fetchVariaciones(token);
+      await apiServices.fetchVariaciones(token); // Esta llamada obtiene todos los productos con su stock y precios
       emit(const SynchronizationInProgress(progress: 0.5, currentTask: "Sincronización Datos Facturacion" ));
 
-      //await apiServices.fetchProductosStockSucursals(token);
-      emit(const SynchronizationInProgress(progress: 0.6, currentTask: "Sincronización Stock Sucursales"));
+      emit(const SynchronizationInProgress(progress: 0.6, currentTask: "Sincronización en progreso"));
 
       await apiServices.fetchClientesMostrador(token);
       emit(const SynchronizationInProgress(progress: 0.7, currentTask: "Sincronización Clientes"));
 
-      //await apiServices.fetchListaPrecio(token);
-      emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización Lista Precio"));
+      emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización en progreso"));
 
       await apiServices.fetchCategorias(token);
       emit(const SynchronizationInProgress(progress: 0.9, currentTask: "Sincronización Categorías"));
