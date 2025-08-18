@@ -574,6 +574,9 @@ class DatabaseHelper {
         final dynamic categoryIdValue = row['categoryId'];
         final int? categoryId = categoryIdValue != null ? int.tryParse(categoryIdValue.toString()) : null;
 
+        // Debug datos de la fila
+        print('DEBUG ROW: $row');
+        
         productosMap[productId] = Datum(
           id: productId,
           nombre: row['nombre'] as String?,
