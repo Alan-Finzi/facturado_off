@@ -536,8 +536,8 @@ class DatabaseHelper {
       v.referencia_variacion AS variacion_referencia,
       v.nombre AS variacion_nombre, 
 
-      -- Stock
-      pss.id AS stock_id,
+      -- Stock (la tabla productos_stock_sucursales no tiene campo id)
+      pss.product_id AS stock_id,
       pss.stock AS stock,
       pss.stock_real AS stock_real,
       pss.sucursal_id AS stock_sucursal_id,
