@@ -515,10 +515,7 @@ class DatabaseHelper {
       int sucursalId, int listaId) async {
     final db = await database;
 
-    // Obtener categorías
-
-
-    // Ejecutar consulta
+    // Ejecutar consulta para obtener productos con sus datos básicos y campos JSON
     final List<Map<String, dynamic>> rows = await db.rawQuery('''
     SELECT 
       p.id AS id,
@@ -529,37 +526,22 @@ class DatabaseHelper {
       p.marca_id AS marcaId, 
       p.proveedor_id AS proveedorId,
       p.comercio_id AS comercioId,
-       c.name AS categoria_nombre, 
+      p.listas_precios,
+      p.stocks,
+      c.name AS categoria_nombre,
       
       -- Variaciones
       v.id AS variacion_id, 
       v.referencia_variacion AS variacion_referencia,
-      v.nombre AS variacion_nombre, 
-
-      -- Stock (la tabla productos_stock_sucursales no tiene campo id)
-      pss.product_id AS stock_id,
-      pss.stock AS stock,
-      pss.stock_real AS stock_real,
-      pss.sucursal_id AS stock_sucursal_id,
-
-      -- Lista de precios
-      plp.lista_id AS lista_precio_id,
-      plp.precio_lista AS lista_precio_precio,
-      l.id AS lista_id, 
-      l.nombre AS lista_nombre
+      v.nombre AS variacion_nombre
 
     FROM product p
-     LEFT JOIN categorias c ON p.category_id = c.id
+    LEFT JOIN categorias c ON p.category_id = c.id
     LEFT JOIN variacion v ON p.id = v.producto_id
-    LEFT JOIN productos_stock_sucursales pss 
-      ON p.id = pss.product_id 
-      AND pss.sucursal_id = ?
-    LEFT JOIN productos_lista_precios plp 
-      ON p.id = plp.product_id 
-      AND plp.lista_id = ?
-    LEFT JOIN lista l ON plp.lista_id = l.id
     WHERE p.eliminado = 0 OR p.eliminado IS NULL
-  ''', [sucursalId, listaId]);
+  ''');
+    
+    print('Consulta ejecutada, filas obtenidas: ${rows.length}');
 
     final Map<int, Datum> productosMap = {};
 
@@ -573,7 +555,33 @@ class DatabaseHelper {
         // Buscar categoría
         final dynamic categoryIdValue = row['categoryId'];
         final int? categoryId = categoryIdValue != null ? int.tryParse(categoryIdValue.toString()) : null;
-
+        
+        // Procesar listas de precios desde JSON
+        List<ListasPrecio> listasPrecios = [];
+        if (row['listas_precios'] != null && row['listas_precios'].toString().isNotEmpty) {
+          try {
+            final List<dynamic> lpJson = jsonDecode(row['listas_precios']);
+            listasPrecios = lpJson.map((lp) => ListasPrecio.fromJson(lp)).toList();
+            print('Listas de precios para producto $productId: ${listasPrecios.length}');
+          } catch (e) {
+            print('Error al decodificar listas_precios para producto $productId: $e');
+            listasPrecios = [];
+          }
+        }
+        
+        // Procesar stocks desde JSON
+        List<Stock> stocks = [];
+        if (row['stocks'] != null && row['stocks'].toString().isNotEmpty) {
+          try {
+            final List<dynamic> stocksJson = jsonDecode(row['stocks']);
+            stocks = stocksJson.map((s) => Stock.fromJson(s)).toList();
+            print('Stocks para producto $productId: ${stocks.length}');
+          } catch (e) {
+            print('Error al decodificar stocks para producto $productId: $e');
+            stocks = [];
+          }
+        }
+        
         // Debug datos de la fila
         print('DEBUG ROW: $row');
         
@@ -590,8 +598,8 @@ class DatabaseHelper {
           proveedorId: row['proveedorId'] != null ? int.tryParse(row['proveedorId'].toString()) : null,
           comercioId: row['comercioId']?.toString(),
           productosVariaciones: [],
-          stocks: [],
-          listasPrecios: [],
+          stocks: stocks,           // Usar los stocks parseados del JSON
+          listasPrecios: listasPrecios,  // Usar las listas de precios parseadas del JSON
         );
       }
 
@@ -649,31 +657,8 @@ class DatabaseHelper {
         }
       }
 
-      // Procesar stock a nivel de producto (si aplica en tu modelo)
-      if (row['stock_id'] != null && productoActual.stocks != null) {
-        productoActual.stocks!.add(Stock(
-          id: row['stock_id'] as int?,
-          productId: productId,
-          stock: row['stock']?.toString(),
-          sucursalId: row['stock_sucursal_id'] as int?,
-        ));
-      }
-
-      // Procesar precios a nivel de producto (si aplica en tu modelo)
-      if (row['lista_precio_id'] != null && productoActual.listasPrecios != null) {
-        productoActual.listasPrecios!.add(ListasPrecio(
-          id: row['lista_precio_id'] as int?,
-          productId: productId,
-          precioLista: row['lista_precio_precio']?.toString(),
-          listaId: row['lista_id'] as int?,
-          lista: row['lista_id'] != null
-              ? Lista(
-            id: row['lista_id'] as int?,
-            nombre: row['lista_nombre'] as String?,
-          )
-              : null,
-        ));
-      }
+      // Ya no necesitamos procesar stocks y precios desde las tablas relacionales
+      // porque los estamos obteniendo directamente desde los campos JSON
     }
 
     // Agregar debug para ver qué datos estamos obteniendo
@@ -684,6 +669,22 @@ class DatabaseHelper {
       print('DEBUG: Producto ID ${producto.id}, Nombre: ${producto.nombre}');
       print('DEBUG: Stocks: ${producto.stocks?.length ?? 0}');
       print('DEBUG: Precios: ${producto.listasPrecios?.length ?? 0}');
+      
+      // Filtrar stocks para la sucursal solicitada (si es necesario)
+      if (producto.stocks != null && producto.stocks!.isNotEmpty && sucursalId > 0) {
+        producto.stocks = producto.stocks!.where((s) => 
+          s.sucursalId == sucursalId || s.sucursalId == null
+        ).toList();
+      }
+      
+      // Filtrar precios para la lista solicitada (si es necesario)
+      if (producto.listasPrecios != null && producto.listasPrecios!.isNotEmpty && listaId > 0) {
+        // Asegurarnos que la lista solicitada esté incluida si existe
+        final listaEspecifica = producto.listasPrecios!.where((lp) => lp.listaId == listaId).toList();
+        if (listaEspecifica.isNotEmpty) {
+          producto.listasPrecios = listaEspecifica;
+        }
+      }
     }
     
     return ProductoResponse(
@@ -988,6 +989,39 @@ class DatabaseHelper {
       whereArgs: [sucursalId], // Argumento para la condición
     );
     return List.generate(maps.length, (i) => ProductosStockSucursalesModel.fromMap(maps[i]));
+  }
+  
+  // Obtiene todas las sucursales disponibles en la base de datos
+  Future<List<Map<String, dynamic>>> getSucursales() async {
+    final db = await database;
+    
+    try {
+      // Obtener sucursales únicas de la tabla productos_stock_sucursales
+      final List<Map<String, dynamic>> result = await db.rawQuery('''
+        SELECT DISTINCT sucursal_id as id, sucursal_id as nombre
+        FROM productos_stock_sucursales
+        WHERE eliminado = 0 OR eliminado IS NULL
+        ORDER BY sucursal_id
+      ''');
+      
+      // Si no hay resultados, retornar al menos la sucursal por defecto
+      if (result.isEmpty) {
+        final user = User.currencyUser;
+        final defaultSucursalId = int.tryParse(user?.sucursal?.toString() ?? '') ?? 0;
+        return [{'id': defaultSucursalId, 'nombre': 'Casa Central'}];
+      }
+      
+      // Convertir los nombres de sucursal de un formato más amigable
+      return result.map((item) {
+        final int id = item['id'];
+        return {'id': id, 'nombre': 'Sucursal ${id == 0 ? "Principal" : id.toString()}'};
+      }).toList();
+      
+    } catch (e) {
+      print('Error al obtener sucursales: $e');
+      // En caso de error, devolver al menos una sucursal predeterminada
+      return [{'id': 0, 'nombre': 'Casa Central'}];
+    }
   }
 
   //datos facturacion
