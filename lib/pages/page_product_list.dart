@@ -434,7 +434,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
       ),
     );
   }
-  }
 
   Widget _buildCatalogoTableHeader() {
     return Padding(
@@ -757,7 +756,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         }).toList();
       },
     );
-  }
   }
 
   Widget _buildProductRowCell(Widget content, {int flex = 1, String? text}) {
