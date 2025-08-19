@@ -553,22 +553,22 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   }
 
   // Filas para la pestaña de catálogo
-  List<Widget> _buildCatalogoRows() {
+  BlocBuilder<ProductosMaestroCubit, ProductosMaestroState> _buildCatalogoRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return [Center(child: CircularProgressIndicator())];
+          return Center(child: CircularProgressIndicator());
         }
         
         if (state.errorMessage != null) {
-          return [Center(child: Text('Error: ${state.errorMessage}'))];
+          return Center(child: Text('Error: ${state.errorMessage}'));
         }
         
         final productos = state.filteredProductoResponse?.data ?? 
                          state.productoResponse?.data ?? [];
         
         if (productos.isEmpty) {
-          return [Center(child: Text('No se encontraron productos'))];
+          return Center(child: Text('No se encontraron productos'));
         }
         
         // Filtrar y ordenar productos
@@ -576,7 +576,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         final sortedProducts = _getSortedProducts(filteredProducts);
         
         if (sortedProducts.isEmpty) {
-          return [Center(child: Text('No se encontraron productos que coincidan con la búsqueda'))];
+          return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
             
         return sortedProducts.map((producto) {
@@ -624,22 +624,22 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   }
   
   // Filas para la pestaña de precios
-  List<Widget> _buildPreciosRows() {
+  BlocBuilder<ProductosMaestroCubit, ProductosMaestroState> _buildPreciosRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return [Center(child: CircularProgressIndicator())];
+          return Center(child: CircularProgressIndicator());
         }
         
         if (state.errorMessage != null) {
-          return [Center(child: Text('Error: ${state.errorMessage}'))];
+          return Center(child: Text('Error: ${state.errorMessage}'));
         }
         
         final productos = state.filteredProductoResponse?.data ?? 
                          state.productoResponse?.data ?? [];
         
         if (productos.isEmpty) {
-          return [Center(child: Text('No se encontraron productos'))];
+          return Center(child: Text('No se encontraron productos'));
         }
         
         // Filtrar y ordenar productos
@@ -647,7 +647,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         final sortedProducts = _getSortedProducts(filteredProducts);
         
         if (sortedProducts.isEmpty) {
-          return [Center(child: Text('No se encontraron productos que coincidan con la búsqueda'))];
+          return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
         return sortedProducts.map((producto) {

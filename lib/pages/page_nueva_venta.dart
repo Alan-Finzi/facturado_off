@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../bloc/cubit_lista_precios/lista_precios_state.dart';
 import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
