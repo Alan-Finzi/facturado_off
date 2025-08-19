@@ -543,7 +543,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           Checkbox(value: false, onChanged: (bool? value) {}),
           _buildTableHeaderCell('Nombre del producto', flex: 2),
           _buildTableHeaderCell('SKU', flex: 1),
-          _buildTableHeaderCell('Stock en ${_getNombreSucursal(_selectedSucursalId)}', flex: 2),
+          _buildTableHeaderCell('Stock en ${_getNombreSucursal(_selectedSucursalId!)}', flex: 2),
         ],
       ),
     );
@@ -770,7 +770,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               ),
             );
           }
-        }).toList();
+        }).toList());
       },
     );
   }
