@@ -118,9 +118,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         _buildFilterAndSearch(),
         _buildCatalogoTableHeader(),
         Expanded(
-          child: ListView(
-            children: _buildCatalogoRows(),
-          ),
+          child: _buildCatalogoRows(),
         ),
       ],
     );
@@ -133,9 +131,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         _buildPreciosFilter(),
         _buildPreciosTableHeader(),
         Expanded(
-          child: ListView(
-            children: _buildPreciosRows(),
-          ),
+          child: _buildPreciosRows(),
         ),
       ],
     );
@@ -148,9 +144,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         _buildStockFilter(),
         _buildStockTableHeader(),
         Expanded(
-          child: ListView(
-            children: _buildStockRows(),
-          ),
+          child: _buildStockRows(),
         ),
       ],
     );
