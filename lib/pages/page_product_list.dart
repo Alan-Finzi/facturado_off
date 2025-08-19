@@ -14,8 +14,8 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  int _selectedListaId = 0; // Lista predeterminada
-  int _selectedSucursalId = 0;
+  int _selectedListaId = 1; // Lista predeterminada (empezamos con 1 para evitar duplicados)
+  int _selectedSucursalId = 1; // Sucursal predeterminada (empezamos con 1 para evitar duplicados)
   String _sortBy = 'nombre'; // nombre, codigo, precio
   String _sortDirection = 'asc'; // asc, desc
   List<Lista> _listasPrecios = [];
@@ -45,19 +45,19 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   
   // Carga productos filtrados por lista de precio para la pestaña PRECIOS
   Future<void> _cargarProductosLista() async {
-    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId, 0);
+    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId, -1); // Usamos -1 para evitar conflictos
     print('Productos filtrados por lista $_selectedListaId cargados');
   }
   
   // Carga productos filtrados por stock y sucursal para la pestaña STOCK
   Future<void> _cargarProductosStock() async {
-    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(0, _selectedSucursalId);
+    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId); // Usamos -1 para evitar conflictos
     print('Productos filtrados por sucursal $_selectedSucursalId cargados');
   }
   
   // Carga todos los productos independientemente del stock o lista de precio para la pestaña CATÁLOGO
   Future<void> _cargarTodosProductos() async {
-    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(0, 0);
+    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1); // Usamos -1 para todos
     print('Todos los productos cargados');
   }
   
@@ -253,16 +253,20 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                 underline: SizedBox(),
                 value: _selectedListaId,
                 hint: Text("Seleccionar lista de precios"),
-                items: [
-                  DropdownMenuItem<int>(
-                    value: -1,
-                    child: Text('Todas las listas'),
-                  ),
-                  ..._listasPrecios.map((lista) => DropdownMenuItem<int>(
-                    value: lista.id,
-                    child: Text(lista.nombre ?? 'Lista ${lista.id}'),
-                  )).toList()
-                ],
+                items: _listasPrecios.isEmpty
+                  ? [DropdownMenuItem<int>(value: 1, child: Text('Lista predeterminada'))]
+                  : [
+                      DropdownMenuItem<int>(
+                        value: -1,
+                        child: Text('Todas las listas'),
+                      ),
+                      ..._listasPrecios
+                        .where((lista) => lista.id != null) // Filtramos nulos
+                        .map((lista) => DropdownMenuItem<int>(
+                          value: lista.id ?? 1, // Valor por defecto 1 si es nulo
+                          child: Text(lista.nombre ?? 'Lista ${lista.id ?? 1}'),
+                        )).toList()
+                    ],
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
@@ -330,10 +334,14 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                 underline: SizedBox(),
                 value: _selectedSucursalId,
                 hint: Text("Seleccionar sucursal"),
-                items: _sucursales.map((sucursal) => DropdownMenuItem<int>(
-                  value: sucursal['id'],
-                  child: Text(sucursal['nombre']),
-                )).toList(),
+                items: _sucursales.isEmpty
+                  ? [DropdownMenuItem<int>(value: 1, child: Text('Sucursal predeterminada'))]
+                  : _sucursales
+                      .map((sucursal) => DropdownMenuItem<int>(
+                        value: sucursal['id'] ?? 1, // Valor por defecto 1 si es nulo
+                        child: Text(sucursal['nombre'] ?? 'Sucursal ${sucursal['id'] ?? 1}'),
+                      ))
+                      .toList(),
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
