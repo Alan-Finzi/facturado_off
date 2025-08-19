@@ -644,20 +644,19 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: [
+          children: <Widget>[
             Checkbox(value: false, onChanged: (bool? value) {}),
             _buildTableHeaderCell('Nombre del producto', flex: 2),
             _buildTableHeaderCell('SKU', flex: 1),
-            // Mostrar todas las listas de precios disponibles
+            // Mostrar todas las listas de precios disponibles o la lista específica
             if (_selectedListaId == null) 
-              ..._listasPrecios.map((lista) => 
+              ...(_listasPrecios.map((lista) => 
                 _buildTableHeaderCell(
                   '${lista.nombre ?? "Lista ${lista.id}"} (${lista.id})', 
                   flex: 1
                 )
-              ).toList()
-            else {
-              // Mostrar lista específica seleccionada
+              ).toList())
+            else
               _buildTableHeaderCell(
                 'Precio Lista ${_listasPrecios.firstWhere(
                   (l) => l.id == _selectedListaId, 
@@ -665,13 +664,12 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                 ).nombre ?? _selectedListaId}', 
                 flex: 1
               ),
-              // Si hay sucursal seleccionada, mostrar cabecera de stock
-              if (_selectedSucursalId != null)
-                _buildTableHeaderCell(
-                  'Stock en ${_getNombreSucursal(_selectedSucursalId!)}',
-                  flex: 1
-                )
-            }
+            // Si hay sucursal seleccionada, mostrar cabecera de stock
+            if (_selectedListaId != null && _selectedSucursalId != null)
+              _buildTableHeaderCell(
+                'Stock en ${_getNombreSucursal(_selectedSucursalId!)}',
+                flex: 1
+              )
           ],
         ),
       ),
