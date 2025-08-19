@@ -68,16 +68,39 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   
   // Carga productos filtrados por lista de precio para la pestaña PRECIOS
   Future<void> _cargarProductosLista() async {
-    if (_selectedListaId == null) return;
-    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId!, -1); // Usamos -1 para evitar conflictos
-    print('Productos filtrados por lista $_selectedListaId cargados');
+    // Si tenemos seleccionada una lista y sucursal específicas, aplicamos ambos filtros
+    if (_selectedListaId != null && _selectedSucursalId != null) {
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId!, _selectedSucursalId!);
+      print('Productos filtrados por lista $_selectedListaId y sucursal $_selectedSucursalId cargados');
+    } 
+    // Si solo tenemos lista seleccionada
+    else if (_selectedListaId != null) {
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId!, -1);
+      print('Productos filtrados por lista $_selectedListaId cargados');
+    }
+    // Si solo tenemos sucursal seleccionada
+    else if (_selectedSucursalId != null) {
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId!);
+      print('Productos filtrados por sucursal $_selectedSucursalId cargados');
+    }
+    // Si no tenemos nada seleccionado, cargamos todos
+    else {
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1);
+      print('Todos los productos cargados');
+    }
   }
   
   // Carga productos filtrados por stock y sucursal para la pestaña STOCK
   Future<void> _cargarProductosStock() async {
-    if (_selectedSucursalId == null) return;
-    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId!); // Usamos -1 para evitar conflictos
-    print('Productos filtrados por sucursal $_selectedSucursalId cargados');
+    if (_selectedSucursalId == null) {
+      // Si no hay sucursal seleccionada, cargamos todos los productos
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1);
+      print('Todos los productos cargados para mostrar stock');
+    } else {
+      // Cargamos productos filtrados por la sucursal seleccionada
+      context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId!); 
+      print('Productos filtrados por sucursal $_selectedSucursalId cargados');
+    }
   }
   
   // Carga todos los productos independientemente del stock o lista de precio para la pestaña CATÁLOGO
@@ -260,80 +283,134 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   Widget _buildPreciosFilter() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Row(
+      child: Column(
         children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              _showSortOptions(context);
-            },
-            icon: Icon(Icons.filter_list),
-            label: Text('Ordenar'),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: _listasPrecios.isEmpty
-                ? DropdownButton<int?>(
-                    isExpanded: true,
-                    underline: SizedBox(),
-                    value: null,
-                    hint: Text("No hay listas disponibles"),
-                    items: [],
-                    onChanged: null, // Deshabilitado si no hay listas
-                  )
-                : DropdownButton<int?>(
-                    isExpanded: true,
-                    underline: SizedBox(),
-                    value: _selectedListaId,
-                    hint: Text("Seleccionar lista de precios"),
-                    items: [
-                      DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text('Todas las listas'),
-                      ),
-                      ..._listasPrecios
-                        .where((lista) => lista.id != null)
-                        .map((lista) => DropdownMenuItem<int?>(
-                          value: lista.id,
-                          child: Text(lista.nombre ?? 'Lista ${lista.id}'),
-                        )).toList(),
-                    ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedListaId = value;
-                    _cargarProductosLista(); // Siempre recargamos
-                  });
+          // Primera fila con botón de ordenar y buscador
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  _showSortOptions(context);
                 },
+                icon: Icon(Icons.filter_list),
+                label: Text('Ordenar'),
               ),
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Buscar por nombre o código...',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.search),
-                  onPressed: () {
+              SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Buscar por nombre o código...',
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.search),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = _searchController.text.toLowerCase();
+                        });
+                      },
+                    ),
+                  ),
+                  onChanged: (value) {
                     setState(() {
-                      _searchQuery = _searchController.text.toLowerCase();
+                      _searchQuery = value.toLowerCase();
                     });
                   },
                 ),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
-            ),
+            ],
+          ),
+          SizedBox(height: 8),
+          // Segunda fila con dos filtros: lista de precios y sucursales
+          Row(
+            children: [
+              // Filtro de Lista de Precios
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: _listasPrecios.isEmpty
+                    ? DropdownButton<int?>(
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        value: null,
+                        hint: Text("No hay listas disponibles"),
+                        items: [],
+                        onChanged: null, // Deshabilitado si no hay listas
+                      )
+                    : DropdownButton<int?>(
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        value: _selectedListaId,
+                        hint: Text("Seleccionar lista de precios"),
+                        items: [
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Todas las listas'),
+                          ),
+                          ..._listasPrecios
+                            .where((lista) => lista.id != null)
+                            .map((lista) => DropdownMenuItem<int?>(
+                              value: lista.id,
+                              child: Text(lista.nombre ?? 'Lista ${lista.id}'),
+                            )).toList(),
+                        ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedListaId = value;
+                        _cargarProductosLista(); // Siempre recargamos
+                      });
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(width: 16),
+              // Filtro de Sucursales
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: _sucursales.isEmpty
+                    ? DropdownButton<int?>(
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        value: null,
+                        hint: Text("No hay sucursales disponibles"),
+                        items: [],
+                        onChanged: null,
+                      )
+                    : DropdownButton<int?>(
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        value: _selectedSucursalId,
+                        hint: Text("Seleccionar sucursal"),
+                        items: [
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Todas las sucursales'),
+                          ),
+                          ..._sucursales
+                            .map((sucursal) => DropdownMenuItem<int?>(
+                              value: sucursal['id'],
+                              child: Text(sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}'),
+                            ))
+                            .toList(),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSucursalId = value;
+                          });
+                        },
+                      ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -344,74 +421,116 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   Widget _buildStockFilter() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Row(
+      child: Column(
         children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              _showSortOptions(context);
-            },
-            icon: Icon(Icons.filter_list),
-            label: Text('Ordenar'),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: _sucursales.isEmpty
-                ? DropdownButton<int?>(
-                    isExpanded: true,
-                    underline: SizedBox(),
-                    value: null,
-                    hint: Text("No hay sucursales disponibles"),
-                    items: [],
-                    onChanged: null, // Deshabilitado si no hay sucursales
-                  )
-                : DropdownButton<int?>(
-                    isExpanded: true,
-                    underline: SizedBox(),
-                    value: _selectedSucursalId,
-                    hint: Text("Seleccionar sucursal"),
-                    items: _sucursales
-                        .map((sucursal) => DropdownMenuItem<int?>(
-                          value: sucursal['id'],
-                          child: Text(sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}'),
-                        ))
-                        .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedSucursalId = value;
-                    _cargarProductosStock(); // Siempre recargamos
-                  });
+          // Primera fila con botón de ordenar y buscador
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  _showSortOptions(context);
                 },
+                icon: Icon(Icons.filter_list),
+                label: Text('Ordenar'),
               ),
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Buscar por nombre o código...',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.search),
-                  onPressed: () {
+              SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Buscar por nombre o código...',
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.search),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = _searchController.text.toLowerCase();
+                        });
+                      },
+                    ),
+                  ),
+                  onChanged: (value) {
                     setState(() {
-                      _searchQuery = _searchController.text.toLowerCase();
+                      _searchQuery = value.toLowerCase();
                     });
                   },
                 ),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
-            ),
+            ],
+          ),
+          SizedBox(height: 8),
+          // Segunda fila con filtro de sucursales
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: _sucursales.isEmpty
+                    ? DropdownButton<int?>(
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        value: null,
+                        hint: Text("No hay sucursales disponibles"),
+                        items: [],
+                        onChanged: null, // Deshabilitado si no hay sucursales
+                      )
+                    : DropdownButton<int?>(
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        value: _selectedSucursalId,
+                        hint: Text("Seleccionar sucursal"),
+                        items: [
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Todas las sucursales'),
+                          ),
+                          ..._sucursales
+                            .map((sucursal) => DropdownMenuItem<int?>(
+                              value: sucursal['id'],
+                              child: Text(sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}'),
+                            ))
+                            .toList(),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSucursalId = value;
+                            _cargarProductosStock(); // Siempre recargamos
+                          });
+                        },
+                      ),
+                ),
+              ),
+              SizedBox(width: 16),
+              // Área para mostrar información de la sucursal seleccionada
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.grey.shade50,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.store, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedSucursalId != null
+                              ? 'Mostrando stock de: ${_getNombreSucursal(_selectedSucursalId!)}'
+                              : 'Seleccione una sucursal para ver el stock',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -522,15 +641,39 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   Widget _buildPreciosTableHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: Row(
-        children: [
-          Checkbox(value: false, onChanged: (bool? value) {}),
-          _buildTableHeaderCell('Nombre del producto', flex: 2),
-          _buildTableHeaderCell('SKU', flex: 1),
-          ...(_selectedListaId == -1 ? 
-            _listasPrecios.take(3).map((lista) => _buildTableHeaderCell(lista.nombre ?? 'Lista ${lista.id}', flex: 1)).toList() :
-            [_buildTableHeaderCell('Precio Lista ${_selectedListaId}', flex: 2)])
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            Checkbox(value: false, onChanged: (bool? value) {}),
+            _buildTableHeaderCell('Nombre del producto', flex: 2),
+            _buildTableHeaderCell('SKU', flex: 1),
+            // Mostrar todas las listas de precios disponibles
+            if (_selectedListaId == null) 
+              ..._listasPrecios.map((lista) => 
+                _buildTableHeaderCell(
+                  '${lista.nombre ?? "Lista ${lista.id}"} (${lista.id})', 
+                  flex: 1
+                )
+              ).toList()
+            else {
+              // Mostrar lista específica seleccionada
+              _buildTableHeaderCell(
+                'Precio Lista ${_listasPrecios.firstWhere(
+                  (l) => l.id == _selectedListaId, 
+                  orElse: () => Lista(id: _selectedListaId, nombre: "")
+                ).nombre ?? _selectedListaId}', 
+                flex: 1
+              ),
+              // Si hay sucursal seleccionada, mostrar cabecera de stock
+              if (_selectedSucursalId != null)
+                _buildTableHeaderCell(
+                  'Stock en ${_getNombreSucursal(_selectedSucursalId!)}',
+                  flex: 1
+                )
+            }
+          ],
+        ),
       ),
     );
   }
@@ -543,7 +686,10 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           Checkbox(value: false, onChanged: (bool? value) {}),
           _buildTableHeaderCell('Nombre del producto', flex: 2),
           _buildTableHeaderCell('SKU', flex: 1),
-          _buildTableHeaderCell('Stock en ${_getNombreSucursal(_selectedSucursalId!)}', flex: 2),
+          _buildTableHeaderCell(
+            'Stock en ${_selectedSucursalId != null ? _getNombreSucursal(_selectedSucursalId!) : "Todas las sucursales"}', 
+            flex: 2
+          ),
         ],
       ),
     );
@@ -720,57 +866,77 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        return ListView(
-          children: sortedProducts.map((producto) {
-          if (_selectedListaId == -1) {
-            // Mostrar múltiples listas de precios
-            final preciosPorLista = _listasPrecios.take(3).map((lista) {
-              final precio = producto.listasPrecios?.firstWhere(
-                (lp) => lp.listaId == lista.id,
-                orElse: () => ListasPrecio(precioLista: '0.0'),
-              ).precioLista ?? '0.0';
-              return _buildProductRowCell(Text('\$$precio'), flex: 1);
-            }).toList();
-            
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Checkbox(value: false, onChanged: (bool? value) {}),
-                  _buildProductRowCell(
-                    const Icon(Icons.add, size: 20),
-                    flex: 2,
-                    text: producto.nombre ?? 'Sin nombre',
-                  ),
-                  _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                  ...preciosPorLista
-                ],
-              ),
-            );
-          } else {
-            // Mostrar una lista de precios específica
-            final precio = producto.listasPrecios?.firstWhere(
-              (lp) => lp.listaId == _selectedListaId,
-              orElse: () => ListasPrecio(precioLista: '0.0'),
-            ).precioLista ?? '0.0';
-            
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Checkbox(value: false, onChanged: (bool? value) {}),
-                  _buildProductRowCell(
-                    const Icon(Icons.add, size: 20),
-                    flex: 2,
-                    text: producto.nombre ?? 'Sin nombre',
-                  ),
-                  _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                  _buildProductRowCell(Text('\$$precio'), flex: 2),
-                ],
-              ),
-            );
-          }
-        }).toList());
+        return SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: sortedProducts.map((producto) {
+                if (_selectedListaId == null) {
+                  // Mostrar todas las listas de precios disponibles
+                  final preciosPorLista = _listasPrecios.map((lista) {
+                    final precio = producto.listasPrecios?.firstWhere(
+                      (lp) => lp.listaId == lista.id,
+                      orElse: () => ListasPrecio(precioLista: '0.0'),
+                    ).precioLista ?? '0.0';
+                    return _buildProductRowCell(Text('\$$precio'), flex: 1);
+                  }).toList();
+                  
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                    child: Row(
+                      children: [
+                        Checkbox(value: false, onChanged: (bool? value) {}),
+                        _buildProductRowCell(
+                          const Icon(Icons.add, size: 20),
+                          flex: 2,
+                          text: producto.nombre ?? 'Sin nombre',
+                        ),
+                        _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                        ...preciosPorLista
+                      ],
+                    ),
+                  );
+                } else {
+                  // Mostrar una lista de precios específica
+                  final precio = producto.listasPrecios?.firstWhere(
+                    (lp) => lp.listaId == _selectedListaId,
+                    orElse: () => ListasPrecio(precioLista: '0.0'),
+                  ).precioLista ?? '0.0';
+                  
+                  // Si hay sucursal seleccionada, mostrar también el stock
+                  final stock = _selectedSucursalId != null ? 
+                    producto.stocks?.firstWhere(
+                      (s) => s.sucursalId == _selectedSucursalId,
+                      orElse: () => Stock(stock: '0'),
+                    ).stock ?? '0' : null;
+                  
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                    child: Row(
+                      children: [
+                        Checkbox(value: false, onChanged: (bool? value) {}),
+                        _buildProductRowCell(
+                          const Icon(Icons.add, size: 20),
+                          flex: 2,
+                          text: producto.nombre ?? 'Sin nombre',
+                        ),
+                        _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                        _buildProductRowCell(Text('\$$precio'), flex: 1),
+                        // Mostrar stock si hay sucursal seleccionada
+                        if (stock != null)
+                          _buildProductRowCell(Text(stock), flex: 1),
+                      ],
+                    ),
+                  );
+                }
+              }).toList(),
+            ),
+          ),
+        );
       },
     );
   }
@@ -802,31 +968,83 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        return ListView(
-          children: sortedProducts.map((producto) {
-          // Obtener stock para la sucursal seleccionada
-          final stock = producto.stocks?.firstWhere(
-            (s) => s.sucursalId == _selectedSucursalId,
-            orElse: () => Stock(stock: '0'),
-          ).stock ?? '0';
-          
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            child: Row(
-              children: [
-                Checkbox(value: false, onChanged: (bool? value) {}),
-                _buildProductRowCell(
-                  const Icon(Icons.add, size: 20),
-                  flex: 2,
-                  text: producto.nombre ?? 'Sin nombre',
-                ),
-                _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                _buildProductRowCell(Text(stock), flex: 2),
-              ],
+        if (_selectedSucursalId == null) {
+          // Mostrar productos con todas las sucursales disponibles
+          return SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: sortedProducts.map((producto) {
+                  // Mostrar todos los stocks para este producto
+                  final stockPorSucursal = producto.stocks?.map((stock) {
+                    final nombreSucursal = _sucursales.firstWhere(
+                      (s) => s['id'] == stock.sucursalId,
+                      orElse: () => {'id': stock.sucursalId, 'nombre': 'Sucursal ${stock.sucursalId}'},
+                    )['nombre'];
+                    
+                    return _buildProductRowCell(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${stock.stock}', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('$nombreSucursal', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                        ],
+                      ), 
+                      flex: 1
+                    );
+                  }).toList() ?? [];
+                  
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                    child: Row(
+                      children: [
+                        Checkbox(value: false, onChanged: (bool? value) {}),
+                        _buildProductRowCell(
+                          const Icon(Icons.add, size: 20),
+                          flex: 2,
+                          text: producto.nombre ?? 'Sin nombre',
+                        ),
+                        _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                        ...stockPorSucursal,
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           );
-        }).toList(),
-        );
+        } else {
+          // Mostrar productos con stock para la sucursal seleccionada
+          return ListView(
+            children: sortedProducts.map((producto) {
+              // Obtener stock para la sucursal seleccionada
+              final stock = producto.stocks?.firstWhere(
+                (s) => s.sucursalId == _selectedSucursalId,
+                orElse: () => Stock(stock: '0'),
+              ).stock ?? '0';
+              
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                child: Row(
+                  children: [
+                    Checkbox(value: false, onChanged: (bool? value) {}),
+                    _buildProductRowCell(
+                      const Icon(Icons.add, size: 20),
+                      flex: 2,
+                      text: producto.nombre ?? 'Sin nombre',
+                    ),
+                    _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                    _buildProductRowCell(Text(stock), flex: 2),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        }
       },
     );
   }
