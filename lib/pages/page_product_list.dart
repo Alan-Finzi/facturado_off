@@ -4,6 +4,7 @@ import '../bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
 import '../models/productos_maestro.dart';
 import '../models/user.dart';
 import '../helper/database_helper.dart';
+import 'dart:math';
 
 class ProductsPage extends StatefulWidget {
   @override
@@ -864,13 +865,21 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        return SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: sortedProducts.map((producto) {
+        // Usamos un LayoutBuilder para definir dimensiones explícitas
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                // Garantizar un ancho mínimo para evitar problemas de renderizado
+                width: max(constraints.maxWidth, 500.0),
+                // Usamos ListView.builder en lugar de map para mejor rendimiento
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: sortedProducts.length,
+                  itemBuilder: (context, index) {
+                    final producto = sortedProducts[index];
                 if (_selectedListaId == null) {
                   // Mostrar todas las listas de precios disponibles
                   final preciosPorLista = _listasPrecios.map((lista) {
@@ -931,9 +940,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                     ),
                   );
                 }
-              }).toList(),
-            ),
-          ),
+                  },
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -968,13 +979,20 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         
         if (_selectedSucursalId == null) {
           // Mostrar productos con todas las sucursales disponibles
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: sortedProducts.map((producto) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  // Garantizar un ancho mínimo para evitar problemas de renderizado
+                  width: max(constraints.maxWidth, 500.0),
+                  // Usamos ListView.builder en lugar de map para mejor rendimiento
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: sortedProducts.length,
+                    itemBuilder: (context, index) {
+                      final producto = sortedProducts[index];
                   // Mostrar todos los stocks para este producto
                   final stockPorSucursal = producto.stocks?.map((stock) {
                     final nombreSucursal = _sucursales.firstWhere(
@@ -1010,9 +1028,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                       ],
                     ),
                   );
-                }).toList(),
-              ),
-            ),
+                    },
+                  ),
+                ),
+              );
+            },
           );
         } else {
           // Mostrar productos con stock para la sucursal seleccionada
