@@ -33,38 +33,58 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     final user = User.currencyUser;
     _selectedSucursalId = int.tryParse(user?.sucursal?.toString() ?? '') ?? 0;
     
-    // Cargar productos
-    _cargarProductos();
+    // Cargar productos de todos los tipos
+    await _cargarProductosLista(); // Carga productos por lista de precio
+    await _cargarProductosStock(); // Carga productos por stock y sucursal
+    await _cargarTodosProductos(); // Carga todos los productos
     
-    // Cargar listas de precios
-    _cargarListasPrecios();
-    
-    // Cargar sucursales (simulado por ahora)
-    _cargarSucursales();
+    // Cargar listas de precios y sucursales disponibles
+    await _cargarListasPrecios();
+    await _cargarSucursales();
   }
   
-  void _cargarProductos() {
-    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId, _selectedSucursalId);
+  // Carga productos filtrados por lista de precio para la pestaña PRECIOS
+  Future<void> _cargarProductosLista() async {
+    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId, 0);
+    print('Productos filtrados por lista $_selectedListaId cargados');
   }
   
+  // Carga productos filtrados por stock y sucursal para la pestaña STOCK
+  Future<void> _cargarProductosStock() async {
+    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(0, _selectedSucursalId);
+    print('Productos filtrados por sucursal $_selectedSucursalId cargados');
+  }
+  
+  // Carga todos los productos independientemente del stock o lista de precio para la pestaña CATÁLOGO
+  Future<void> _cargarTodosProductos() async {
+    context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(0, 0);
+    print('Todos los productos cargados');
+  }
+  
+  // Carga las listas de precios disponibles para el selector de la pestaña PRECIOS
   Future<void> _cargarListasPrecios() async {
     try {
       final listas = await DatabaseHelper.instance.getListaPrecios();
       setState(() {
         _listasPrecios = listas;
       });
+      print('${listas.length} listas de precios cargadas');
     } catch (e) {
       print('Error al cargar listas de precios: $e');
+      setState(() {
+        _listasPrecios = [];
+      });
     }
   }
   
+  // Carga las sucursales disponibles para el selector de la pestaña STOCK
   Future<void> _cargarSucursales() async {
     try {
       final sucursales = await DatabaseHelper.instance.getSucursales();
       setState(() {
         _sucursales = sucursales;
       });
-      print('Sucursales cargadas: ${_sucursales.length}');
+      print('${sucursales.length} sucursales cargadas');
     } catch (e) {
       print('Error al cargar sucursales: $e');
       // Fallback en caso de error
@@ -104,7 +124,16 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _cargarProductos(),
+        onPressed: () async {
+          // Recargar los datos según la pestaña activa
+          if (_tabController.index == 0) {
+            await _cargarTodosProductos();
+          } else if (_tabController.index == 1) {
+            await _cargarProductosLista();
+          } else if (_tabController.index == 2) {
+            await _cargarProductosStock();
+          }
+        },
         tooltip: 'Recargar datos',
         child: Icon(Icons.refresh),
       ),
@@ -239,7 +268,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                     setState(() {
                       _selectedListaId = value;
                       if (value != -1) {
-                        _cargarProductos();
+                        _cargarProductosLista();
                       }
                     });
                   }
@@ -309,7 +338,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                   if (value != null) {
                     setState(() {
                       _selectedSucursalId = value;
-                      _cargarProductos();
+                      _cargarProductosStock();
                     });
                   }
                 },
