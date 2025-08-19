@@ -553,22 +553,22 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   }
 
   // Filas para la pestaña de catálogo
-  List<Widget> _buildCatalogoRows() {
+  Widget _buildCatalogoRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return [Center(child: CircularProgressIndicator())];
+          return Center(child: CircularProgressIndicator());
         }
         
         if (state.errorMessage != null) {
-          return [Center(child: Text('Error: ${state.errorMessage}'))];
+          return Center(child: Text('Error: ${state.errorMessage}'));
         }
         
         final productos = state.filteredProductoResponse?.data ?? 
                          state.productoResponse?.data ?? [];
         
         if (productos.isEmpty) {
-          return [Center(child: Text('No se encontraron productos'))];
+          return Center(child: Text('No se encontraron productos'));
         }
         
         // Filtrar y ordenar productos
@@ -576,10 +576,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         final sortedProducts = _getSortedProducts(filteredProducts);
         
         if (sortedProducts.isEmpty) {
-          return [Center(child: Text('No se encontraron productos que coincidan con la búsqueda'))];
+          return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
             
-        return sortedProducts.map((producto) {
+        return ListView(
+          children: sortedProducts.map((producto) {
           // Obtener precio de la lista 0 (normal)
           final precioNormal = producto.listasPrecios?.isNotEmpty == true
               ? producto.listasPrecios!.firstWhere(
@@ -618,28 +619,29 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               ],
             ),
           );
-        }).toList();
+        }).toList(),
+        );
       },
     );
   }
   
   // Filas para la pestaña de precios
-  List<Widget> _buildPreciosRows() {
+  Widget _buildPreciosRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return [Center(child: CircularProgressIndicator())];
+          return Center(child: CircularProgressIndicator());
         }
         
         if (state.errorMessage != null) {
-          return [Center(child: Text('Error: ${state.errorMessage}'))];
+          return Center(child: Text('Error: ${state.errorMessage}'));
         }
         
         final productos = state.filteredProductoResponse?.data ?? 
                          state.productoResponse?.data ?? [];
         
         if (productos.isEmpty) {
-          return [Center(child: Text('No se encontraron productos'))];
+          return Center(child: Text('No se encontraron productos'));
         }
         
         // Filtrar y ordenar productos
@@ -647,10 +649,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         final sortedProducts = _getSortedProducts(filteredProducts);
         
         if (sortedProducts.isEmpty) {
-          return [Center(child: Text('No se encontraron productos que coincidan con la búsqueda'))];
+          return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        return sortedProducts.map((producto) {
+        return ListView(
+          children: sortedProducts.map((producto) {
           if (_selectedListaId == -1) {
             // Mostrar múltiples listas de precios
             final preciosPorLista = _listasPrecios.take(3).map((lista) {
@@ -705,22 +708,22 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   }
   
   // Filas para la pestaña de stock
-  List<Widget> _buildStockRows() {
+  Widget _buildStockRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return [Center(child: CircularProgressIndicator())];
+          return Center(child: CircularProgressIndicator());
         }
         
         if (state.errorMessage != null) {
-          return [Center(child: Text('Error: ${state.errorMessage}'))];
+          return Center(child: Text('Error: ${state.errorMessage}'));
         }
         
         final productos = state.filteredProductoResponse?.data ?? 
                          state.productoResponse?.data ?? [];
         
         if (productos.isEmpty) {
-          return [Center(child: Text('No se encontraron productos'))];
+          return Center(child: Text('No se encontraron productos'));
         }
         
         // Filtrar y ordenar productos
@@ -728,10 +731,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         final sortedProducts = _getSortedProducts(filteredProducts);
         
         if (sortedProducts.isEmpty) {
-          return [Center(child: Text('No se encontraron productos que coincidan con la búsqueda'))];
+          return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        return sortedProducts.map((producto) {
+        return ListView(
+          children: sortedProducts.map((producto) {
           // Obtener stock para la sucursal seleccionada
           final stock = producto.stocks?.firstWhere(
             (s) => s.sucursalId == _selectedSucursalId,
@@ -753,7 +757,8 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               ],
             ),
           );
-        }).toList();
+        }).toList(),
+        );
       },
     );
   }
