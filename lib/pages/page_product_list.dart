@@ -791,48 +791,53 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         if (sortedProducts.isEmpty) {
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
+        
+        // Usar ListView.builder en lugar de ListView con map para mejor rendimiento
+        return ListView.builder(
+          itemCount: sortedProducts.length,
+          itemBuilder: (context, index) {
+            final producto = sortedProducts[index];
+            // Obtener precio de la lista 0 (normal)
+            final precioNormal = producto.listasPrecios?.isNotEmpty == true
+                ? producto.listasPrecios!.firstWhere(
+                    (lp) => lp.listaId == 0,
+                    orElse: () => ListasPrecio(precioLista: '0.0'),
+                  ).precioLista ?? '0.0'
+                : '0.0';
             
-        return ListView(
-          children: sortedProducts.map((producto) {
-          // Obtener precio de la lista 0 (normal)
-          final precioNormal = producto.listasPrecios?.isNotEmpty == true
-              ? producto.listasPrecios!.firstWhere(
-                  (lp) => lp.listaId == 0,
-                  orElse: () => ListasPrecio(precioLista: '0.0'),
-                ).precioLista ?? '0.0'
-              : '0.0';
-          
-          // Obtener precio mayorista (para este ejemplo usamos lista 1)
-          final precioMayorista = producto.listasPrecios?.where((lp) => lp.listaId != 0).isNotEmpty == true
-              ? producto.listasPrecios!.firstWhere(
-                  (lp) => lp.listaId != 0,
-                  orElse: () => ListasPrecio(precioLista: '0.0'),
-                ).precioLista ?? '0.0'
-              : '0.0';
-          
-          // Obtener stock
-          final stock = producto.stocks?.isNotEmpty == true
-              ? producto.stocks!.first.stock ?? '0'
-              : '0';
-          
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            child: Row(
-              children: [
-                Checkbox(value: false, onChanged: (bool? value) {}),
-                _buildProductRowCell(
-                  const Icon(Icons.add, size: 20),
-                  flex: 2,
-                  text: producto.nombre ?? 'Sin nombre',
-                ),
-                _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                _buildProductRowCell(Text('\$$precioNormal'), flex: 1),
-                _buildProductRowCell(Text('\$$precioMayorista'), flex: 1),
-                _buildProductRowCell(Text(stock), flex: 1),
-              ],
-            ),
-          );
-        }).toList(),
+            // Obtener precio mayorista (para este ejemplo usamos lista 1)
+            final precioMayorista = producto.listasPrecios?.where((lp) => lp.listaId != 0).isNotEmpty == true
+                ? producto.listasPrecios!.firstWhere(
+                    (lp) => lp.listaId != 0,
+                    orElse: () => ListasPrecio(precioLista: '0.0'),
+                  ).precioLista ?? '0.0'
+                : '0.0';
+            
+            // Obtener stock
+            final stock = producto.stocks?.isNotEmpty == true
+                ? producto.stocks!.first.stock ?? '0'
+                : '0';
+            
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              height: 48, // Altura explícita para evitar problemas de tamaño
+              color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+              child: Row(
+                children: [
+                  SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
+                  _buildProductRowCell(
+                    const Icon(Icons.add, size: 20),
+                    flex: 2,
+                    text: producto.nombre ?? 'Sin nombre',
+                  ),
+                  _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                  _buildProductRowCell(Text('\$$precioNormal'), flex: 1),
+                  _buildProductRowCell(Text('\$$precioMayorista'), flex: 1),
+                  _buildProductRowCell(Text(stock), flex: 1),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -865,81 +870,92 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        // Usamos un LayoutBuilder para definir dimensiones explícitas
+        // Evitamos usar SingleChildScrollView anidado con ListView.builder
+        // En lugar de eso, usamos un CustomScrollView con slivers
         return LayoutBuilder(
           builder: (context, constraints) {
+            // Establecer un ancho mínimo para evitar problemas de renderizado
+            final contentWidth = max(constraints.maxWidth, 500.0);
+            
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SizedBox(
-                // Garantizar un ancho mínimo para evitar problemas de renderizado
-                width: max(constraints.maxWidth, 500.0),
-                // Usamos ListView.builder en lugar de map para mejor rendimiento
-                child: ListView.builder(
+                width: contentWidth,
+                child: ListView.separated(
+                  // Usar ListView.separated para mayor control y rendimiento
                   shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
                   itemCount: sortedProducts.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 2),
                   itemBuilder: (context, index) {
                     final producto = sortedProducts[index];
-                if (_selectedListaId == null) {
-                  // Mostrar todas las listas de precios disponibles
-                  final preciosPorLista = _listasPrecios.map((lista) {
-                    final precio = producto.listasPrecios?.firstWhere(
-                      (lp) => lp.listaId == lista.id,
-                      orElse: () => ListasPrecio(precioLista: '0.0'),
-                    ).precioLista ?? '0.0';
-                    return _buildProductRowCell(Text('\$$precio'), flex: 1);
-                  }).toList();
-                  
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                    color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                    child: Row(
-                      children: [
-                        Checkbox(value: false, onChanged: (bool? value) {}),
-                        _buildProductRowCell(
-                          const Icon(Icons.add, size: 20),
-                          flex: 2,
-                          text: producto.nombre ?? 'Sin nombre',
+                    
+                    if (_selectedListaId == null) {
+                      // Mostrar todas las listas de precios disponibles
+                      List<Widget> preciosPorLista = [];
+                      
+                      // Asegurarnos de que _listasPrecios no esté vacío antes de usar map
+                      if (_listasPrecios.isNotEmpty) {
+                        preciosPorLista = _listasPrecios.map((lista) {
+                          final precio = producto.listasPrecios?.firstWhere(
+                            (lp) => lp.listaId == lista.id,
+                            orElse: () => ListasPrecio(precioLista: '0.0'),
+                          ).precioLista ?? '0.0';
+                          return _buildProductRowCell(Text('\$$precio'), flex: 1);
+                        }).toList();
+                      }
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                        height: 48, // Altura explícita para evitar problemas de tamaño
+                        color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                        child: Row(
+                          children: [
+                            SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
+                            _buildProductRowCell(
+                              const Icon(Icons.add, size: 20),
+                              flex: 2,
+                              text: producto.nombre ?? 'Sin nombre',
+                            ),
+                            _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                            ...preciosPorLista
+                          ],
                         ),
-                        _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                        ...preciosPorLista
-                      ],
-                    ),
-                  );
-                } else {
-                  // Mostrar una lista de precios específica
-                  final precio = producto.listasPrecios?.firstWhere(
-                    (lp) => lp.listaId == _selectedListaId,
-                    orElse: () => ListasPrecio(precioLista: '0.0'),
-                  ).precioLista ?? '0.0';
-                  
-                  // Si hay sucursal seleccionada, mostrar también el stock
-                  final stock = _selectedSucursalId != null ? 
-                    producto.stocks?.firstWhere(
-                      (s) => s.sucursalId == _selectedSucursalId,
-                      orElse: () => Stock(stock: '0'),
-                    ).stock ?? '0' : null;
-                  
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                    color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                    child: Row(
-                      children: [
-                        Checkbox(value: false, onChanged: (bool? value) {}),
-                        _buildProductRowCell(
-                          const Icon(Icons.add, size: 20),
-                          flex: 2,
-                          text: producto.nombre ?? 'Sin nombre',
+                      );
+                    } else {
+                      // Mostrar una lista de precios específica
+                      final precio = producto.listasPrecios?.firstWhere(
+                        (lp) => lp.listaId == _selectedListaId,
+                        orElse: () => ListasPrecio(precioLista: '0.0'),
+                      ).precioLista ?? '0.0';
+                      
+                      // Si hay sucursal seleccionada, mostrar también el stock
+                      final stock = _selectedSucursalId != null ? 
+                        producto.stocks?.firstWhere(
+                          (s) => s.sucursalId == _selectedSucursalId,
+                          orElse: () => Stock(stock: '0'),
+                        ).stock ?? '0' : null;
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                        height: 48, // Altura explícita para evitar problemas de tamaño
+                        color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                        child: Row(
+                          children: [
+                            SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
+                            _buildProductRowCell(
+                              const Icon(Icons.add, size: 20),
+                              flex: 2,
+                              text: producto.nombre ?? 'Sin nombre',
+                            ),
+                            _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                            _buildProductRowCell(Text('\$$precio'), flex: 1),
+                            // Mostrar stock si hay sucursal seleccionada
+                            if (stock != null)
+                              _buildProductRowCell(Text(stock), flex: 1),
+                          ],
                         ),
-                        _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                        _buildProductRowCell(Text('\$$precio'), flex: 1),
-                        // Mostrar stock si hay sucursal seleccionada
-                        if (stock != null)
-                          _buildProductRowCell(Text(stock), flex: 1),
-                      ],
-                    ),
-                  );
-                }
+                      );
+                    }
                   },
                 ),
               ),
@@ -981,53 +997,60 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           // Mostrar productos con todas las sucursales disponibles
           return LayoutBuilder(
             builder: (context, constraints) {
+              // Establecer un ancho mínimo para evitar problemas de renderizado
+              final contentWidth = max(constraints.maxWidth, 500.0);
+              
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  // Garantizar un ancho mínimo para evitar problemas de renderizado
-                  width: max(constraints.maxWidth, 500.0),
-                  // Usamos ListView.builder en lugar de map para mejor rendimiento
+                  width: contentWidth,
                   child: ListView.builder(
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
+                    // Eliminamos NeverScrollableScrollPhysics para permitir el scroll vertical
                     itemCount: sortedProducts.length,
                     itemBuilder: (context, index) {
                       final producto = sortedProducts[index];
-                  // Mostrar todos los stocks para este producto
-                  final stockPorSucursal = producto.stocks?.map((stock) {
-                    final nombreSucursal = _sucursales.firstWhere(
-                      (s) => s['id'] == stock.sucursalId,
-                      orElse: () => {'id': stock.sucursalId, 'nombre': 'Sucursal ${stock.sucursalId}'},
-                    )['nombre'];
-                    
-                    return _buildProductRowCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${stock.stock}', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('$nombreSucursal', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                        ],
-                      ), 
-                      flex: 1
-                    );
-                  }).toList() ?? [];
-                  
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                    color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                    child: Row(
-                      children: [
-                        Checkbox(value: false, onChanged: (bool? value) {}),
-                        _buildProductRowCell(
-                          const Icon(Icons.add, size: 20),
-                          flex: 2,
-                          text: producto.nombre ?? 'Sin nombre',
+                      List<Widget> stockPorSucursal = [];
+                      
+                      // Nos aseguramos de que haya stocks disponibles antes de mostrarlos
+                      if (producto.stocks != null && producto.stocks!.isNotEmpty) {
+                        stockPorSucursal = producto.stocks!.map((stock) {
+                          final nombreSucursal = _sucursales.firstWhere(
+                            (s) => s['id'] == stock.sucursalId,
+                            orElse: () => {'id': stock.sucursalId, 'nombre': 'Sucursal ${stock.sucursalId}'},
+                          )['nombre'];
+                          
+                          return _buildProductRowCell(
+                            Column(
+                              mainAxisSize: MainAxisSize.min, // Ajuste importante para definir tamaño
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${stock.stock}', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text('$nombreSucursal', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                              ],
+                            ), 
+                            flex: 1
+                          );
+                        }).toList();
+                      }
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                        height: 52, // Altura explícita para evitar problemas de tamaño
+                        color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                        child: Row(
+                          children: [
+                            SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
+                            _buildProductRowCell(
+                              const Icon(Icons.add, size: 20),
+                              flex: 2,
+                              text: producto.nombre ?? 'Sin nombre',
+                            ),
+                            _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
+                            ...stockPorSucursal,
+                          ],
                         ),
-                        _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                        ...stockPorSucursal,
-                      ],
-                    ),
-                  );
+                      );
                     },
                   ),
                 ),
@@ -1036,8 +1059,10 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           );
         } else {
           // Mostrar productos con stock para la sucursal seleccionada
-          return ListView(
-            children: sortedProducts.map((producto) {
+          return ListView.builder(
+            itemCount: sortedProducts.length,
+            itemBuilder: (context, index) {
+              final producto = sortedProducts[index];
               // Obtener stock para la sucursal seleccionada
               final stock = producto.stocks?.firstWhere(
                 (s) => s.sucursalId == _selectedSucursalId,
@@ -1046,10 +1071,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                color: sortedProducts.indexOf(producto) % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                height: 48, // Altura explícita para evitar problemas de tamaño
+                color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
                 child: Row(
                   children: [
-                    Checkbox(value: false, onChanged: (bool? value) {}),
+                    SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
                     _buildProductRowCell(
                       const Icon(Icons.add, size: 20),
                       flex: 2,
@@ -1060,7 +1086,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                   ],
                 ),
               );
-            }).toList(),
+            },
           );
         }
       },
@@ -1071,6 +1097,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     return Expanded(
       flex: flex,
       child: Row(
+        mainAxisSize: MainAxisSize.min, // Asegurar tamaño mínimo
         children: [
           if (text != null)
             Padding(
@@ -1078,8 +1105,14 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               child: content,
             ),
           if (text != null)
-            Text(text),
-          if (text == null) content,
+            Expanded(
+              child: Text(
+                text,
+                overflow: TextOverflow.ellipsis, // Evitar desbordamiento de texto
+              ),
+            ),
+          if (text == null) 
+            Expanded(child: content), // Envolver el contenido en un Expanded
         ],
       ),
     );
