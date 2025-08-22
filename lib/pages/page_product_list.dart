@@ -193,7 +193,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     );
   }
 
-  // Pestaña de Catálogo - Muestra el listado principal
+  // Pestaña de Catálogo - Muestra precio base y stock por sucursal
   Widget _buildCatalogoTab() {
     return Column(
       children: [
@@ -631,9 +631,8 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           Checkbox(value: false, onChanged: (bool? value) {}),
           _buildTableHeaderCell('Nombre del producto', flex: 2),
           _buildTableHeaderCell('SKU', flex: 1),
-          _buildTableHeaderCell('Precio', flex: 1),
-          _buildTableHeaderCell('Precio Lista mayorista', flex: 1),
-          _buildTableHeaderCell('Stock', flex: 1),
+          _buildTableHeaderCell('Precio base', flex: 1),
+          _buildTableHeaderCell('Stock disponible', flex: 1),
         ],
       ),
     );
@@ -765,7 +764,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     ).toList();
   }
 
-  // Filas para la pestaña de catálogo
+  // Filas para la pestaña de catálogo - muestra precio base y stock de la sucursal actual
   Widget _buildCatalogoRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
@@ -792,48 +791,65 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        // Usar ListView.builder en lugar de ListView con map para mejor rendimiento
+        // Obtener la sucursal actual del usuario
+        final user = User.currencyUser;
+        final sucursalActual = int.tryParse(user?.sucursal?.toString() ?? '0') ?? 0;
+        
+        // Usar ListView.builder para mejor rendimiento
         return ListView.builder(
           itemCount: sortedProducts.length,
           itemBuilder: (context, index) {
             final producto = sortedProducts[index];
-            // Obtener precio de la lista 0 (normal)
-            final precioNormal = producto.listasPrecios?.isNotEmpty == true
+            
+            // Obtener precio base (precio por defecto, no por lista)
+            final precioBase = producto.listasPrecios?.isNotEmpty == true
                 ? producto.listasPrecios!.firstWhere(
-                    (lp) => lp.listaId == 0,
+                    (lp) => lp.listaId == 0, // Lista 0 es la base/default
                     orElse: () => ListasPrecio(precioLista: '0.0'),
                   ).precioLista ?? '0.0'
                 : '0.0';
             
-            // Obtener precio mayorista (para este ejemplo usamos lista 1)
-            final precioMayorista = producto.listasPrecios?.where((lp) => lp.listaId != 0).isNotEmpty == true
-                ? producto.listasPrecios!.firstWhere(
-                    (lp) => lp.listaId != 0,
-                    orElse: () => ListasPrecio(precioLista: '0.0'),
-                  ).precioLista ?? '0.0'
-                : '0.0';
-            
-            // Obtener stock
-            final stock = producto.stocks?.isNotEmpty == true
-                ? producto.stocks!.first.stock ?? '0'
+            // Obtener stock de la sucursal actual
+            final stockSucursalActual = producto.stocks?.where((s) => s.sucursalId == sucursalActual).isNotEmpty == true
+                ? producto.stocks!.firstWhere(
+                    (s) => s.sucursalId == sucursalActual,
+                    orElse: () => Stock(stock: '0'),
+                  ).stock ?? '0'
                 : '0';
             
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              height: 48, // Altura explícita para evitar problemas de tamaño
+              height: 48, 
               color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
               child: Row(
                 children: [
                   SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
                   _buildProductRowCell(
-                    const Icon(Icons.add, size: 20),
+                    const Icon(Icons.inventory_2, size: 20), // Icono de inventario para catálogo
                     flex: 2,
                     text: producto.nombre ?? 'Sin nombre',
                   ),
                   _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                  _buildProductRowCell(Text('\$$precioNormal'), flex: 1),
-                  _buildProductRowCell(Text('\$$precioMayorista'), flex: 1),
-                  _buildProductRowCell(Text(stock), flex: 1),
+                  _buildProductRowCell(
+                    Row(
+                      children: [
+                        Icon(Icons.attach_money, size: 16, color: Colors.green),
+                        SizedBox(width: 4),
+                        Text(precioBase),
+                      ],
+                    ), 
+                    flex: 1
+                  ),
+                  _buildProductRowCell(
+                    Row(
+                      children: [
+                        Icon(Icons.store, size: 16, color: Colors.blue),
+                        SizedBox(width: 4),
+                        Text(stockSucursalActual),
+                      ],
+                    ), 
+                    flex: 1
+                  ),
                 ],
               ),
             );
@@ -843,7 +859,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     );
   }
   
-  // Filas para la pestaña de precios - implementado con DataTable para evitar problemas de renderizado
+  // Filas para la pestaña de precios - muestra precios por cada lista
   Widget _buildPreciosRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
@@ -878,7 +894,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         columns.add(DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))));
         columns.add(DataColumn(label: Text('Código', style: TextStyle(fontWeight: FontWeight.bold))));
         
-        // Columnas dinámicas para listas de precios
+        // Mostrar columnas para todas las listas de precios o solo la seleccionada
         if (_selectedListaId == null) {
           // Mostrar columnas para todas las listas de precios
           for (var lista in _listasPrecios) {
@@ -903,17 +919,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ));
-          
-          // Si hay sucursal, agregar columna de stock
-          if (_selectedSucursalId != null) {
-            final nombreSucursal = _getNombreSucursal(_selectedSucursalId!);
-            columns.add(DataColumn(
-              label: Text(
-                'Stock en $nombreSucursal',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ));
-          }
         }
         
         // Crear las filas
@@ -930,7 +935,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add, size: 20),
+                Icon(Icons.attach_money, size: 20, color: Colors.green),
                 SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -954,7 +959,22 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                 orElse: () => ListasPrecio(precioLista: '0.0'),
               ).precioLista ?? '0.0';
               
-              cells.add(DataCell(Text('\$$precio')));
+              cells.add(DataCell(
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    color: lista.id == 0 ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                  ),
+                  child: Text(
+                    '\$$precio', 
+                    style: TextStyle(
+                      fontWeight: lista.id == 0 ? FontWeight.bold : FontWeight.normal,
+                      color: lista.id == 0 ? Colors.blue.shade800 : Colors.green.shade800,
+                    )
+                  ),
+                )
+              ));
             }
           } else {
             // Mostrar celda para lista específica
@@ -963,17 +983,22 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               orElse: () => ListasPrecio(precioLista: '0.0'),
             ).precioLista ?? '0.0';
             
-            cells.add(DataCell(Text('\$$precio')));
-            
-            // Si hay sucursal seleccionada, mostrar celda de stock
-            if (_selectedSucursalId != null) {
-              final stock = producto.stocks?.firstWhere(
-                (s) => s.sucursalId == _selectedSucursalId,
-                orElse: () => Stock(stock: '0'),
-              ).stock ?? '0';
-              
-              cells.add(DataCell(Text(stock)));
-            }
+            cells.add(DataCell(
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: _selectedListaId == 0 ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                ),
+                child: Text(
+                  '\$$precio', 
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _selectedListaId == 0 ? Colors.blue.shade800 : Colors.green.shade800,
+                  )
+                ),
+              )
+            ));
           }
           
           // Agregar la fila con color alternado
@@ -1007,7 +1032,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     );
   }
   
-  // Filas para la pestaña de stock
+  // Filas para la pestaña de stock - muestra nombre y stock por sucursal
   Widget _buildStockRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
@@ -1034,102 +1059,159 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        if (_selectedSucursalId == null) {
-          // Mostrar productos con todas las sucursales disponibles
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              // Establecer un ancho mínimo para evitar problemas de renderizado
-              final contentWidth = max(constraints.maxWidth, 500.0);
-              
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: contentWidth,
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    // Eliminamos NeverScrollableScrollPhysics para permitir el scroll vertical
-                    itemCount: sortedProducts.length,
-                    itemBuilder: (context, index) {
-                      final producto = sortedProducts[index];
-                      List<Widget> stockPorSucursal = [];
-                      
-                      // Nos aseguramos de que haya stocks disponibles antes de mostrarlos
-                      if (producto.stocks != null && producto.stocks!.isNotEmpty) {
-                        stockPorSucursal = producto.stocks!.map((stock) {
-                          final nombreSucursal = _sucursales.firstWhere(
-                            (s) => s['id'] == stock.sucursalId,
-                            orElse: () => {'id': stock.sucursalId, 'nombre': 'Sucursal ${stock.sucursalId}'},
-                          )['nombre'];
-                          
-                          return _buildProductRowCell(
-                            Column(
-                              mainAxisSize: MainAxisSize.min, // Ajuste importante para definir tamaño
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${stock.stock}', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('$nombreSucursal', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                              ],
-                            ), 
-                            flex: 1
-                          );
-                        }).toList();
-                      }
-                      
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                        height: 52, // Altura explícita para evitar problemas de tamaño
-                        color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                        child: Row(
-                          children: [
-                            SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
-                            _buildProductRowCell(
-                              const Icon(Icons.add, size: 20),
-                              flex: 2,
-                              text: producto.nombre ?? 'Sin nombre',
-                            ),
-                            _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                            ...stockPorSucursal,
-                          ],
-                        ),
-                      );
-                    },
+        // Crear columnas para DataTable
+        List<DataColumn> columns = [
+          DataColumn(label: SizedBox(width: 30, child: Checkbox(value: false, onChanged: null))),
+          DataColumn(label: Text('Nombre del producto', style: TextStyle(fontWeight: FontWeight.bold))),
+        ];
+        
+        // Agregar columna para la sucursal seleccionada o todas las sucursales
+        if (_selectedSucursalId != null) {
+          // Sucursal específica
+          final nombreSucursal = _getNombreSucursal(_selectedSucursalId!);
+          columns.add(DataColumn(
+            label: Text(
+              'Stock en $nombreSucursal',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ));
+        } else {
+          // Todas las sucursales disponibles
+          for (var sucursal in _sucursales) {
+            columns.add(DataColumn(
+              label: Text(
+                sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}',
+                style: TextStyle(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ));
+          }
+        }
+        
+        // Crear filas
+        List<DataRow> rows = [];
+        for (int i = 0; i < sortedProducts.length; i++) {
+          final producto = sortedProducts[i];
+          List<DataCell> cells = [];
+          
+          // Celda de checkbox
+          cells.add(DataCell(Checkbox(value: false, onChanged: (bool? value) {})));
+          
+          // Celda de nombre del producto
+          cells.add(DataCell(
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.inventory_2, size: 20, color: Colors.indigo),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    producto.nombre ?? 'Sin nombre',
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              );
-            },
-          );
-        } else {
-          // Mostrar productos con stock para la sucursal seleccionada
-          return ListView.builder(
-            itemCount: sortedProducts.length,
-            itemBuilder: (context, index) {
-              final producto = sortedProducts[index];
-              // Obtener stock para la sucursal seleccionada
-              final stock = producto.stocks?.firstWhere(
-                (s) => s.sucursalId == _selectedSucursalId,
-                orElse: () => Stock(stock: '0'),
-              ).stock ?? '0';
-              
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                height: 48, // Altura explícita para evitar problemas de tamaño
-                color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                child: Row(
-                  children: [
-                    SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
-                    _buildProductRowCell(
-                      const Icon(Icons.add, size: 20),
-                      flex: 2,
-                      text: producto.nombre ?? 'Sin nombre',
-                    ),
-                    _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                    _buildProductRowCell(Text(stock), flex: 2),
-                  ],
+              ],
+            ),
+          ));
+          
+          if (_selectedSucursalId != null) {
+            // Mostrar stock para la sucursal seleccionada
+            final stock = producto.stocks?.firstWhere(
+              (s) => s.sucursalId == _selectedSucursalId,
+              orElse: () => Stock(stock: '0'),
+            ).stock ?? '0';
+            
+            // Destacar visualmente el nivel de stock
+            Color stockColor = Colors.green;
+            if (int.tryParse(stock) == 0) {
+              stockColor = Colors.red;
+            } else if (int.tryParse(stock) != null && int.parse(stock) < 5) {
+              stockColor = Colors.orange;
+            }
+            
+            cells.add(DataCell(
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: stockColor.withOpacity(0.2),
                 ),
-              );
-            },
-          );
+                child: Text(
+                  stock,
+                  style: TextStyle(color: stockColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ));
+          } else {
+            // Mostrar stock para todas las sucursales
+            // Crear un mapa para tomar solo la primera coincidencia por sucursal_id
+            Map<int, Stock> stocksPorSucursal = {};
+            if (producto.stocks != null) {
+              for (var stock in producto.stocks!) {
+                if (!stocksPorSucursal.containsKey(stock.sucursalId)) {
+                  stocksPorSucursal[stock.sucursalId] = stock;
+                }
+              }
+            }
+            
+            // Agregar celdas para cada sucursal
+            for (var sucursal in _sucursales) {
+              final sucursalId = sucursal['id'];
+              final stock = stocksPorSucursal.containsKey(sucursalId)
+                  ? stocksPorSucursal[sucursalId]!.stock ?? '0'
+                  : '0';
+              
+              // Destacar visualmente el nivel de stock
+              Color stockColor = Colors.green;
+              if (int.tryParse(stock) == 0) {
+                stockColor = Colors.red;
+              } else if (int.tryParse(stock) != null && int.parse(stock) < 5) {
+                stockColor = Colors.orange;
+              }
+              
+              cells.add(DataCell(
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: stockColor.withOpacity(0.2),
+                  ),
+                  child: Text(
+                    stock,
+                    style: TextStyle(color: stockColor, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ));
+            }
+          }
+          
+          // Agregar la fila con color alternado
+          rows.add(DataRow(
+            color: MaterialStatePropertyAll(
+              i % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white
+            ),
+            cells: cells,
+          ));
         }
+        
+        // DataTable con scroll horizontal y vertical
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            child: DataTable(
+              columnSpacing: 20,
+              headingRowHeight: 40,
+              dataRowMinHeight: 48,
+              dataRowMaxHeight: 48,
+              columns: columns,
+              rows: rows,
+              border: TableBorder(
+                horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                verticalInside: BorderSide(width: 1, color: Colors.grey.shade200),
+              ),
+            ),
+          ),
+        );
       },
     );
   }
