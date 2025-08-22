@@ -870,93 +870,155 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        // Evitamos usar SingleChildScrollView anidado con ListView.builder
-        // En lugar de eso, usamos un CustomScrollView con slivers
+        // Solución completamente rediseñada para la pestaña de precios
+        // Usamos Column con un SingleChildScrollView interno para evitar conflictos de scroll
         return LayoutBuilder(
           builder: (context, constraints) {
-            // Establecer un ancho mínimo para evitar problemas de renderizado
-            final contentWidth = max(constraints.maxWidth, 500.0);
+            final List<Widget> rows = [];
             
+            // Creamos las filas manualmente para mejor control
+            for (int index = 0; index < sortedProducts.length; index++) {
+              final producto = sortedProducts[index];
+              final rowWidgets = <Widget>[];
+              
+              // Agregamos los elementos básicos de cada fila
+              rowWidgets.add(SizedBox(width: 24, height: 48, child: Checkbox(value: false, onChanged: (bool? value) {})));
+              
+              // Widget para el nombre del producto
+              rowWidgets.add(
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 48,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(right: 8.0),
+                          child: Icon(Icons.add, size: 20),
+                        ),
+                        Expanded(
+                          child: Text(
+                            producto.nombre ?? 'Sin nombre',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+              
+              // Widget para el código
+              rowWidgets.add(
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    height: 48,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      producto.barcode ?? 'Sin código',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              );
+              
+              // Listas de precios o precio específico
+              if (_selectedListaId == null) {
+                // Mostrar todas las listas de precios disponibles si hay alguna
+                if (_listasPrecios.isNotEmpty) {
+                  for (var lista in _listasPrecios) {
+                    final precio = producto.listasPrecios?.firstWhere(
+                      (lp) => lp.listaId == lista.id,
+                      orElse: () => ListasPrecio(precioLista: '0.0'),
+                    ).precioLista ?? '0.0';
+                    
+                    rowWidgets.add(
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          height: 48,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '\$$precio',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                }
+              } else {
+                // Mostrar precio de lista específica
+                final precio = producto.listasPrecios?.firstWhere(
+                  (lp) => lp.listaId == _selectedListaId,
+                  orElse: () => ListasPrecio(precioLista: '0.0'),
+                ).precioLista ?? '0.0';
+                
+                rowWidgets.add(
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      height: 48,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '\$$precio',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                );
+                
+                // Si hay sucursal seleccionada, mostrar también el stock
+                if (_selectedSucursalId != null) {
+                  final stock = producto.stocks?.firstWhere(
+                    (s) => s.sucursalId == _selectedSucursalId,
+                    orElse: () => Stock(stock: '0'),
+                  ).stock ?? '0';
+                  
+                  rowWidgets.add(
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        height: 48,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          stock,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              }
+              
+              // Crear la fila completa
+              rows.add(
+                Container(
+                  height: 48, // Altura explícita para evitar problemas de tamaño
+                  color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                  child: Row(children: rowWidgets),
+                ),
+              );
+            }
+            
+            // Envolver en un SingleChildScrollView horizontal
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: contentWidth,
-                child: ListView.separated(
-                  // Usar ListView.separated para mayor control y rendimiento
-                  shrinkWrap: true,
-                  itemCount: sortedProducts.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 2),
-                  itemBuilder: (context, index) {
-                    final producto = sortedProducts[index];
-                    
-                    if (_selectedListaId == null) {
-                      // Mostrar todas las listas de precios disponibles
-                      List<Widget> preciosPorLista = [];
-                      
-                      // Asegurarnos de que _listasPrecios no esté vacío antes de usar map
-                      if (_listasPrecios.isNotEmpty) {
-                        preciosPorLista = _listasPrecios.map((lista) {
-                          final precio = producto.listasPrecios?.firstWhere(
-                            (lp) => lp.listaId == lista.id,
-                            orElse: () => ListasPrecio(precioLista: '0.0'),
-                          ).precioLista ?? '0.0';
-                          return _buildProductRowCell(Text('\$$precio'), flex: 1);
-                        }).toList();
-                      }
-                      
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                        height: 48, // Altura explícita para evitar problemas de tamaño
-                        color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                        child: Row(
-                          children: [
-                            SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
-                            _buildProductRowCell(
-                              const Icon(Icons.add, size: 20),
-                              flex: 2,
-                              text: producto.nombre ?? 'Sin nombre',
-                            ),
-                            _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                            ...preciosPorLista
-                          ],
-                        ),
-                      );
-                    } else {
-                      // Mostrar una lista de precios específica
-                      final precio = producto.listasPrecios?.firstWhere(
-                        (lp) => lp.listaId == _selectedListaId,
-                        orElse: () => ListasPrecio(precioLista: '0.0'),
-                      ).precioLista ?? '0.0';
-                      
-                      // Si hay sucursal seleccionada, mostrar también el stock
-                      final stock = _selectedSucursalId != null ? 
-                        producto.stocks?.firstWhere(
-                          (s) => s.sucursalId == _selectedSucursalId,
-                          orElse: () => Stock(stock: '0'),
-                        ).stock ?? '0' : null;
-                      
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                        height: 48, // Altura explícita para evitar problemas de tamaño
-                        color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                        child: Row(
-                          children: [
-                            SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
-                            _buildProductRowCell(
-                              const Icon(Icons.add, size: 20),
-                              flex: 2,
-                              text: producto.nombre ?? 'Sin nombre',
-                            ),
-                            _buildProductRowCell(Text(producto.barcode ?? 'Sin código'), flex: 1),
-                            _buildProductRowCell(Text('\$$precio'), flex: 1),
-                            // Mostrar stock si hay sucursal seleccionada
-                            if (stock != null)
-                              _buildProductRowCell(Text(stock), flex: 1),
-                          ],
-                        ),
-                      );
-                    }
-                  },
+              child: Container(
+                width: max(constraints.maxWidth, 500.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Usar un Expanded con ListView para permitir scroll vertical
+                    Expanded(
+                      child: ListView(
+                        children: rows,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -1096,24 +1158,31 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   Widget _buildProductRowCell(Widget content, {int flex = 1, String? text}) {
     return Expanded(
       flex: flex,
-      child: Row(
-        mainAxisSize: MainAxisSize.min, // Asegurar tamaño mínimo
-        children: [
-          if (text != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: content,
-            ),
-          if (text != null)
-            Expanded(
-              child: Text(
-                text,
-                overflow: TextOverflow.ellipsis, // Evitar desbordamiento de texto
+      child: Container(
+        height: 48, // Altura fija para evitar problemas de tamaño
+        constraints: BoxConstraints(
+          minHeight: 48.0, // Altura mínima garantizada
+          minWidth: 50.0,  // Ancho mínimo garantizado
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // Asegurar tamaño mínimo
+          children: [
+            if (text != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: content,
               ),
-            ),
-          if (text == null) 
-            Expanded(child: content), // Envolver el contenido en un Expanded
-        ],
+            if (text != null)
+              Expanded(
+                child: Text(
+                  text,
+                  overflow: TextOverflow.ellipsis, // Evitar desbordamiento de texto
+                ),
+              ),
+            if (text == null) 
+              Expanded(child: content), // Envolver el contenido en un Expanded
+          ],
+        ),
       ),
     );
   }
