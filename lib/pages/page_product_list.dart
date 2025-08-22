@@ -843,7 +843,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     );
   }
   
-  // Filas para la pestaña de precios
+  // Filas para la pestaña de precios - implementado con DataTable para evitar problemas de renderizado
   Widget _buildPreciosRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
@@ -870,159 +870,138 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        // Solución completamente rediseñada para la pestaña de precios
-        // Usamos Column con un SingleChildScrollView interno para evitar conflictos de scroll
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final List<Widget> rows = [];
-            
-            // Creamos las filas manualmente para mejor control
-            for (int index = 0; index < sortedProducts.length; index++) {
-              final producto = sortedProducts[index];
-              final rowWidgets = <Widget>[];
-              
-              // Agregamos los elementos básicos de cada fila
-              rowWidgets.add(SizedBox(width: 24, height: 48, child: Checkbox(value: false, onChanged: (bool? value) {})));
-              
-              // Widget para el nombre del producto
-              rowWidgets.add(
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    height: 48,
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(right: 8.0),
-                          child: Icon(Icons.add, size: 20),
-                        ),
-                        Expanded(
-                          child: Text(
-                            producto.nombre ?? 'Sin nombre',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-              
-              // Widget para el código
-              rowWidgets.add(
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    height: 48,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      producto.barcode ?? 'Sin código',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              );
-              
-              // Listas de precios o precio específico
-              if (_selectedListaId == null) {
-                // Mostrar todas las listas de precios disponibles si hay alguna
-                if (_listasPrecios.isNotEmpty) {
-                  for (var lista in _listasPrecios) {
-                    final precio = producto.listasPrecios?.firstWhere(
-                      (lp) => lp.listaId == lista.id,
-                      orElse: () => ListasPrecio(precioLista: '0.0'),
-                    ).precioLista ?? '0.0';
-                    
-                    rowWidgets.add(
-                      Expanded(
-                        flex: 1,
-                        child: Container(
-                          height: 48,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '\$$precio',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                }
-              } else {
-                // Mostrar precio de lista específica
-                final precio = producto.listasPrecios?.firstWhere(
-                  (lp) => lp.listaId == _selectedListaId,
-                  orElse: () => ListasPrecio(precioLista: '0.0'),
-                ).precioLista ?? '0.0';
-                
-                rowWidgets.add(
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      height: 48,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '\$$precio',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                );
-                
-                // Si hay sucursal seleccionada, mostrar también el stock
-                if (_selectedSucursalId != null) {
-                  final stock = producto.stocks?.firstWhere(
-                    (s) => s.sucursalId == _selectedSucursalId,
-                    orElse: () => Stock(stock: '0'),
-                  ).stock ?? '0';
-                  
-                  rowWidgets.add(
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        height: 48,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          stock,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              }
-              
-              // Crear la fila completa
-              rows.add(
-                Container(
-                  height: 48, // Altura explícita para evitar problemas de tamaño
-                  color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                  child: Row(children: rowWidgets),
-                ),
-              );
-            }
-            
-            // Envolver en un SingleChildScrollView horizontal
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Container(
-                width: max(constraints.maxWidth, 500.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Usar un Expanded con ListView para permitir scroll vertical
-                    Expanded(
-                      child: ListView(
-                        children: rows,
-                      ),
-                    ),
-                  ],
-                ),
+        // Crear las columnas dependiendo de la configuración
+        List<DataColumn> columns = [];
+        
+        // Agregar las columnas estándar
+        columns.add(DataColumn(label: SizedBox(width: 30, child: Checkbox(value: false, onChanged: null))));
+        columns.add(DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))));
+        columns.add(DataColumn(label: Text('Código', style: TextStyle(fontWeight: FontWeight.bold))));
+        
+        // Columnas dinámicas para listas de precios
+        if (_selectedListaId == null) {
+          // Mostrar columnas para todas las listas de precios
+          for (var lista in _listasPrecios) {
+            columns.add(DataColumn(
+              label: Text(
+                '${lista.nombre ?? "Lista ${lista.id}"}', 
+                style: TextStyle(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
               ),
-            );
-          },
+            ));
+          }
+        } else {
+          // Mostrar columna para lista específica
+          final nombreLista = _listasPrecios.firstWhere(
+            (l) => l.id == _selectedListaId,
+            orElse: () => Lista(id: _selectedListaId, nombre: "Lista $_selectedListaId"),
+          ).nombre ?? "Lista $_selectedListaId";
+          
+          columns.add(DataColumn(
+            label: Text(
+              nombreLista,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ));
+          
+          // Si hay sucursal, agregar columna de stock
+          if (_selectedSucursalId != null) {
+            final nombreSucursal = _getNombreSucursal(_selectedSucursalId!);
+            columns.add(DataColumn(
+              label: Text(
+                'Stock en $nombreSucursal',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ));
+          }
+        }
+        
+        // Crear las filas
+        List<DataRow> rows = [];
+        for (int i = 0; i < sortedProducts.length; i++) {
+          final producto = sortedProducts[i];
+          List<DataCell> cells = [];
+          
+          // Celda de checkbox
+          cells.add(DataCell(Checkbox(value: false, onChanged: (bool? value) {})));
+          
+          // Celda de nombre
+          cells.add(DataCell(
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 20),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    producto.nombre ?? 'Sin nombre',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ));
+          
+          // Celda de código
+          cells.add(DataCell(Text(producto.barcode ?? 'Sin código')));
+          
+          // Celdas dinámicas para precios
+          if (_selectedListaId == null) {
+            // Mostrar celdas para todas las listas de precios
+            for (var lista in _listasPrecios) {
+              final precio = producto.listasPrecios?.firstWhere(
+                (lp) => lp.listaId == lista.id,
+                orElse: () => ListasPrecio(precioLista: '0.0'),
+              ).precioLista ?? '0.0';
+              
+              cells.add(DataCell(Text('\$$precio')));
+            }
+          } else {
+            // Mostrar celda para lista específica
+            final precio = producto.listasPrecios?.firstWhere(
+              (lp) => lp.listaId == _selectedListaId,
+              orElse: () => ListasPrecio(precioLista: '0.0'),
+            ).precioLista ?? '0.0';
+            
+            cells.add(DataCell(Text('\$$precio')));
+            
+            // Si hay sucursal seleccionada, mostrar celda de stock
+            if (_selectedSucursalId != null) {
+              final stock = producto.stocks?.firstWhere(
+                (s) => s.sucursalId == _selectedSucursalId,
+                orElse: () => Stock(stock: '0'),
+              ).stock ?? '0';
+              
+              cells.add(DataCell(Text(stock)));
+            }
+          }
+          
+          // Agregar la fila con color alternado
+          rows.add(DataRow(
+            color: MaterialStatePropertyAll(
+              i % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white
+            ),
+            cells: cells,
+          ));
+        }
+        
+        // DataTable con scroll horizontal y vertical
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            child: DataTable(
+              columnSpacing: 20,
+              headingRowHeight: 40,
+              dataRowMinHeight: 48,
+              dataRowMaxHeight: 48,
+              columns: columns,
+              rows: rows,
+              border: TableBorder(
+                horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                verticalInside: BorderSide(width: 1, color: Colors.grey.shade200),
+              ),
+            ),
+          ),
         );
       },
     );
