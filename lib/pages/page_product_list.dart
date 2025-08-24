@@ -869,6 +869,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   }
   
   // Filas para la pestaña de precios - muestra precios por cada lista
+  // Implementación simplificada usando ListView para evitar errores de layout
   Widget _buildPreciosRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
@@ -917,17 +918,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           }
         }
         
-        print('Listas ID disponibles: $listasIdDisponibles');
-        print('Nombres de listas: $nombresListas');
-        
-        // Crear las columnas dependiendo de la configuración
-        List<DataColumn> columns = [];
-        
-        // Agregar las columnas estándar
-        columns.add(DataColumn(label: SizedBox(width: 30, child: Checkbox(value: false, onChanged: null))));
-        columns.add(DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))));
-        columns.add(DataColumn(label: Text('Código', style: TextStyle(fontWeight: FontWeight.bold))));
-        
         // Ordenar las listas por nombre para mostrarlas de forma organizada
         // Primero creamos una lista para poder ordenarla
         List<MapEntry<int?, String>> listasOrdenadas = nombresListas.entries.toList();
@@ -938,179 +928,193 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return a.value.compareTo(b.value);
         });
         
-        // Mostrar columnas para todas las listas de precios o solo la seleccionada
-        if (_selectedListaId == null) {
-          // Mostrar columnas para todas las listas de precios disponibles
-          for (var entry in listasOrdenadas) {
-            final listaId = entry.key;
-            final nombreLista = entry.value;
-            
-            columns.add(DataColumn(
-              label: Text(
-                '$nombreLista (ID: $listaId)', 
-                style: TextStyle(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ));
-          }
-        } else {
-          // Mostrar columna para lista específica
-          final nombreLista = nombresListas[_selectedListaId] ?? "Lista $_selectedListaId";
-          
-          columns.add(DataColumn(
-            label: Text(
-              '$nombreLista (ID: $_selectedListaId)',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ));
-        }
+        // Crear una lista de listas_id disponibles en el orden definido
+        List<int?> listasIdOrdenadas = listasOrdenadas.map((entry) => entry.key).toList();
         
-        // Crear las filas
-        List<DataRow> rows = [];
-        for (int i = 0; i < sortedProducts.length; i++) {
-          final producto = sortedProducts[i];
-          List<DataCell> cells = [];
-          
-          // Crear un mapa de listaId -> precio para acceso rápido
-          Map<int?, String> preciosPorListaId = {};
-          if (producto.listasPrecios != null) {
-            for (var listaPrecio in producto.listasPrecios!) {
-              if (listaPrecio.listaId != null) {
-                preciosPorListaId[listaPrecio.listaId] = listaPrecio.precioLista ?? '0.0';
-              }
-            }
-          }
-          
-          // Celda de checkbox
-          cells.add(DataCell(Checkbox(value: false, onChanged: (bool? value) {})));
-          
-          // Celda de nombre
-          cells.add(DataCell(
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.attach_money, size: 20, color: Colors.green),
-                SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    producto.nombre ?? 'Sin nombre',
-                    overflow: TextOverflow.ellipsis,
+        // Usar un enfoque simplificado con ListView para evitar errores de layout
+        return Column(
+          children: [
+            // Encabezado de la tabla
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                border: Border(bottom: BorderSide(color: Colors.grey.shade300))
+              ),
+              child: Row(
+                children: [
+                  // Checkbox para seleccionar todos
+                  SizedBox(width: 30, child: Checkbox(value: false, onChanged: (val) {})),
+                  // Nombre del producto
+                  Expanded(
+                    flex: 2,
+                    child: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                ),
-              ],
-            ),
-          ));
-          
-          // Celda de código
-          cells.add(DataCell(Text(producto.barcode ?? 'Sin código')));
-          
-          // Celdas dinámicas para precios
-          if (_selectedListaId == null) {
-            // Mostrar celdas para todas las listas de precios en el orden establecido
-            for (var entry in listasOrdenadas) {
-              final listaId = entry.key;
-              final precio = preciosPorListaId[listaId] ?? '0.0';
-              
-              // Determinar color basado en el precio y tipo de lista
-              Color bgColor;
-              Color textColor;
-              bool isBold;
-              
-              if (listaId == 0) {
-                // Lista base/default
-                bgColor = Colors.blue.withOpacity(0.1);
-                textColor = Colors.blue.shade800;
-                isBold = true;
-              } else {
-                // Otras listas
-                bgColor = Colors.green.withOpacity(0.1);
-                textColor = Colors.green.shade800;
-                isBold = false;
-              }
-              
-              // Si el precio es cero o muy bajo, resaltarlo diferente
-              if (double.tryParse(precio) == 0 || precio == '0.0' || precio == '0.00' || precio == '0.000') {
-                bgColor = Colors.red.withOpacity(0.1);
-                textColor = Colors.red.shade800;
-              }
-              
-              cells.add(DataCell(
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: bgColor,
+                  // Código del producto
+                  Expanded(
+                    flex: 1,
+                    child: Text('Código', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  child: Text(
-                    '\$$precio', 
-                    style: TextStyle(
-                      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                      color: textColor,
+                  // Columna para precio(s)
+                  if (_selectedListaId != null)
+                    // Una columna si hay lista seleccionada
+                    Expanded(
+                      flex: 1,
+                      child: Text(
+                        '${nombresListas[_selectedListaId] ?? "Lista $_selectedListaId"}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     )
-                  ),
-                )
-              ));
-            }
-          } else {
-            // Mostrar celda para lista específica
-            final precio = preciosPorListaId[_selectedListaId] ?? '0.0';
-            
-            // Determinar color basado en el precio y tipo de lista
-            Color bgColor = _selectedListaId == 0 ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1);
-            Color textColor = _selectedListaId == 0 ? Colors.blue.shade800 : Colors.green.shade800;
-            
-            // Si el precio es cero, resaltarlo como problema
-            if (double.tryParse(precio) == 0 || precio == '0.0' || precio == '0.00' || precio == '0.000') {
-              bgColor = Colors.red.withOpacity(0.1);
-              textColor = Colors.red.shade800;
-            }
-            
-            cells.add(DataCell(
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  color: bgColor,
-                ),
-                child: Text(
-                  '\$$precio', 
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  )
-                ),
-              )
-            ));
-          }
-          
-          // Agregar la fila con color alternado
-          rows.add(DataRow(
-            color: MaterialStatePropertyAll(
-              i % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white
-            ),
-            cells: cells,
-          ));
-        }
-        
-        // DataTable con scroll horizontal y vertical
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SingleChildScrollView(
-            child: DataTable(
-              columnSpacing: 20,
-              headingRowHeight: 40,
-              dataRowMinHeight: 48,
-              dataRowMaxHeight: 48,
-              columns: columns,
-              rows: rows,
-              border: TableBorder(
-                horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                verticalInside: BorderSide(width: 1, color: Colors.grey.shade200),
+                  else
+                    // Múltiples columnas para todas las listas
+                    ...listasOrdenadas.map((entry) => 
+                      Expanded(
+                        flex: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            '${entry.value} (${entry.key})',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                    ).toList(),
+                ],
               ),
             ),
-          ),
+            
+            // Lista de productos
+            Expanded(
+              child: ListView.builder(
+                itemCount: sortedProducts.length,
+                itemBuilder: (context, index) {
+                  final producto = sortedProducts[index];
+                  
+                  // Crear un mapa de listaId -> precio para acceso rápido
+                  Map<int?, String> preciosPorListaId = {};
+                  if (producto.listasPrecios != null) {
+                    for (var listaPrecio in producto.listasPrecios!) {
+                      if (listaPrecio.listaId != null) {
+                        preciosPorListaId[listaPrecio.listaId] = listaPrecio.precioLista ?? '0.0';
+                      }
+                    }
+                  }
+                  
+                  // Construir una fila para el producto actual
+                  return Container(
+                    height: 48,
+                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
+                      border: Border(bottom: BorderSide(color: Colors.grey.shade200))
+                    ),
+                    child: Row(
+                      children: [
+                        // Checkbox
+                        SizedBox(width: 30, child: Checkbox(value: false, onChanged: (val) {})),
+                        
+                        // Nombre del producto
+                        Expanded(
+                          flex: 2,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.attach_money, size: 20, color: Colors.green),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  producto.nombre ?? 'Sin nombre',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Código
+                        Expanded(
+                          flex: 1,
+                          child: Text(
+                            producto.barcode ?? 'Sin código',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        
+                        // Columnas de precios
+                        if (_selectedListaId != null)
+                          // Mostrar una columna si hay lista seleccionada
+                          _buildPrecioCelda(preciosPorListaId[_selectedListaId], _selectedListaId == 0)
+                        else
+                          // Mostrar todas las columnas de precios
+                          ...listasIdOrdenadas.map((listaId) => 
+                            _buildPrecioCelda(preciosPorListaId[listaId], listaId == 0)
+                          ).toList(),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+  
+  // Construir una celda de precio formateada
+  Widget _buildPrecioCelda(String? precio, bool isPrecioBase) {
+    final precioStr = precio ?? '0.0';
+    
+    // Determinar color basado en el precio y tipo de lista
+    Color bgColor;
+    Color textColor;
+    bool isBold;
+    
+    if (isPrecioBase) {
+      // Lista base/default
+      bgColor = Colors.blue.withOpacity(0.1);
+      textColor = Colors.blue.shade800;
+      isBold = true;
+    } else {
+      // Otras listas
+      bgColor = Colors.green.withOpacity(0.1);
+      textColor = Colors.green.shade800;
+      isBold = false;
+    }
+    
+    // Si el precio es cero o muy bajo, resaltarlo diferente
+    if (double.tryParse(precioStr) == 0 || 
+        precioStr == '0.0' || 
+        precioStr == '0.00' || 
+        precioStr == '0.000') {
+      bgColor = Colors.red.withOpacity(0.1);
+      textColor = Colors.red.shade800;
+    }
+    
+    return Expanded(
+      flex: 1,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            color: bgColor,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '\$$precioStr', 
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: textColor,
+              fontSize: 13,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
     );
   }
   
