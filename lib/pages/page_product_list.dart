@@ -98,9 +98,9 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1);
       print('Todos los productos cargados para mostrar stock');
     } else {
-      // Cargamos productos filtrados por la sucursal seleccionada
+      // Cargamos productos filtrados por la sucursal_id seleccionada
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId!); 
-      print('Productos filtrados por sucursal $_selectedSucursalId cargados');
+      print('Productos filtrados por sucursal_id $_selectedSucursalId cargados');
     }
   }
   
@@ -802,20 +802,28 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             final producto = sortedProducts[index];
             
             // Obtener precio base (precio por defecto, no por lista)
-            final precioBase = producto.listasPrecios?.isNotEmpty == true
+            final precioBase = producto.listasPrecios?.where((lp) => lp.listaId == 0).isNotEmpty == true
                 ? producto.listasPrecios!.firstWhere(
                     (lp) => lp.listaId == 0, // Lista 0 es la base/default
                     orElse: () => ListasPrecio(precioLista: '0.0'),
                   ).precioLista ?? '0.0'
                 : '0.0';
             
-            // Obtener stock de la sucursal actual
+            // Obtener stock de la sucursal actual (buscando por sucursal_id)
             final stockSucursalActual = producto.stocks?.where((s) => s.sucursalId == sucursalActual).isNotEmpty == true
                 ? producto.stocks!.firstWhere(
                     (s) => s.sucursalId == sucursalActual,
                     orElse: () => Stock(stock: '0'),
                   ).stock ?? '0'
                 : '0';
+            
+            // Destacar visualmente el nivel de stock
+            Color stockColor = Colors.blue;
+            if (int.tryParse(stockSucursalActual) == 0) {
+              stockColor = Colors.red;
+            } else if (int.tryParse(stockSucursalActual) != null && int.parse(stockSucursalActual) < 5) {
+              stockColor = Colors.orange;
+            }
             
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -843,9 +851,9 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                   _buildProductRowCell(
                     Row(
                       children: [
-                        Icon(Icons.store, size: 16, color: Colors.blue),
+                        Icon(Icons.store, size: 16, color: stockColor),
                         SizedBox(width: 4),
-                        Text(stockSucursalActual),
+                        Text(stockSucursalActual, style: TextStyle(color: stockColor)),
                       ],
                     ), 
                     flex: 1
@@ -1116,10 +1124,12 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           
           if (_selectedSucursalId != null) {
             // Mostrar stock para la sucursal seleccionada
-            final stock = producto.stocks?.firstWhere(
-              (s) => s.sucursalId == _selectedSucursalId,
-              orElse: () => Stock(stock: '0'),
-            ).stock ?? '0';
+            final stock = producto.stocks?.where((s) => s.sucursalId == _selectedSucursalId).isNotEmpty == true
+                ? producto.stocks!.firstWhere(
+                    (s) => s.sucursalId == _selectedSucursalId,
+                    orElse: () => Stock(stock: '0'),
+                  ).stock ?? '0'
+                : '0';
             
             // Destacar visualmente el nivel de stock
             Color stockColor = Colors.green;
@@ -1145,10 +1155,10 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           } else {
             // Mostrar stock para todas las sucursales
             // Crear un mapa para tomar solo la primera coincidencia por sucursal_id
-            Map<int, Stock> stocksPorSucursal = {};
+            Map<int?, Stock> stocksPorSucursal = {};
             if (producto.stocks != null) {
               for (var stock in producto.stocks!) {
-                if (!stocksPorSucursal.containsKey(stock.sucursalId)) {
+                if (stock.sucursalId != null && !stocksPorSucursal.containsKey(stock.sucursalId)) {
                   stocksPorSucursal[stock.sucursalId] = stock;
                 }
               }
@@ -1157,6 +1167,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             // Agregar celdas para cada sucursal
             for (var sucursal in _sucursales) {
               final sucursalId = sucursal['id'];
+              // Buscar explícitamente por sucursal_id y no por sucursal
               final stock = stocksPorSucursal.containsKey(sucursalId)
                   ? stocksPorSucursal[sucursalId]!.stock ?? '0'
                   : '0';
