@@ -500,6 +500,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                           setState(() {
                             _selectedSucursalId = value;
                             _cargarProductosStock(); // Siempre recargamos
+                            print('Sucursal seleccionada: ${_selectedSucursalId}');
                           });
                         },
                       ),
@@ -522,8 +523,8 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                       Expanded(
                         child: Text(
                           _selectedSucursalId != null
-                              ? 'Mostrando stock de: ${_getNombreSucursal(_selectedSucursalId!)}'
-                              : 'Seleccione una sucursal para ver el stock',
+                              ? 'Mostrando stock de: ${_getNombreSucursal(_selectedSucursalId!)} (ID: ${_selectedSucursalId})'
+                              : 'Mostrando todas las sucursales disponibles',
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ),
@@ -1067,6 +1068,20 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
+        // Crear lista de sucursales_id disponibles en todos los productos
+        Set<int?> sucursalesIdDisponibles = Set();
+        for (var producto in sortedProducts) {
+          if (producto.stocks != null) {
+            for (var stock in producto.stocks!) {
+              if (stock.sucursalId != null) {
+                sucursalesIdDisponibles.add(stock.sucursalId);
+              }
+            }
+          }
+        }
+        
+        print('Sucursales ID disponibles: $sucursalesIdDisponibles');
+        
         // Crear columnas para DataTable
         List<DataColumn> columns = [
           DataColumn(label: SizedBox(width: 30, child: Checkbox(value: false, onChanged: null))),
@@ -1084,15 +1099,30 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             ),
           ));
         } else {
-          // Todas las sucursales disponibles
+          // Mostrar columnas para cada sucursal_id encontrado en los datos
+          // Crear un mapa de sucursalId -> nombre para usar después
+          Map<int, String> nombresSucursales = {};
           for (var sucursal in _sucursales) {
-            columns.add(DataColumn(
-              label: Text(
-                sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}',
-                style: TextStyle(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ));
+            if (sucursal['id'] != null) {
+              nombresSucursales[sucursal['id']] = sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}';
+            }
+          }
+          
+          // Mostrar solo las columnas de sucursales que tengan stocks
+          List<int?> sucursalesIdOrdenadas = sucursalesIdDisponibles.toList();
+          sucursalesIdOrdenadas.sort(); // Ordenarlas para mostrar consistentemente
+          
+          for (var sucursalId in sucursalesIdOrdenadas) {
+            if (sucursalId != null) {
+              final nombreSucursal = nombresSucursales[sucursalId] ?? 'Sucursal $sucursalId';
+              columns.add(DataColumn(
+                label: Text(
+                  nombreSucursal,
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ));
+            }
           }
         }
         
@@ -1122,18 +1152,23 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             ),
           ));
           
+          // Crear un mapa de sucursalId -> stock para acceder rápidamente
+          Map<int?, String> stocksPorSucursalId = {};
+          if (producto.stocks != null) {
+            for (var stock in producto.stocks!) {
+              if (stock.sucursalId != null && !stocksPorSucursalId.containsKey(stock.sucursalId)) {
+                stocksPorSucursalId[stock.sucursalId] = stock.stock ?? '0';
+              }
+            }
+          }
+          
           if (_selectedSucursalId != null) {
-            // Mostrar stock para la sucursal seleccionada
-            final stock = producto.stocks?.where((s) => s.sucursalId == _selectedSucursalId).isNotEmpty == true
-                ? producto.stocks!.firstWhere(
-                    (s) => s.sucursalId == _selectedSucursalId,
-                    orElse: () => Stock(stock: '0'),
-                  ).stock ?? '0'
-                : '0';
+            // Mostrar stock solo para la sucursal seleccionada
+            final stock = stocksPorSucursalId[_selectedSucursalId] ?? '0';
             
             // Destacar visualmente el nivel de stock
             Color stockColor = Colors.green;
-            if (int.tryParse(stock) == 0) {
+            if (int.tryParse(stock) == 0 || stock == '0' || stock == '0.000') {
               stockColor = Colors.red;
             } else if (int.tryParse(stock) != null && int.parse(stock) < 5) {
               stockColor = Colors.orange;
@@ -1153,46 +1188,36 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
               ),
             ));
           } else {
-            // Mostrar stock para todas las sucursales
-            // Crear un mapa para tomar solo la primera coincidencia por sucursal_id
-            Map<int?, Stock> stocksPorSucursal = {};
-            if (producto.stocks != null) {
-              for (var stock in producto.stocks!) {
-                if (stock.sucursalId != null && !stocksPorSucursal.containsKey(stock.sucursalId)) {
-                  stocksPorSucursal[stock.sucursalId] = stock;
-                }
-              }
-            }
+            // Mostrar stock para todas las sucursales disponibles
+            List<int?> sucursalesIdOrdenadas = sucursalesIdDisponibles.toList();
+            sucursalesIdOrdenadas.sort();
             
-            // Agregar celdas para cada sucursal
-            for (var sucursal in _sucursales) {
-              final sucursalId = sucursal['id'];
-              // Buscar explícitamente por sucursal_id y no por sucursal
-              final stock = stocksPorSucursal.containsKey(sucursalId)
-                  ? stocksPorSucursal[sucursalId]!.stock ?? '0'
-                  : '0';
-              
-              // Destacar visualmente el nivel de stock
-              Color stockColor = Colors.green;
-              if (int.tryParse(stock) == 0) {
-                stockColor = Colors.red;
-              } else if (int.tryParse(stock) != null && int.parse(stock) < 5) {
-                stockColor = Colors.orange;
+            for (var sucursalId in sucursalesIdOrdenadas) {
+              if (sucursalId != null) {
+                final stock = stocksPorSucursalId[sucursalId] ?? '0';
+                
+                // Destacar visualmente el nivel de stock
+                Color stockColor = Colors.green;
+                if (int.tryParse(stock) == 0 || stock == '0' || stock == '0.000') {
+                  stockColor = Colors.red;
+                } else if (int.tryParse(stock) != null && int.parse(stock) < 5) {
+                  stockColor = Colors.orange;
+                }
+                
+                cells.add(DataCell(
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: stockColor.withOpacity(0.2),
+                    ),
+                    child: Text(
+                      stock,
+                      style: TextStyle(color: stockColor, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ));
               }
-              
-              cells.add(DataCell(
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: stockColor.withOpacity(0.2),
-                  ),
-                  child: Text(
-                    stock,
-                    style: TextStyle(color: stockColor, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ));
             }
           }
           
