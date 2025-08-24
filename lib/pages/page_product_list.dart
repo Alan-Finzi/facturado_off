@@ -895,6 +895,31 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
+        // Recopilar todas las listas_id disponibles en los productos
+        Set<int?> listasIdDisponibles = Set();
+        Map<int?, String> nombresListas = {};
+        
+        // Recopilar todas las listas_id disponibles y sus nombres
+        for (var producto in sortedProducts) {
+          if (producto.listasPrecios != null) {
+            for (var listaPrecio in producto.listasPrecios!) {
+              if (listaPrecio.listaId != null) {
+                listasIdDisponibles.add(listaPrecio.listaId);
+                
+                // Intentar obtener el nombre si está disponible
+                if (listaPrecio.lista != null && listaPrecio.lista!.nombre != null) {
+                  nombresListas[listaPrecio.listaId] = listaPrecio.lista!.nombre!;
+                } else if (!nombresListas.containsKey(listaPrecio.listaId)) {
+                  nombresListas[listaPrecio.listaId] = "SIN NOMBRE";
+                }
+              }
+            }
+          }
+        }
+        
+        print('Listas ID disponibles: $listasIdDisponibles');
+        print('Nombres de listas: $nombresListas');
+        
         // Crear las columnas dependiendo de la configuración
         List<DataColumn> columns = [];
         
@@ -903,13 +928,26 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         columns.add(DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))));
         columns.add(DataColumn(label: Text('Código', style: TextStyle(fontWeight: FontWeight.bold))));
         
+        // Ordenar las listas por nombre para mostrarlas de forma organizada
+        // Primero creamos una lista para poder ordenarla
+        List<MapEntry<int?, String>> listasOrdenadas = nombresListas.entries.toList();
+        // Ordenar por nombre, con 'SIN NOMBRE' al final
+        listasOrdenadas.sort((a, b) {
+          if (a.value == "SIN NOMBRE" && b.value != "SIN NOMBRE") return 1;
+          if (a.value != "SIN NOMBRE" && b.value == "SIN NOMBRE") return -1;
+          return a.value.compareTo(b.value);
+        });
+        
         // Mostrar columnas para todas las listas de precios o solo la seleccionada
         if (_selectedListaId == null) {
-          // Mostrar columnas para todas las listas de precios
-          for (var lista in _listasPrecios) {
+          // Mostrar columnas para todas las listas de precios disponibles
+          for (var entry in listasOrdenadas) {
+            final listaId = entry.key;
+            final nombreLista = entry.value;
+            
             columns.add(DataColumn(
               label: Text(
-                '${lista.nombre ?? "Lista ${lista.id}"}', 
+                '$nombreLista (ID: $listaId)', 
                 style: TextStyle(fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -917,14 +955,11 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           }
         } else {
           // Mostrar columna para lista específica
-          final nombreLista = _listasPrecios.firstWhere(
-            (l) => l.id == _selectedListaId,
-            orElse: () => Lista(id: _selectedListaId, nombre: "Lista $_selectedListaId"),
-          ).nombre ?? "Lista $_selectedListaId";
+          final nombreLista = nombresListas[_selectedListaId] ?? "Lista $_selectedListaId";
           
           columns.add(DataColumn(
             label: Text(
-              nombreLista,
+              '$nombreLista (ID: $_selectedListaId)',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ));
@@ -935,6 +970,16 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         for (int i = 0; i < sortedProducts.length; i++) {
           final producto = sortedProducts[i];
           List<DataCell> cells = [];
+          
+          // Crear un mapa de listaId -> precio para acceso rápido
+          Map<int?, String> preciosPorListaId = {};
+          if (producto.listasPrecios != null) {
+            for (var listaPrecio in producto.listasPrecios!) {
+              if (listaPrecio.listaId != null) {
+                preciosPorListaId[listaPrecio.listaId] = listaPrecio.precioLista ?? '0.0';
+              }
+            }
+          }
           
           // Celda de checkbox
           cells.add(DataCell(Checkbox(value: false, onChanged: (bool? value) {})));
@@ -961,25 +1006,46 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           
           // Celdas dinámicas para precios
           if (_selectedListaId == null) {
-            // Mostrar celdas para todas las listas de precios
-            for (var lista in _listasPrecios) {
-              final precio = producto.listasPrecios?.firstWhere(
-                (lp) => lp.listaId == lista.id,
-                orElse: () => ListasPrecio(precioLista: '0.0'),
-              ).precioLista ?? '0.0';
+            // Mostrar celdas para todas las listas de precios en el orden establecido
+            for (var entry in listasOrdenadas) {
+              final listaId = entry.key;
+              final precio = preciosPorListaId[listaId] ?? '0.0';
+              
+              // Determinar color basado en el precio y tipo de lista
+              Color bgColor;
+              Color textColor;
+              bool isBold;
+              
+              if (listaId == 0) {
+                // Lista base/default
+                bgColor = Colors.blue.withOpacity(0.1);
+                textColor = Colors.blue.shade800;
+                isBold = true;
+              } else {
+                // Otras listas
+                bgColor = Colors.green.withOpacity(0.1);
+                textColor = Colors.green.shade800;
+                isBold = false;
+              }
+              
+              // Si el precio es cero o muy bajo, resaltarlo diferente
+              if (double.tryParse(precio) == 0 || precio == '0.0' || precio == '0.00' || precio == '0.000') {
+                bgColor = Colors.red.withOpacity(0.1);
+                textColor = Colors.red.shade800;
+              }
               
               cells.add(DataCell(
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
-                    color: lista.id == 0 ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                    color: bgColor,
                   ),
                   child: Text(
                     '\$$precio', 
                     style: TextStyle(
-                      fontWeight: lista.id == 0 ? FontWeight.bold : FontWeight.normal,
-                      color: lista.id == 0 ? Colors.blue.shade800 : Colors.green.shade800,
+                      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                      color: textColor,
                     )
                   ),
                 )
@@ -987,23 +1053,30 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             }
           } else {
             // Mostrar celda para lista específica
-            final precio = producto.listasPrecios?.firstWhere(
-              (lp) => lp.listaId == _selectedListaId,
-              orElse: () => ListasPrecio(precioLista: '0.0'),
-            ).precioLista ?? '0.0';
+            final precio = preciosPorListaId[_selectedListaId] ?? '0.0';
+            
+            // Determinar color basado en el precio y tipo de lista
+            Color bgColor = _selectedListaId == 0 ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1);
+            Color textColor = _selectedListaId == 0 ? Colors.blue.shade800 : Colors.green.shade800;
+            
+            // Si el precio es cero, resaltarlo como problema
+            if (double.tryParse(precio) == 0 || precio == '0.0' || precio == '0.00' || precio == '0.000') {
+              bgColor = Colors.red.withOpacity(0.1);
+              textColor = Colors.red.shade800;
+            }
             
             cells.add(DataCell(
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: _selectedListaId == 0 ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                  color: bgColor,
                 ),
                 child: Text(
                   '\$$precio', 
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: _selectedListaId == 0 ? Colors.blue.shade800 : Colors.green.shade800,
+                    color: textColor,
                   )
                 ),
               )
