@@ -115,7 +115,8 @@ class _ListaPreciosState extends State<ListaPrecios> {
                 _controllers[index].text = producto.cantidad.toString();
                 // Usar un key basado en el producto para mejorar la eficiencia de renderizado
                 return DataRow(
-                  key: ValueKey(producto.datum?.id ?? index),
+                  // Asegurar que la clave sea única combinando id del producto con el índice
+                  key: ValueKey('${producto.datum?.id ?? 'null'}_$index'),
                   cells: [
                     DataCell(Text(producto.datum?.barcode ?? 'Sin código')),
                     DataCell(Text(producto.datum?.nombre ?? 'Sin nombre')),
