@@ -322,7 +322,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
             ],
           ),
           SizedBox(height: 8),
-          // Segunda fila con dos filtros: lista de precios y sucursales
+          // Segunda fila con filtro de lista de precios
           Row(
             children: [
               // Filtro de Lista de Precios
@@ -333,82 +333,33 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                     border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: _listasPrecios.isEmpty
-                    ? DropdownButton<int?>(
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        value: null,
-                        hint: Text("No hay listas disponibles"),
-                        items: [],
-                        onChanged: null, // Deshabilitado si no hay listas
-                      )
-                    : DropdownButton<int?>(
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        value: _selectedListaId,
-                        hint: Text("Seleccionar lista de precios"),
-                        items: [
-                          DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text('Todas las listas'),
-                          ),
-                          ..._listasPrecios
-                            .where((lista) => lista.id != null)
-                            .map((lista) => DropdownMenuItem<int?>(
-                              value: lista.id,
-                              child: Text(lista.nombre ?? 'Lista ${lista.id}'),
-                            )).toList(),
-                        ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedListaId = value;
-                        _cargarProductosLista(); // Siempre recargamos
-                      });
-                    },
-                  ),
+                  child: _obtenerSelectorListas(),
                 ),
               ),
               SizedBox(width: 16),
-              // Filtro de Sucursales
+              // Área para mostrar información de la lista seleccionada
               Expanded(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
+                    border: Border.all(color: Colors.grey.shade300),
                     borderRadius: BorderRadius.circular(4),
+                    color: Colors.grey.shade50,
                   ),
-                  child: _sucursales.isEmpty
-                    ? DropdownButton<int?>(
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        value: null,
-                        hint: Text("No hay sucursales disponibles"),
-                        items: [],
-                        onChanged: null,
-                      )
-                    : DropdownButton<int?>(
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        value: _selectedSucursalId,
-                        hint: Text("Seleccionar sucursal"),
-                        items: [
-                          DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text('Todas las sucursales'),
-                          ),
-                          ..._sucursales
-                            .map((sucursal) => DropdownMenuItem<int?>(
-                              value: sucursal['id'],
-                              child: Text(sucursal['nombre'] ?? 'Sucursal ${sucursal['id']}'),
-                            ))
-                            .toList(),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedSucursalId = value;
-                          });
-                        },
+                  child: Row(
+                    children: [
+                      Icon(Icons.attach_money, color: Colors.green),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedListaId != null
+                              ? 'Mostrando precios de: ${_getNombreLista(_selectedListaId!)}'
+                              : 'Seleccione una lista para ver los precios',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -416,6 +367,70 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         ],
       ),
     );
+  }
+  
+  // Método para obtener selector de listas con nombre o ID según disponibilidad
+  Widget _obtenerSelectorListas() {
+    // Primero recopilamos los nombres de las listas disponibles en los productos
+    Map<int?, String> nombresListas = {};
+    
+    // Recopilar nombres de listas de los modelos Lista que ya tenemos en _listasPrecios
+    for (var lista in _listasPrecios) {
+      if (lista.id != null) {
+        nombresListas[lista.id] = lista.nombre ?? 'SIN NOMBRE (${lista.id})';
+      }
+    }
+    
+    // Si no hay listas, mostrar dropdown desactivado
+    if (_listasPrecios.isEmpty) {
+      return DropdownButton<int?>(
+        isExpanded: true,
+        underline: SizedBox(),
+        value: null,
+        hint: Text("No hay listas disponibles"),
+        items: [],
+        onChanged: null, // Deshabilitado si no hay listas
+      );
+    }
+    
+    // Crear los items del dropdown con nombres apropiados
+    return DropdownButton<int?>(
+      isExpanded: true,
+      underline: SizedBox(),
+      value: _selectedListaId,
+      hint: Text("Seleccionar lista de precios"),
+      items: [
+        // Opción para todas las listas
+        DropdownMenuItem<int?>(
+          value: null,
+          child: Text('Todas las listas'),
+        ),
+        // Opciones para cada lista disponible
+        ..._listasPrecios
+          .where((lista) => lista.id != null)
+          .map((lista) => DropdownMenuItem<int?>(
+            value: lista.id,
+            child: Text(nombresListas[lista.id] ?? 'Lista ${lista.id}'),
+          ))
+          .toList(),
+      ],
+      onChanged: (value) {
+        setState(() {
+          _selectedListaId = value;
+          print('Lista seleccionada: $value');
+          _cargarProductosLista(); // Recargar productos con la lista seleccionada
+        });
+      },
+    );
+  }
+  
+  // Método para obtener el nombre de una lista por ID
+  String _getNombreLista(int listaId) {
+    final lista = _listasPrecios.firstWhere(
+      (l) => l.id == listaId,
+      orElse: () => Lista(id: listaId),
+    );
+    return lista.nombre ?? 'SIN NOMBRE (Lista $listaId)';
   }
   
   // Filtro especial para la pestaña de stock
@@ -639,40 +654,25 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     );
   }
   
+  // Encabezado de tabla para precios - simplificado para evitar problemas de layout
   Widget _buildPreciosTableHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: <Widget>[
-            Checkbox(value: false, onChanged: (bool? value) {}),
-            _buildTableHeaderCell('Nombre del producto', flex: 2),
-            _buildTableHeaderCell('SKU', flex: 1),
-            // Mostrar todas las listas de precios disponibles o la lista específica
-            if (_selectedListaId == null) 
-              ...(_listasPrecios.map((lista) => 
-                _buildTableHeaderCell(
-                  '${lista.nombre ?? "Lista ${lista.id}"} (${lista.id})', 
-                  flex: 1
-                )
-              ).toList())
-            else
-              _buildTableHeaderCell(
-                'Precio Lista ${_listasPrecios.firstWhere(
-                  (l) => l.id == _selectedListaId, 
-                  orElse: () => Lista(id: _selectedListaId, nombre: "")
-                ).nombre ?? _selectedListaId}', 
-                flex: 1
-              ),
-            // Si hay sucursal seleccionada, mostrar cabecera de stock
-            if (_selectedListaId != null && _selectedSucursalId != null)
-              _buildTableHeaderCell(
-                'Stock en ${_getNombreSucursal(_selectedSucursalId!)}',
+      child: Row(
+        children: <Widget>[
+          Checkbox(value: false, onChanged: (bool? value) {}),
+          _buildTableHeaderCell('Nombre del producto', flex: 2),
+          _buildTableHeaderCell('SKU', flex: 1),
+          
+          // Solo mostrar el encabezado para la lista seleccionada
+          // para evitar problemas de layout con muchas columnas
+          _selectedListaId != null
+            ? _buildTableHeaderCell(
+                'Precio ${_getNombreLista(_selectedListaId!)}',
                 flex: 1
               )
-          ],
-        ),
+            : _buildTableHeaderCell('Seleccione una lista', flex: 1)
+        ],
       ),
     );
   }
@@ -869,7 +869,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
   }
   
   // Filas para la pestaña de precios - muestra precios por cada lista
-  // Implementación simplificada usando ListView para evitar errores de layout
   Widget _buildPreciosRows() {
     return BlocBuilder<ProductosMaestroCubit, ProductosMaestroState>(
       builder: (context, state) {
@@ -896,225 +895,96 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           return Center(child: Text('No se encontraron productos que coincidan con la búsqueda'));
         }
         
-        // Recopilar todas las listas_id disponibles en los productos
-        Set<int?> listasIdDisponibles = Set();
-        Map<int?, String> nombresListas = {};
-        
-        // Recopilar todas las listas_id disponibles y sus nombres
-        for (var producto in sortedProducts) {
-          if (producto.listasPrecios != null) {
-            for (var listaPrecio in producto.listasPrecios!) {
-              if (listaPrecio.listaId != null) {
-                listasIdDisponibles.add(listaPrecio.listaId);
-                
-                // Intentar obtener el nombre si está disponible
-                if (listaPrecio.lista != null && listaPrecio.lista!.nombre != null) {
-                  nombresListas[listaPrecio.listaId] = listaPrecio.lista!.nombre!;
-                } else if (!nombresListas.containsKey(listaPrecio.listaId)) {
-                  nombresListas[listaPrecio.listaId] = "SIN NOMBRE";
-                }
-              }
+        // Enfoque básico similar a las otras pestañas
+        return ListView.builder(
+          itemCount: sortedProducts.length,
+          itemBuilder: (context, index) {
+            final producto = sortedProducts[index];
+            
+            // Obtener el precio para la lista seleccionada
+            String precio = '0.0';
+            if (_selectedListaId != null && producto.listasPrecios != null) {
+              // Buscar el precio para la lista seleccionada
+              final precioLista = producto.listasPrecios?.firstWhere(
+                (lp) => lp.listaId == _selectedListaId,
+                orElse: () => ListasPrecio(precioLista: '0.0'),
+              ).precioLista;
+              precio = precioLista ?? '0.0';
             }
-          }
-        }
-        
-        // Ordenar las listas por nombre para mostrarlas de forma organizada
-        // Primero creamos una lista para poder ordenarla
-        List<MapEntry<int?, String>> listasOrdenadas = nombresListas.entries.toList();
-        // Ordenar por nombre, con 'SIN NOMBRE' al final
-        listasOrdenadas.sort((a, b) {
-          if (a.value == "SIN NOMBRE" && b.value != "SIN NOMBRE") return 1;
-          if (a.value != "SIN NOMBRE" && b.value == "SIN NOMBRE") return -1;
-          return a.value.compareTo(b.value);
-        });
-        
-        // Crear una lista de listas_id disponibles en el orden definido
-        List<int?> listasIdOrdenadas = listasOrdenadas.map((entry) => entry.key).toList();
-        
-        // Usar un enfoque simplificado con ListView para evitar errores de layout
-        return Column(
-          children: [
-            // Encabezado de la tabla
-            Container(
-              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                border: Border(bottom: BorderSide(color: Colors.grey.shade300))
-              ),
+            
+            // Color del precio según si es precio base o no
+            Color priceColor = Colors.green.shade800;
+            Color priceBackground = Colors.green.withOpacity(0.1);
+            
+            if (_selectedListaId == 0) {
+              priceColor = Colors.blue.shade800;
+              priceBackground = Colors.blue.withOpacity(0.1);
+            }
+            
+            if (precio == '0.0' || precio == '0.00' || precio == '0.000') {
+              priceColor = Colors.red.shade800;
+              priceBackground = Colors.red.withOpacity(0.1);
+            }
+            
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              height: 48, 
+              color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
               child: Row(
                 children: [
-                  // Checkbox para seleccionar todos
-                  SizedBox(width: 30, child: Checkbox(value: false, onChanged: (val) {})),
+                  // Checkbox
+                  SizedBox(width: 24, child: Checkbox(value: false, onChanged: (bool? value) {})),
+                  
                   // Nombre del producto
                   Expanded(
                     flex: 2,
-                    child: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                  // Código del producto
-                  Expanded(
-                    flex: 1,
-                    child: Text('Código', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                  // Columna para precio(s)
-                  if (_selectedListaId != null)
-                    // Una columna si hay lista seleccionada
-                    Expanded(
-                      flex: 1,
-                      child: Text(
-                        '${nombresListas[_selectedListaId] ?? "Lista $_selectedListaId"}',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )
-                  else
-                    // Múltiples columnas para todas las listas
-                    ...listasOrdenadas.map((entry) => 
-                      Expanded(
-                        flex: 1,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Text(
-                            '${entry.value} (${entry.key})',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                    ).toList(),
-                ],
-              ),
-            ),
-            
-            // Lista de productos
-            Expanded(
-              child: ListView.builder(
-                itemCount: sortedProducts.length,
-                itemBuilder: (context, index) {
-                  final producto = sortedProducts[index];
-                  
-                  // Crear un mapa de listaId -> precio para acceso rápido
-                  Map<int?, String> preciosPorListaId = {};
-                  if (producto.listasPrecios != null) {
-                    for (var listaPrecio in producto.listasPrecios!) {
-                      if (listaPrecio.listaId != null) {
-                        preciosPorListaId[listaPrecio.listaId] = listaPrecio.precioLista ?? '0.0';
-                      }
-                    }
-                  }
-                  
-                  // Construir una fila para el producto actual
-                  return Container(
-                    height: 48,
-                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: index % 2 == 0 ? Colors.grey.withOpacity(0.1) : Colors.white,
-                      border: Border(bottom: BorderSide(color: Colors.grey.shade200))
-                    ),
                     child: Row(
                       children: [
-                        // Checkbox
-                        SizedBox(width: 30, child: Checkbox(value: false, onChanged: (val) {})),
-                        
-                        // Nombre del producto
+                        Icon(Icons.attach_money, size: 20, color: Colors.green),
+                        SizedBox(width: 8),
                         Expanded(
-                          flex: 2,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.attach_money, size: 20, color: Colors.green),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  producto.nombre ?? 'Sin nombre',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        // Código
-                        Expanded(
-                          flex: 1,
                           child: Text(
-                            producto.barcode ?? 'Sin código',
+                            producto.nombre ?? 'Sin nombre',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        
-                        // Columnas de precios
-                        if (_selectedListaId != null)
-                          // Mostrar una columna si hay lista seleccionada
-                          _buildPrecioCelda(preciosPorListaId[_selectedListaId], _selectedListaId == 0)
-                        else
-                          // Mostrar todas las columnas de precios
-                          ...listasIdOrdenadas.map((listaId) => 
-                            _buildPrecioCelda(preciosPorListaId[listaId], listaId == 0)
-                          ).toList(),
                       ],
                     ),
-                  );
-                },
+                  ),
+                  
+                  // Código de producto
+                  Expanded(
+                    flex: 1,
+                    child: Text(producto.barcode ?? 'Sin código'),
+                  ),
+                  
+                  // Precio en la lista seleccionada
+                  if (_selectedListaId != null)
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(horizontal: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          color: priceBackground,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '\$$precio', 
+                          style: TextStyle(
+                            fontWeight: _selectedListaId == 0 ? FontWeight.bold : FontWeight.normal,
+                            color: priceColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
-          ],
+            );
+          },
         );
       },
-    );
-  }
-  
-  // Construir una celda de precio formateada
-  Widget _buildPrecioCelda(String? precio, bool isPrecioBase) {
-    final precioStr = precio ?? '0.0';
-    
-    // Determinar color basado en el precio y tipo de lista
-    Color bgColor;
-    Color textColor;
-    bool isBold;
-    
-    if (isPrecioBase) {
-      // Lista base/default
-      bgColor = Colors.blue.withOpacity(0.1);
-      textColor = Colors.blue.shade800;
-      isBold = true;
-    } else {
-      // Otras listas
-      bgColor = Colors.green.withOpacity(0.1);
-      textColor = Colors.green.shade800;
-      isBold = false;
-    }
-    
-    // Si el precio es cero o muy bajo, resaltarlo diferente
-    if (double.tryParse(precioStr) == 0 || 
-        precioStr == '0.0' || 
-        precioStr == '0.00' || 
-        precioStr == '0.000') {
-      bgColor = Colors.red.withOpacity(0.1);
-      textColor = Colors.red.shade800;
-    }
-    
-    return Expanded(
-      flex: 1,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color: bgColor,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '\$$precioStr', 
-            style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: textColor,
-              fontSize: 13,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ),
     );
   }
   
