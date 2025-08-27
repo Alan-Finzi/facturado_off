@@ -129,19 +129,27 @@ class ProductosCubit extends Cubit<ProductosState> {
       // Crear una copia de la lista actual para modificarla
       final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
 
-      // Obtener el código de barras del producto a agregar
-      final String? barcode;
+      // Obtener el código de barras e ID del producto a agregar
+      String? barcode;
+      dynamic productoId;
       if (data.containsKey('productoSeleccionado')) {
         final producto = data['productoSeleccionado'];
         barcode = producto.barcode;
+        productoId = producto.id;
       } else if (data.containsKey('productoConPrecioYStock')) {
-        barcode = (data['productoConPrecioYStock'] as ProductoConPrecioYStock).producto?.barcode;
+        final producto = data['productoConPrecioYStock'] as ProductoConPrecioYStock;
+        barcode = producto.producto?.barcode;
+        productoId = producto.producto?.id;
       } else {
         barcode = null;
+        productoId = null;
       }
 
-      // Verificar si el producto ya está en la lista
-      final existingProductIndex = updatedList.indexWhere((p) => p.producto?.barcode == barcode);
+      // Buscar primero por ID si está disponible, luego por código de barras
+      final existingProductIndex = updatedList.indexWhere((p) => 
+        (productoId != null && p.datum?.id == productoId) || 
+        (barcode != null && p.producto?.barcode == barcode)
+      );
 
       // Si el producto ya existe, incrementar cantidad y recalcular precio
       if (existingProductIndex >= 0) {
