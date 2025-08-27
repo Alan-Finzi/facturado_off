@@ -30,6 +30,9 @@ class ProductosState extends Equatable {
  /// Flag para forzar recálculo o redibujo de precios totales (usado en la UI)
  final bool precioTotal;
 
+ /// Indica si se está procesando la adición de un producto
+ final bool isLoading;
+
  /// Datos de facturación como condición IVA, relación precio-IVA, etc.
  final List<DatosFacturacionModel>? datosFacturacionModel;
 
@@ -54,6 +57,7 @@ class ProductosState extends Equatable {
   this.categorias = const [],
   this.categoriaSeleccionada = '',
   this.precioTotal = false,
+  this.isLoading = false,
   this.productosSeleccionados = const [],
   this.listaPrecios = 1,
   this.nombreListaPrecios = 'Precio base',
@@ -71,6 +75,7 @@ class ProductosState extends Equatable {
   String? cajaSeleccionada,
   String? canalVenta,
   bool? precioTotal,
+  bool? isLoading,
   List<ProductoConPrecioYStock>? productosSeleccionados,
   int? listaPrecios,
   String? nombreListaPrecios,
@@ -89,6 +94,7 @@ class ProductosState extends Equatable {
    listaPrecios: listaPrecios ?? this.listaPrecios,
    nombreListaPrecios: nombreListaPrecios ?? this.nombreListaPrecios,
    precioTotal: precioTotal ?? this.precioTotal,
+   isLoading: isLoading ?? this.isLoading,
   );
  }
 
@@ -101,6 +107,7 @@ class ProductosState extends Equatable {
   categorias,
   categoriaSeleccionada,
   precioTotal,
+  isLoading,
   productosSeleccionados,
   categoriaIvaUser,
   tipoFactura,

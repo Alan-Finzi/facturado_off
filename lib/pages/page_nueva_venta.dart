@@ -205,24 +205,14 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
                         // Asignar tag único para este botón que navega al catálogo
                         tag: 'ver_catalogo_button',
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : () async {
-                            try {
-                              setState(() {
-                                _isLoading = true; // Activar indicador de carga
-                              });
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => CatalogoPage()),
+                            );
                               
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => CatalogoPage()),
-                              );
-                              
-                              if (result != null) {
-                                await context.read<ProductosCubit>().agregarProducto(result);
-                              }
-                            } finally {
-                              setState(() {
-                                _isLoading = false; // Desactivar indicador de carga
-                              });
+                            if (result != null) {
+                              await context.read<ProductosCubit>().agregarProducto(result);
                             }
                           },
                           child: const Text('Ver catálogo'),

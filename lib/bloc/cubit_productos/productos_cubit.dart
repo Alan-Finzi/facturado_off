@@ -109,9 +109,13 @@ class ProductosCubit extends Cubit<ProductosState> {
   /// @param data Datos del producto a agregar, puede contener 'productoSeleccionado' o 'productoConPrecioYStock'
   Future<void> agregarProducto(Map<String, dynamic> data) async {
     try {
+      // Activar indicador de carga
+      emit(state.copyWith(isLoading: true));
+      
       final user = User.currencyUser;
       if (user == null) {
         print('Error: Usuario no autenticado.');
+        emit(state.copyWith(isLoading: false));
         return;
       }
 
@@ -161,7 +165,11 @@ class ProductosCubit extends Cubit<ProductosState> {
           cantidad: existingProduct.cantidad ?? 1.0,
         );
 
-        emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+        emit(state.copyWith(
+          productosSeleccionados: updatedList, 
+          precioTotal: !state.precioTotal,
+          isLoading: false
+        ));
         return;
       }
 
@@ -214,10 +222,16 @@ class ProductosCubit extends Cubit<ProductosState> {
 
         // Agregar el producto a la lista y emitir el nuevo estado
         updatedList.add(productoAgregar);
-        emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+        emit(state.copyWith(
+          productosSeleccionados: updatedList, 
+          precioTotal: !state.precioTotal,
+          isLoading: false
+        ));
       }
     } catch (e) {
       print('Error al agregar producto: $e');
+      // Desactivar indicador de carga en caso de error
+      emit(state.copyWith(isLoading: false));
       // Considerar emitir un estado de error para mostrar en UI
     }
   }

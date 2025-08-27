@@ -1,5 +1,6 @@
 // lista_precios.dart
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
@@ -90,9 +91,12 @@ class _ListaPreciosState extends State<ListaPrecios> {
           totalConDescuentoYPercepciones: 0,
         );
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
+        return Stack(
+          children: [
+            // La tabla de productos
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
             dataTextStyle: TextStyle(fontSize: 11),
             headingTextStyle: TextStyle(fontSize: 12),
             columns: const [
@@ -173,6 +177,58 @@ class _ListaPreciosState extends State<ListaPrecios> {
               },
             ),
           ),
+            
+            // Overlay de carga con spinner
+            if (state.isLoading)
+              Container(
+                width: double.infinity,
+                height: 300, // Altura adecuada para cubrir la tabla
+                color: Colors.black.withOpacity(0.2), // Fondo semi-transparente
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0), // Efecto de desenfoque
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Procesando producto...',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Actualizando lista de productos',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
