@@ -39,7 +39,6 @@ class _ListaPreciosState extends State<ListaPrecios> {
   }
 
   /// Inicializa los controladores de texto para las cantidades de productos
-  /// @param productosSeleccionados Lista de productos seleccionados
   void _initializeControllers(List<ProductoConPrecioYStock> productosSeleccionados) {
     _controllers = List.generate(
       productosSeleccionados.length,
@@ -50,8 +49,6 @@ class _ListaPreciosState extends State<ListaPrecios> {
   }
 
   /// Calcula la suma total de precios finales de los productos seleccionados
-  /// @param productosSeleccionados Lista de productos seleccionados
-  /// @return Suma total de los precios finales
   double _calcularSumaTotal(List<ProductoConPrecioYStock> productosSeleccionados) {
     return productosSeleccionados.fold(0.0, (total, producto) {
       return total + (producto.precioFinal ?? 0.0);
@@ -76,16 +73,15 @@ class _ListaPreciosState extends State<ListaPrecios> {
 
         // Calcular el total y actualizar el estado del resumen
         double sumaTotal = _calcularSumaTotal(state.productosSeleccionados);
-        
+
         // Sincronizar el total calculado con el Cubit de resumen
-        // Esta actualización asegura que el UI refleje el precio total correcto
         context.read<ResumenCubit>().changResumen(
           descuentoPromoTotal: 0,
           descuentoTotal: 0,
           ivaTotal: 0,
           ivaIncl: true,
           subtotal: 0,
-          totalFacturar: sumaTotal,  // El precio total a facturar
+          totalFacturar: sumaTotal,
           totalSinDescuento: 0,
           percepciones: 0,
           totalConDescuentoYPercepciones: 0,
@@ -97,138 +93,128 @@ class _ListaPreciosState extends State<ListaPrecios> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-            dataTextStyle: TextStyle(fontSize: 11),
-            headingTextStyle: TextStyle(fontSize: 12),
-            columns: const [
-              DataColumn(label: Text('CÓDIGO')),
-              DataColumn(label: Text('NOMBRE')),
-              DataColumn(label: Text('PRECIO')),
-              DataColumn(label: Text('CANT')),
-              DataColumn(label: Text('PROMO')),
-              DataColumn(label: Text('IVA')),
-              DataColumn(label: Text('TOTAL')),
-              DataColumn(label: Text('ACCIONES')),
-            ],
-            // Usar ListView.builder para listas largas sería más eficiente, 
-            // pero para mantener el diseño usamos DataTable con optimización
-            rows: List<DataRow>.generate(
-              state.productosSeleccionados.length,
-                  (index) {
-                // Solo procesar los elementos visibles o cerca del área visible
-                final producto = state.productosSeleccionados[index];
-                _controllers[index].text = producto.cantidad.toString();
-                // Usar un key basado en el producto para mejorar la eficiencia de renderizado
-                return DataRow(
-                  // Asegurar que la clave sea única combinando id del producto con el índice
-                  key: ValueKey('${producto.datum?.id ?? 'null'}_$index'),
-                  cells: [
-                    DataCell(Text(producto.datum?.barcode ?? 'Sin código')),
-                    DataCell(Text(producto.datum?.nombre ?? 'Sin nombre')),
+                dataTextStyle: const TextStyle(fontSize: 11),
+                headingTextStyle: const TextStyle(fontSize: 12),
+                columns: const [
+                  DataColumn(label: Text('CÓDIGO')),
+                  DataColumn(label: Text('NOMBRE')),
+                  DataColumn(label: Text('PRECIO')),
+                  DataColumn(label: Text('CANT')),
+                  DataColumn(label: Text('PROMO')),
+                  DataColumn(label: Text('IVA')),
+                  DataColumn(label: Text('TOTAL')),
+                  DataColumn(label: Text('ACCIONES')),
+                ],
+                rows: List<DataRow>.generate(
+                  state.productosSeleccionados.length,
+                      (index) {
+                    final producto = state.productosSeleccionados[index];
+                    _controllers[index].text = producto.cantidad.toString();
 
-                    DataCell(Text('\$ ${producto.precioLista ?? ''}')),
-                    DataCell(
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.remove),
-                            onPressed: () => context.read<ProductosCubit>().cambiarCantidad(index, -1),
+                    return DataRow(
+                      key: ValueKey('${producto.datum?.id ?? 'null'}_$index'),
+                      cells: [
+                        DataCell(Text(producto.datum?.barcode ?? 'Sin código')),
+                        DataCell(Text(producto.datum?.nombre ?? 'Sin nombre')),
+                        DataCell(Text('\$ ${producto.precioLista ?? ''}')),
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove),
+                                onPressed: () => context.read<ProductosCubit>().cambiarCantidad(index, -1),
+                              ),
+                              SizedBox(
+                                width: 50,
+                                child: TextField(
+                                  controller: _controllers[index],
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    final cantidad = int.tryParse(value) ?? 0;
+                                    context.read<ProductosCubit>().precioTotal(index, cantidad);
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add),
+                                onPressed: () => context.read<ProductosCubit>().cambiarCantidad(index, 1),
+                              ),
+                            ],
                           ),
-                          SizedBox(
-                            width: 50,
-                            child: TextField(
-                              controller: _controllers[index],
-                              keyboardType: TextInputType.number,
-                              onChanged: (value) {
-                                final cantidad = int.parse(value);
-                                context.read<ProductosCubit>().precioTotal(index, cantidad);
-                              },
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.add),
-                            onPressed: () => context.read<ProductosCubit>().cambiarCantidad(index, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DataCell(Row(
-                      children: [
-                        Flexible(
-                          child: Text(producto.promo ?? ''),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.cancel),
-                          onPressed: () {
-                            // Lógica para cancelar la promoción
-                          },
+                        DataCell(
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(producto.promo ?? ''),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.cancel),
+                                onPressed: () {
+                                  // Lógica para cancelar la promoción
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(Text('${producto.iva} %')),
+                        DataCell(Text('\$ ${(producto.precioFinal ?? 0).toStringAsFixed(2)}')),
+                        DataCell(
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () => context.read<ProductosCubit>().eliminarProducto(index),
+                          ),
                         ),
                       ],
-                    )),
-                    DataCell(Text('${producto.iva} %')),
-                    DataCell(Text('\$ ${(producto.precioFinal ?? 0).toStringAsFixed(2)}')),
-                    DataCell(
-                      IconButton(
-                        icon: Icon(Icons.delete),
-                        onPressed: () => context.read<ProductosCubit>().eliminarProducto(index),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-            
-            // Overlay de carga con spinner
+
+            // Overlay de carga con spinner (collection if)
             if (state.isLoading)
               Positioned.fill(
                 child: Container(
-                width: double.infinity,
-                height: 300, // Altura adecuada para cubrir la tabla
-                color: Colors.black.withOpacity(0.2), // Fondo semi-transparente
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0), // Efecto de desenfoque
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(20.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          )
-                        ]
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Procesando producto...',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade800,
+                  width: double.infinity,
+                  height: 300,
+                  color: Colors.black.withOpacity(0.2),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(20.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            )
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                             ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Actualizando lista de productos',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
+                            const SizedBox(height: 1),
+                            Text(
+                              'Actualizando lista de productos',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
               ),
           ],
         );
