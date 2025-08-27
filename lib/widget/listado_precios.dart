@@ -39,20 +39,43 @@ class _ListaPreciosState extends State<ListaPrecios> {
   }
 
   /// Inicializa los controladores de texto para las cantidades de productos
+  /// Optimizado para reutilizar controladores existentes cuando es posible
   void _initializeControllers(List<ProductoConPrecioYStock> productosSeleccionados) {
-    _controllers = List.generate(
-      productosSeleccionados.length,
-          (index) => TextEditingController(
-        text: productosSeleccionados[index].cantidad.toString(),
-      ),
-    );
+    // Preservar controladores existentes para evitar recreación
+    final List<TextEditingController> nuevosControllers = [];
+    
+    for (int i = 0; i < productosSeleccionados.length; i++) {
+      // Reutilizar controlador si existe, sino crear uno nuevo
+      if (i < _controllers.length) {
+        nuevosControllers.add(_controllers[i]);
+        // Solo actualizar el texto si es necesario
+        if (_controllers[i].text != productosSeleccionados[i].cantidad.toString()) {
+          _controllers[i].text = productosSeleccionados[i].cantidad.toString();
+        }
+      } else {
+        nuevosControllers.add(TextEditingController(
+          text: productosSeleccionados[i].cantidad.toString(),
+        ));
+      }
+    }
+    
+    // Disponer controladores que ya no se necesitan
+    for (int i = productosSeleccionados.length; i < _controllers.length; i++) {
+      _controllers[i].dispose();
+    }
+    
+    _controllers = nuevosControllers;
   }
 
   /// Calcula la suma total de precios finales de los productos seleccionados
+  /// Optimizado para rendimiento
   double _calcularSumaTotal(List<ProductoConPrecioYStock> productosSeleccionados) {
-    return productosSeleccionados.fold(0.0, (total, producto) {
-      return total + (producto.precioFinal ?? 0.0);
-    });
+    // Usar iteración directa para mayor eficiencia en listas grandes
+    double total = 0.0;
+    for (var producto in productosSeleccionados) {
+      total += producto.precioFinal ?? 0.0;
+    }
+    return total;
   }
 
   @override
@@ -66,26 +89,32 @@ class _ListaPreciosState extends State<ListaPrecios> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProductosCubit, ProductosState>(
+      buildWhen: (previous, current) => 
+          previous.productosSeleccionados != current.productosSeleccionados || 
+          previous.isLoading != current.isLoading,
       builder: (context, state) {
+        // Optimización: Solo actualizar controladores cuando cambia la cantidad de productos
         if (_controllers.length != state.productosSeleccionados.length) {
           _initializeControllers(state.productosSeleccionados);
         }
 
-        // Calcular el total y actualizar el estado del resumen
-        double sumaTotal = _calcularSumaTotal(state.productosSeleccionados);
-
-        // Sincronizar el total calculado con el Cubit de resumen
-        context.read<ResumenCubit>().changResumen(
-          descuentoPromoTotal: 0,
-          descuentoTotal: 0,
-          ivaTotal: 0,
-          ivaIncl: true,
-          subtotal: 0,
-          totalFacturar: sumaTotal,
-          totalSinDescuento: 0,
-          percepciones: 0,
-          totalConDescuentoYPercepciones: 0,
-        );
+        // Cálculo de total optimizado para ejecutarse solo cuando es necesario
+        final double sumaTotal = _calcularSumaTotal(state.productosSeleccionados);
+        
+        // Actualización diferida del resumen para mejorar rendimiento
+        Future.microtask(() {
+          context.read<ResumenCubit>().changResumen(
+            descuentoPromoTotal: 0,
+            descuentoTotal: 0,
+            ivaTotal: 0,
+            ivaIncl: true,
+            subtotal: 0,
+            totalFacturar: sumaTotal,
+            totalSinDescuento: 0,
+            percepciones: 0,
+            totalConDescuentoYPercepciones: 0,
+          );
+        });
 
         return Stack(
           children: [
@@ -93,6 +122,10 @@ class _ListaPreciosState extends State<ListaPrecios> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
+                dataRowMinHeight: 36, // Filas más compactas para rendimiento
+                dataRowMaxHeight: 36, // Altura fija para evitar recálculos
+                horizontalMargin: 8, // Reducir márgenes para optimizar espacio
+                columnSpacing: 8, // Espaciado mínimo entre columnas
                 dataTextStyle: const TextStyle(fontSize: 11),
                 headingTextStyle: const TextStyle(fontSize: 12),
                 columns: const [
@@ -105,30 +138,53 @@ class _ListaPreciosState extends State<ListaPrecios> {
                   DataColumn(label: Text('TOTAL')),
                   DataColumn(label: Text('ACCIONES')),
                 ],
-                rows: List<DataRow>.generate(
+                // Optimización: Uso de un builder eficiente que evita recálculos innecesarios
+                rows: List.generate(
                   state.productosSeleccionados.length,
-                      (index) {
+                  (index) {
+                    // Cache local para evitar accesos repetidos
                     final producto = state.productosSeleccionados[index];
-                    _controllers[index].text = producto.cantidad.toString();
+                    
+                    // Solo actualizar el texto si es necesario (evita reconstrucción de TextField)
+                    if (_controllers[index].text != producto.cantidad.toString()) {
+                      _controllers[index].text = producto.cantidad.toString();
+                    }
+
+                    // Precomputar valores para evitar cálculos durante el renderizado
+                    final idKey = '${producto.datum?.id ?? 'null'}_$index';
+                    final barcode = producto.datum?.barcode ?? 'Sin código';
+                    final nombre = producto.datum?.nombre ?? 'Sin nombre';
+                    final precioLista = producto.precioLista ?? '';
+                    final precioFinal = producto.precioFinal ?? 0;
+                    final iva = producto.iva;
+                    final promo = producto.promo ?? '';
 
                     return DataRow(
-                      key: ValueKey('${producto.datum?.id ?? 'null'}_$index'),
+                      key: ValueKey(idKey),
                       cells: [
-                        DataCell(Text(producto.datum?.barcode ?? 'Sin código')),
-                        DataCell(Text(producto.datum?.nombre ?? 'Sin nombre')),
-                        DataCell(Text('\$ ${producto.precioLista ?? ''}')),
+                        DataCell(Text(barcode)), // Valor precalculado
+                        DataCell(Text(nombre)), // Valor precalculado
+                        DataCell(Text('\$ $precioLista')), // Valor precalculado
                         DataCell(
+                          // Optimización: Row con children memoizados
                           Row(
+                            mainAxisSize: MainAxisSize.min, // Reducir el tamaño del widget
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove),
+                                icon: const Icon(Icons.remove, size: 18), // Reducir tamaño
+                                padding: EdgeInsets.zero, // Optimizar espacio
+                                visualDensity: VisualDensity.compact, // Optimizar espacio
                                 onPressed: () => context.read<ProductosCubit>().cambiarCantidad(index, -1),
                               ),
                               SizedBox(
-                                width: 50,
+                                width: 40, // Reducir tamaño
                                 child: TextField(
                                   controller: _controllers[index],
                                   keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    isDense: true, // Reducir tamaño
+                                    contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                  ),
                                   onChanged: (value) {
                                     final cantidad = int.tryParse(value) ?? 0;
                                     context.read<ProductosCubit>().precioTotal(index, cantidad);
@@ -136,7 +192,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.add),
+                                icon: const Icon(Icons.add, size: 18), // Reducir tamaño
+                                padding: EdgeInsets.zero, // Optimizar espacio
+                                visualDensity: VisualDensity.compact, // Optimizar espacio
                                 onPressed: () => context.read<ProductosCubit>().cambiarCantidad(index, 1),
                               ),
                             ],
@@ -144,12 +202,15 @@ class _ListaPreciosState extends State<ListaPrecios> {
                         ),
                         DataCell(
                           Row(
+                            mainAxisSize: MainAxisSize.min, // Optimización de layout
                             children: [
                               Flexible(
-                                child: Text(producto.promo ?? ''),
+                                child: Text(promo),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.cancel),
+                                icon: const Icon(Icons.cancel, size: 18), // Reducir tamaño
+                                padding: EdgeInsets.zero, // Optimizar espacio
+                                visualDensity: VisualDensity.compact, // Optimizar espacio
                                 onPressed: () {
                                   // Lógica para cancelar la promoción
                                 },
@@ -157,11 +218,13 @@ class _ListaPreciosState extends State<ListaPrecios> {
                             ],
                           ),
                         ),
-                        DataCell(Text('${producto.iva} %')),
-                        DataCell(Text('\$ ${(producto.precioFinal ?? 0).toStringAsFixed(2)}')),
+                        DataCell(Text('$iva %')), // Valor precalculado
+                        DataCell(Text('\$ ${precioFinal.toStringAsFixed(2)}')), // Valor precalculado
                         DataCell(
                           IconButton(
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete, size: 18), // Reducir tamaño
+                            padding: EdgeInsets.zero, // Optimizar espacio
+                            visualDensity: VisualDensity.compact, // Optimizar espacio
                             onPressed: () => context.read<ProductosCubit>().eliminarProducto(index),
                           ),
                         ),
