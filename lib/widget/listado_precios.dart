@@ -179,8 +179,9 @@ class _ListaPreciosState extends State<ListaPrecios> {
           ),
             
             // Overlay de carga con spinner
-            if (state.isLoading)
-              Container(
+            Visibility(
+              visible: state.isLoading,
+              child: Container(
                 width: double.infinity,
                 height: 300, // Altura adecuada para cubrir la tabla
                 color: Colors.black.withOpacity(0.2), // Fondo semi-transparente
@@ -228,6 +229,7 @@ class _ListaPreciosState extends State<ListaPrecios> {
                   ),
                 ),
               ),
+            ),
           ],
         );
       },
