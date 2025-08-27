@@ -300,8 +300,7 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
         ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildNotasYObservaciones() {
