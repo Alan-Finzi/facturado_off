@@ -42,6 +42,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
         title:  Text('Estado de Conexión', style: TextStyle(color:themeCubit.state.isDark? Colors.white : Colors.black)),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'connection_theme_fab',
         elevation: 1,
         child:themeCubit.state.isDark? const Icon(Icons.dark_mode,size: 20,) :  const Icon(Icons.light,size: 20) ,
         onPressed: (){

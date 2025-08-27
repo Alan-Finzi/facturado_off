@@ -191,17 +191,21 @@ class NuevaVentaPage extends StatelessWidget {
                 ),
                 Expanded(
                   flex: 1,
-                  child:     ElevatedButton(
-                    onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => CatalogoPage()),
-                      );
-                      if (result != null) {
-                        context.read<ProductosCubit>().agregarProducto(result);
-                      }
-                    },
-                    child: const Text('Ver catálogo'),
+                  child: Hero(
+                    // Asignar tag único para este botón que navega al catálogo
+                    tag: 'ver_catalogo_button',
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => CatalogoPage()),
+                        );
+                        if (result != null) {
+                          context.read<ProductosCubit>().agregarProducto(result);
+                        }
+                      },
+                      child: const Text('Ver catálogo'),
+                    ),
                   ),
                 )
               ],

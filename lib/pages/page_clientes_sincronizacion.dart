@@ -128,6 +128,7 @@ class _ClientesSincronizacionPageState extends State<ClientesSincronizacionPage>
                 itemCount: clientesModificados.length,
             ),
             floatingActionButton: FloatingActionButton.extended(
+                heroTag: 'clientes_sincronizacion_fab',
                 icon: const Icon(Icons.sync),
                 label: const Text('Sincronizar'),
                 onPressed: sincronizarClientes,

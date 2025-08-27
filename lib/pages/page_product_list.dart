@@ -173,6 +173,8 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        // Asignar una etiqueta hero única a este FloatingActionButton
+        heroTag: 'product_list_reload_fab',
         onPressed: () async {
           // Recargar primero datos básicos y luego los específicos según pestaña
           await _cargarListasPrecios();
