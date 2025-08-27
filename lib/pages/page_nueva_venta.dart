@@ -164,50 +164,71 @@ class dropButtonDatosFact extends StatelessWidget {
 
 
 // Página de nueva venta
-class NuevaVentaPage extends StatelessWidget {
+class NuevaVentaPage extends StatefulWidget {
   const NuevaVentaPage({super.key});
 
+  @override
+  _NuevaVentaPageState createState() => _NuevaVentaPageState();
+}
+
+class _NuevaVentaPageState extends State<NuevaVentaPage> {
+  bool _isLoading = false;
+  
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BuscarClienteWidget(),
-            const SizedBox(height: 16.0),
-            Row(
+      child: Stack(
+        children: [
+          // Contenido principal
+          SingleChildScrollView(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 1,
-                  child: BuscarProductoScanner(),
-                ),
-                const SizedBox(width: 8.0), // Espaciado entre widgets
-                Expanded(
-                  flex:2,
-                  child: BuscarProductoWidget(),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Hero(
-                    // Asignar tag único para este botón que navega al catálogo
-                    tag: 'ver_catalogo_button',
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => CatalogoPage()),
-                        );
-                        if (result != null) {
-                          context.read<ProductosCubit>().agregarProducto(result);
-                        }
-                      },
-                      child: const Text('Ver catálogo'),
+                BuscarClienteWidget(),
+                const SizedBox(height: 16.0),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: BuscarProductoScanner(),
                     ),
-                  ),
-                )
+                    const SizedBox(width: 8.0), // Espaciado entre widgets
+                    Expanded(
+                      flex:2,
+                      child: BuscarProductoWidget(),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Hero(
+                        // Asignar tag único para este botón que navega al catálogo
+                        tag: 'ver_catalogo_button',
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : () async {
+                            try {
+                              setState(() {
+                                _isLoading = true; // Activar indicador de carga
+                              });
+                              
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => CatalogoPage()),
+                              );
+                              
+                              if (result != null) {
+                                await context.read<ProductosCubit>().agregarProducto(result);
+                              }
+                            } finally {
+                              setState(() {
+                                _isLoading = false; // Desactivar indicador de carga
+                              });
+                            }
+                          },
+                          child: const Text('Ver catálogo'),
+                        ),
+                      ),
+                    )
               ],
             ),
 
@@ -250,6 +271,43 @@ class NuevaVentaPage extends StatelessWidget {
             ListaPrecios(),
             const SizedBox(height: 16.0),
             _buildNotasYObservaciones(),
+          ],
+        ),
+      ),
+      // Indicador de carga que se muestra sobre el contenido
+      if (_isLoading)
+        Container(
+          color: Colors.black.withOpacity(0.3),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10.0,
+                    spreadRadius: 2.0,
+                  )
+                ]
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20.0),
+                  Text(
+                    'Cargando producto...',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10.0),
+                  Text('Calculando precios y costos'),
+                ],
+              ),
+            ),
+          ),
+        ),
           ],
         ),
       ),
