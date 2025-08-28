@@ -225,37 +225,52 @@ class _ListaPreciosState extends State<ListaPrecios> {
             // Overlay de carga con spinner (collection if)
             if (state.isLoading)
               Positioned.fill(
-                child: Container(
-                  width: double.infinity,
-                  height: 300,
-                  color: Colors.black.withOpacity(0.2),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(20.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            )
-                          ],
-                        ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Determinar tamaño basado en el espacio disponible
+                    final double availableWidth = constraints.maxWidth;
+                    final double availableHeight = constraints.maxHeight;
+                    
+                    return Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      color: Colors.black.withOpacity(0.2),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                        child: Center(
+                          child: Container(
+                            // Tamaño responsive basado en espacio disponible
+                            width: availableWidth < 300 ? availableWidth * 0.8 : 200,
+                            padding: EdgeInsets.all(availableWidth < 300 ? 10.0 : 20.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                )
+                              ],
+                            ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            // Spinner de tamaño adaptable
+                            SizedBox(
+                              width: availableWidth < 300 ? 20 : 24,
+                              height: availableWidth < 300 ? 20 : 24,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
                             ),
-                            const SizedBox(height: 1),
+                            SizedBox(height: availableWidth < 300 ? 8 : 12),
+                            // Texto adaptable
                             Text(
-                              'Actualizando lista de productos',
+                              availableWidth < 150 ? '...' : 'Actualizando lista',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: availableWidth < 300 ? 10 : 12,
                                 color: Colors.grey.shade700,
                               ),
                             ),
