@@ -59,7 +59,7 @@ class ResumenTabla extends StatelessWidget {
                             ),
                             TableRow(
                                 children: [
-                                    Text('- Descuento Gral (${state.descuentoGeneral.toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 10)),
+                                    Text('- Descuento Gral (${state.descuentoGeneral.round()}%)', style: const TextStyle(fontSize: 10)),
                                     Text('- \$${descuentoGral.toStringAsFixed(2)}', textAlign: TextAlign.right),
                                 ],
                             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_login/login_cubit.dart';
@@ -146,7 +147,8 @@ class VentaDropdownsWidget extends StatelessWidget {
                         // ▼ Descuento
                         const Text("Descuento:"),
                         Builder(builder: (context) {
-                            final controller = TextEditingController(text: state.descuentoGeneral.toString());
+                            // Convertir a entero y luego a string para que no muestre decimales
+                            final controller = TextEditingController(text: state.descuentoGeneral.round().toString());
                             // Asegurar que el cursor siempre quede al final
                             controller.selection = TextSelection.fromPosition(
                                 TextPosition(offset: controller.text.length)
@@ -158,14 +160,17 @@ class VentaDropdownsWidget extends StatelessWidget {
                                 ),
                                 keyboardType: TextInputType.number,
                                 controller: controller,
+                                // Utilizar inputFormatters para garantizar que solo se ingresen números enteros
+                                inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                ],
                                 onChanged: (value) {
-                                    double? descuento = double.tryParse(value);
+                                    // Convertir a entero
+                                    int? descuento = int.tryParse(value);
                                     if (descuento != null) {
-                                        // Asegurarse de que el descuento no sea negativo
-                                        if (descuento < 0) descuento = 0;
                                         // Asegurarse de que el descuento no sea mayor a 100%
                                         if (descuento > 100) descuento = 100;
-                                        productosCubit.updateDescuentoGeneral(descuento);
+                                        productosCubit.updateDescuentoGeneral(descuento.toDouble());
                                     }
                                 },
                             );
