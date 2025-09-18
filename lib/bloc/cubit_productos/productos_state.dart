@@ -45,6 +45,9 @@ class ProductosState extends Equatable {
  /// Nombre de la lista de precios actualmente seleccionada
  final String? nombreListaPrecios;
 
+ /// Porcentaje de descuento general a aplicar
+ final double descuentoGeneral;
+
  /// Constructor del estado con valores por defecto para la mayoría de propiedades
  ProductosState({
   required this.currentListProductCubit,
@@ -61,6 +64,7 @@ class ProductosState extends Equatable {
   this.productosSeleccionados = const [],
   this.listaPrecios = 1,
   this.nombreListaPrecios = 'Precio base',
+ this.descuentoGeneral = 0.0,
  });
 
  /// Permite crear una nueva copia del estado con algunas propiedades actualizadas
@@ -79,6 +83,7 @@ class ProductosState extends Equatable {
   List<ProductoConPrecioYStock>? productosSeleccionados,
   int? listaPrecios,
   String? nombreListaPrecios,
+  double? descuentoGeneral,
  }) {
   return ProductosState(
    currentListProductCubit: currentListProductCubit ?? this.currentListProductCubit,
@@ -93,6 +98,7 @@ class ProductosState extends Equatable {
    productosSeleccionados: productosSeleccionados ?? this.productosSeleccionados,
    listaPrecios: listaPrecios ?? this.listaPrecios,
    nombreListaPrecios: nombreListaPrecios ?? this.nombreListaPrecios,
+   descuentoGeneral: descuentoGeneral ?? this.descuentoGeneral,
    precioTotal: precioTotal ?? this.precioTotal,
    isLoading: isLoading ?? this.isLoading,
   );
@@ -115,5 +121,6 @@ class ProductosState extends Equatable {
   canalVenta,
   listaPrecios,
   nombreListaPrecios,
+  descuentoGeneral,
  ];
 }

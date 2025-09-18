@@ -28,10 +28,13 @@ class ResumenTabla extends StatelessWidget {
                     totalIva += (precioFinal - (precioLista * cantidad));
                 }
 
-                // En este punto podés conectar descuentos reales si los tenés
+                // Utilizar el descuento general del estado
                 const descuentoPromos = 0.0;
-                const descuentoGral = 0.0;
+                final descuentoGral = (state.descuentoGeneral / 100) * subtotal;
                 const recargo = 0.0;
+                
+                // Recalculamos el total final restando el descuento general
+                totalFinal -= descuentoGral;
 
                 return Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -56,7 +59,7 @@ class ResumenTabla extends StatelessWidget {
                             ),
                             TableRow(
                                 children: [
-                                    Text('- Descuento Gral (${_porcentaje(descuentoGral, subtotal)}%)', style: const TextStyle(fontSize: 10)),
+                                    Text('- Descuento Gral (${state.descuentoGeneral.toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 10)),
                                     Text('- \$${descuentoGral.toStringAsFixed(2)}', textAlign: TextAlign.right),
                                 ],
                             ),

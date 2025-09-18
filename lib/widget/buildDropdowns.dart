@@ -5,8 +5,6 @@ import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/datos_facturacion_model.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../helper/database_helper.dart';
@@ -145,15 +143,33 @@ class VentaDropdownsWidget extends StatelessWidget {
 
                         const SizedBox(height: 16.0),
 
-                        // ▼ Descuento (texto sin lógica aún)
+                        // ▼ Descuento
                         const Text("Descuento:"),
-                        const TextField(
-                            decoration: InputDecoration(
-                                suffixText: '%',
-                                prefixIcon: Icon(Icons.discount),
-                            ),
-                            keyboardType: TextInputType.number,
-                        ),
+                        Builder(builder: (context) {
+                            final controller = TextEditingController(text: state.descuentoGeneral.toString());
+                            // Asegurar que el cursor siempre quede al final
+                            controller.selection = TextSelection.fromPosition(
+                                TextPosition(offset: controller.text.length)
+                            );
+                            return TextField(
+                                decoration: const InputDecoration(
+                                    suffixText: '%',
+                                    prefixIcon: Icon(Icons.discount),
+                                ),
+                                keyboardType: TextInputType.number,
+                                controller: controller,
+                                onChanged: (value) {
+                                    double? descuento = double.tryParse(value);
+                                    if (descuento != null) {
+                                        // Asegurarse de que el descuento no sea negativo
+                                        if (descuento < 0) descuento = 0;
+                                        // Asegurarse de que el descuento no sea mayor a 100%
+                                        if (descuento > 100) descuento = 100;
+                                        productosCubit.updateDescuentoGeneral(descuento);
+                                    }
+                                },
+                            );
+                        }),
                     ],
                 );
             },

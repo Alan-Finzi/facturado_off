@@ -77,6 +77,12 @@ class ProductosCubit extends Cubit<ProductosState> {
     emit(state.copyWith(canalVenta: canalVenta));
   }
   
+  /// Actualiza el porcentaje de descuento general
+  /// @param descuento El porcentaje de descuento a aplicar
+  void updateDescuentoGeneral(double descuento) {
+    emit(state.copyWith(descuentoGeneral: descuento));
+  }
+  
   void updateListaPreciosInfo(int listaId, String nombre) {
     emit(state.copyWith(listaPrecios: listaId, nombreListaPrecios: nombre));
   }
