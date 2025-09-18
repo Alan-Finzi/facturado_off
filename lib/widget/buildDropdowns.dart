@@ -144,7 +144,7 @@ class VentaDropdownsWidget extends StatelessWidget {
 
                         const SizedBox(height: 16.0),
 
-                        // ▼ Descuento
+                        // ▼ Descuento con botón aplicar
                         const Text("Descuento:"),
                         Builder(builder: (context) {
                             // Convertir a entero y luego a string para que no muestre decimales
@@ -153,26 +153,54 @@ class VentaDropdownsWidget extends StatelessWidget {
                             controller.selection = TextSelection.fromPosition(
                                 TextPosition(offset: controller.text.length)
                             );
-                            return TextField(
-                                decoration: const InputDecoration(
-                                    suffixText: '%',
-                                    prefixIcon: Icon(Icons.discount),
-                                ),
-                                keyboardType: TextInputType.number,
-                                controller: controller,
-                                // Utilizar inputFormatters para garantizar que solo se ingresen números enteros
-                                inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
+                            
+                            // Variable para almacenar temporalmente el valor del descuento
+                            TextEditingController valueController = controller;
+                            
+                            return Row(
+                                children: [
+                                    // TextField para ingresar el porcentaje
+                                    Expanded(
+                                        child: TextField(
+                                            decoration: const InputDecoration(
+                                                suffixText: '%',
+                                                prefixIcon: Icon(Icons.discount),
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            controller: controller,
+                                            // Utilizar inputFormatters para garantizar que solo se ingresen números enteros
+                                            inputFormatters: [
+                                                FilteringTextInputFormatter.digitsOnly,
+                                            ],
+                                        ),
+                                    ),
+                                    
+                                    // Botón Aplicar
+                                    Padding(
+                                        padding: const EdgeInsets.only(left: 8.0),
+                                        child: ElevatedButton(
+                                            onPressed: () {
+                                                // Convertir a entero
+                                                int? descuento = int.tryParse(controller.text);
+                                                if (descuento != null) {
+                                                    // Asegurarse de que el descuento no sea mayor a 100%
+                                                    if (descuento > 100) {
+                                                        descuento = 100;
+                                                        // Actualizar el controller para reflejar el valor máximo
+                                                        controller.text = '100';
+                                                    }
+                                                    // Actualizar el estado con el nuevo valor
+                                                    productosCubit.updateDescuentoGeneral(descuento.toDouble());
+                                                }
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor: Theme.of(context).primaryColor,
+                                                foregroundColor: Colors.white,
+                                            ),
+                                            child: const Text('Aplicar'),
+                                        ),
+                                    ),
                                 ],
-                                onChanged: (value) {
-                                    // Convertir a entero
-                                    int? descuento = int.tryParse(value);
-                                    if (descuento != null) {
-                                        // Asegurarse de que el descuento no sea mayor a 100%
-                                        if (descuento > 100) descuento = 100;
-                                        productosCubit.updateDescuentoGeneral(descuento.toDouble());
-                                    }
-                                },
                             );
                         }),
                     ],
