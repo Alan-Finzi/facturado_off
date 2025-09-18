@@ -60,12 +60,12 @@ class DatabaseHelper {
   }
 
   Future<void> deleteDatabaseIfExists() async {
-    String path = join(await getDatabasesPath(), 'flaminco_appv13_DB.db');
+    String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
     await deleteDatabase(path);
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'flaminco_appv13_DB.db');
+    String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
     print('La base de datos se guarda en la siguiente ruta: $path');
 
     return await  openDatabase(

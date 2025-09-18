@@ -135,7 +135,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                     
                     // Ejecutar la carga de datos de ejemplo
                     final seeder = DatabaseSeeder();
-                    await seeder.seedDatabase();
+                   // await seeder.seedDatabase();
                     
                     log.i('ConnectionPage', 'Datos de ejemplo cargados correctamente');
                     

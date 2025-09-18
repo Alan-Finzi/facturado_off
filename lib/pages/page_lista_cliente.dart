@@ -76,7 +76,7 @@ class _ClientesListPageState extends State<ClientesListPage> {
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 600;
         final double itemWidth = constraints.maxWidth / (isSmallScreen ? 1.5 : 4);
-        final fieldTextStyle = const TextStyle(fontSize: 12);
+        final fieldTextStyle = const TextStyle(fontSize: 12,color: Colors.black);
 
         return Padding(
           padding: const EdgeInsets.all(8.0),

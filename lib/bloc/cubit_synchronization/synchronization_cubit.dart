@@ -46,7 +46,7 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
       emit(SynchronizationInProgress(progress: 1, currentTask: "Sincronización completada"));
       final directory = await getApplicationDocumentsDirectory();
-      final path = join(directory.path, 'flaminco_appv13_DB.db');
+      final path = join(directory.path, 'flaminco_appv14_DB.db');
       print('------------------------------');
       print(path.toString());
       print('--------------------------------');
