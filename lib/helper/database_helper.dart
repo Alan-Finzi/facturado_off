@@ -32,7 +32,8 @@ class DatabaseHelper {
   /// La base de datos se mantiene como singleton para eficiencia
   Future<Database> get database async {
     if (_database != null) return _database!;
-    await deleteDatabaseIfExists();
+    // Comentamos la línea que elimina la base de datos para que persistan los datos
+    // await deleteDatabaseIfExists();
     _database = await _initDatabase();
     return _database!;
   }
@@ -939,21 +940,23 @@ class DatabaseHelper {
   /// Obtiene todos los clientes de la base de datos con caché para mejorar rendimiento
   Future<List<ClientesMostrador>> getClientesDB() async {
     const cacheKey = 'all_clientes';
-    
-    // Verificar si existe en caché
-    final cachedResult = _getCachedResult(cacheKey);
-    if (cachedResult != null) {
-      return cachedResult as List<ClientesMostrador>;
-    }
-    
+
+    // Temporalmente desactivamos la caché para asegurar que siempre obtenemos datos frescos
+    // final cachedResult = _getCachedResult(cacheKey);
+    // if (cachedResult != null) {
+    //   return cachedResult as List<ClientesMostrador>;
+    // }
+
     // Consultar la base de datos
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('Clientes_mostrador');
+    print('Clientes encontrados en BD: ${maps.length}');
+
     final result = List.generate(maps.length, (i) => ClientesMostrador.fromJson(maps[i]));
-    
+
     // Guardar en caché
     _cacheResult(cacheKey, result);
-    
+
     return result;
   }
 

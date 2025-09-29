@@ -51,9 +51,8 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
     return BlocListener<ClientesMostradorCubit, ClientesMostradorState>(
       listener: (context, state) {
         // Cuando hay cambios en el estado, cargamos las sugerencias
-        if (state.clientes.isNotEmpty) {
-          cargarSugerencias(state.clientes);
-        }
+        print('Estado de clientes actualizado: ${state.clientes.length} clientes');
+        cargarSugerencias(state.clientes);
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
