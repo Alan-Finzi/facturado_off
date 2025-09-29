@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widget/buscar_cliente.dart';
+
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
 
@@ -22,34 +24,30 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección Cliente
+            // Sección Cliente - Usando el widget de búsqueda unificado
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Buscar cliente o cuit',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
+                  flex: 3,
+                  child: BuscarClienteWidget(
+                    clearProductsOnSelection: false, // No limpiar productos al seleccionar
                   ),
                 ),
                 SizedBox(width: 8.0),
-                IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: () {},
-                ),
-                SizedBox(width: 8.0),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Vendedor'),
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.person),
-                      label: Text('DEMO'),
-                      onPressed: () {},
-                    ),
-                  ],
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Vendedor'),
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.person),
+                        label: Text('DEMO'),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

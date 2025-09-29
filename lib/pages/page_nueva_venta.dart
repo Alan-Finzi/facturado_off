@@ -28,17 +28,21 @@ class _VentaMainPageState extends State<VentaMainPage> {
   String categoriaIvaUser = 'Seleccionar';
   List<DatosFacturacionModel> datosFacturacion = [];
   bool datosCargados = false; // Variable para evitar que se recarguen los datos // Inicialmente "Seleccionar
-  final List<Widget> _pages = [
-    const NuevaVentaPage(),
-    FormaCobroPage(
-      onBackPressed: () {
-        // Regresar a la página anterior
-      },
-    ),
-  ];
+  // Las páginas se crearán en el método build para poder pasar el callback actualizado
 
   @override
   Widget build(BuildContext context) {
+    // Creamos la lista de páginas aquí para poder pasar los callbacks actualizados
+    final List<Widget> pages = [
+      const NuevaVentaPage(),
+      FormaCobroPage(
+        onBackPressed: () {
+          // Volver a la página anterior al presionar el botón
+          _navigateToPage(0);
+        },
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Proceso de Venta'),
@@ -46,7 +50,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
       body: Row(
         children: [
           Expanded(
-            child: _pages[_currentPageIndex],
+            child: pages[_currentPageIndex],
           ),
           _buildResumenDeVenta(context),
         ],
@@ -185,7 +189,10 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BuscarClienteWidget(),
+                BuscarClienteWidget(
+                  clearProductsOnSelection: true,
+                  showSelectedClient: true,
+                ),
                 const SizedBox(height: 16.0),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
