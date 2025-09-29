@@ -21,9 +21,10 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Sección Cliente - Usando el widget de búsqueda unificado
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +183,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
               onChanged: (bool? value) {},
               title: Text('Envío a otro domicilio'),
             ),
-            Spacer(),
+            SizedBox(height: 20),
 
             // Botones Anterior y Guardar
             Row(
@@ -200,7 +201,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }
