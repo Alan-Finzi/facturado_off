@@ -1,0 +1,1 @@
+Estado actual: Revirtiendo implementación parcial de funcionalidad de pagos para revisar requisitos
