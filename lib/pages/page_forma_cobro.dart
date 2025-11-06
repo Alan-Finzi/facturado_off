@@ -73,112 +73,187 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
             ),
             SizedBox(height: 16.0),
 
-            // Sección Forma de Cobro
-            Text(
-              'Forma de cobro',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.0),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        isPagoParcial = false;
-                      });
-                    },
-                    child: Text('Pago total'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: !isPagoParcial ? Colors.grey : null,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        isPagoParcial = true;
-                      });
-                    },
-                    child: Text('Pago parcial / pago dividido'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPagoParcial ? Colors.grey : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.0),
-
-            if (isPagoParcial)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+// Sección Forma de Cobro
+              Text(
+                'Forma de cobro',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 8.0),
+              Row(
                 children: [
-                  // Agregar Método de Pago
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      '+ Agregar Método de Pago',
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                  ),
-                  SizedBox(height: 16.0),
-                  const Row(
-                    children: [
-                      // Monto Total
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Monto Total',
-                            prefixText: '\$ ',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          isPagoParcial = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: !isPagoParcial ? Colors.grey[800] : Colors.grey[300],
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        textStyle: TextStyle(fontSize: 16),
                       ),
-                      SizedBox(width: 16.0),
-                      // A Cobrar Total
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            labelText: 'A cobrar total',
-                            prefixText: '\$ ',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
+                      child: Text('Pago total'),
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          isPagoParcial = true;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isPagoParcial ? Colors.grey[800] : Colors.grey[300],
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        textStyle: TextStyle(fontSize: 16),
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 8.0),
-                  Text('Deuda: \$ 0,00'),
-                ],
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Monto a Pagar
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText:
-                      'Ingresa el monto con el que va a pagar tu cliente',
-                      border: OutlineInputBorder(),
+                      child: Text('Pago dividido o en Cuenta Corriente'),
                     ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  SizedBox(height: 8.0),
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Vuelto a entregar',
-                      border: OutlineInputBorder(),
-                    ),
-                    readOnly: true,
                   ),
                 ],
               ),
+              SizedBox(height: 16.0),
+
+              if (!isPagoParcial)
+              // === UI para Pago Total ===
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ---- Columna izquierda: Método de cobro ----
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Método de cobro',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 8),
+                              DropdownButtonFormField<String>(
+                                value: 'Efectivo',
+                                items: ['Efectivo', 'Tarjeta', 'Transferencia']
+                                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (_) {},
+                                decoration: InputDecoration(
+                                  labelText: 'Tipo de cobro',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              DropdownButtonFormField<String>(
+                                value: 'Efectivo',
+                                items: ['Efectivo', 'Tarjeta', 'Transferencia']
+                                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                                    .toList(),
+                                onChanged: (_) {},
+                                decoration: InputDecoration(
+                                  labelText: 'Forma de cobro',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 16),
+
+                        // ---- Columna derecha: Monto a pagar ----
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Monto a pagar',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        labelText:
+                                        'Ingresa el monto con el que va a pagar tu cliente',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // Acción para llenar con el total
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding:
+                                      EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                    ),
+                                    child: Text('Paga el total'),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              TextField(
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Vuelto a entregar',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              else
+              // === Bloque de pago parcial (sin cambios) ===
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        '+ Agregar Método de Pago',
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                    SizedBox(height: 16.0),
+                    const Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Monto Total',
+                              prefixText: '\$ ',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        SizedBox(width: 16.0),
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: 'A cobrar total',
+                              prefixText: '\$ ',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.0),
+                    Text('Deuda: \$ 0,00'),
+                  ],
+                ),
             SizedBox(height: 16.0),
 
             // Sección Tipo de Envío
