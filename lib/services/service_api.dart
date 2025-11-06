@@ -8,6 +8,7 @@ import '../models/categorias_model.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/datos_facturacion_model.dart';
 import '../models/lista_precio_model.dart';
+import '../models/metodo_pago_model.dart';
 import '../models/producto.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_ivas_model.dart';
@@ -26,6 +27,7 @@ class ApiServices{
   final String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
   final String apiUrlDatosFacturacion = 'https://api.flamincoapp.com.ar/api/dato-facturacions';
   final String apiUrlCategoria = 'https://api.flamincoapp.com.ar/api/categories';
+  final String apiUrlMetodosPago = 'https://api.flamincoapp.com.ar/api/metodos-pago';
   
   // APIs que serán eliminadas/reemplazadas por apiUrlProductosVer
   // final String apiUrlProducto = 'https://api.flamincoapp.com.ar/api/products';
@@ -306,4 +308,40 @@ class ApiServices{
     }
   }
 
+  Future<void> fetchMetodosPago(String token) async {
+    try {
+      final String? comercioId = User.currencyUser?.comercioId;
+
+      if (comercioId == null) {
+        throw Exception('No se encontró el ID de comercio del usuario actual');
+      }
+
+      // Construir la URL con el parámetro de comercio_id
+      final Uri apiUrl = Uri.parse('${apiUrlMetodosPago}?comercio_id=$comercioId');
+      print('Obteniendo métodos de pago desde: $apiUrl');
+
+      final response = await http.get(
+        apiUrl,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+
+        // Mapear la respuesta al modelo MetodoPagoModel
+        List<MetodoPagoModel> metodosPago = data.map((json) => MetodoPagoModel.fromJson(json)).toList();
+
+        // Insertar o actualizar los datos en la base de datos
+        await DatabaseHelper.instance.insertMetodosPago(metodosPago);
+      } else {
+        throw Exception('Error al cargar los métodos de pago. Código: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error en fetchMetodosPago: $e');
+      throw Exception('Error al cargar los métodos de pago.');
+    }
+  }
 }

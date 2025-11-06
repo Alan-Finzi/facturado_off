@@ -6,6 +6,7 @@ import '../models/categorias_model.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/datos_facturacion_model.dart';
 import '../models/lista_precio_model.dart';
+import '../models/metodo_pago_model.dart';
 import '../models/producto.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_lista_precios_model.dart';
@@ -71,13 +72,29 @@ class DatabaseHelper {
 
     return await  openDatabase(
       path,
-      version: 27, // Incrementa este número si ya estabas en 23
+      version: 28, // Incrementado para incluir tabla de métodos de pago
       onCreate: (db, version) async {
         await _createTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 24) {
           await _createTables(db); // Llama a _createTables para crear las tablas nuevas
+        }
+        if (oldVersion < 28) {
+          // Crear tabla de métodos de pago si se actualiza a versión 28
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS metodos_pago(
+              id INTEGER PRIMARY KEY,
+              nombre TEXT,
+              comercio_id INTEGER,
+              porcentaje_recargo REAL,
+              acreditacion_inmediata INTEGER,
+              descripcion TEXT,
+              eliminado INTEGER,
+              created_at TEXT,
+              updated_at TEXT
+            )
+          ''');
         }
       },
     );
@@ -342,6 +359,20 @@ class DatabaseHelper {
         sucursal_id INTEGER,
         iva REAL,
         porcentaje REAL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE metodos_pago(
+        id INTEGER PRIMARY KEY,
+        nombre TEXT,
+        comercio_id INTEGER,
+        porcentaje_recargo REAL,
+        acreditacion_inmediata INTEGER,
+        descripcion TEXT,
+        eliminado INTEGER,
+        created_at TEXT,
+        updated_at TEXT
       )
     ''');
   }
@@ -1201,6 +1232,40 @@ WHERE
         );
       }
     });
+  }
+
+  // Métodos relacionados con la tabla metodos_pago
+  Future<void> insertMetodosPago(List<MetodoPagoModel> metodosPago) async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      for (var metodoPago in metodosPago) {
+        await txn.insert(
+          'metodos_pago',
+          metodoPago.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+    print('Se agregaron los métodos de pago con éxito');
+  }
+
+  Future<List<MetodoPagoModel>> getMetodosPago() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('metodos_pago');
+
+    return List.generate(maps.length, (i) => MetodoPagoModel.fromJson(maps[i]));
+  }
+
+  Future<List<MetodoPagoModel>> getMetodosPagoByComercioId(int comercioId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'metodos_pago',
+      where: 'comercio_id = ?',
+      whereArgs: [comercioId],
+    );
+
+    return List.generate(maps.length, (i) => MetodoPagoModel.fromJson(maps[i]));
   }
 
   Future<List<Datum>> getProducts() async {

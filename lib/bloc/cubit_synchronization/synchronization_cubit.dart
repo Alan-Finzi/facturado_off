@@ -39,6 +39,9 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
       await apiServices.fetchClientesMostrador(token);
       emit(const SynchronizationInProgress(progress: 0.7, currentTask: "Sincronización Clientes"));
 
+      await apiServices.fetchMetodosPago(token);
+      emit(const SynchronizationInProgress(progress: 0.75, currentTask: "Sincronización Métodos de Pago"));
+
       emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización en progreso"));
 
       await apiServices.fetchCategorias(token);
