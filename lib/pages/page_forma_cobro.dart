@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
+import '../models/metodo_pago_model.dart';
 import '../widget/buscar_cliente.dart';
+
+// Modelo para agrupar los métodos de pago por tipo
+class TipoCobro {
+  final int id;
+  final String nombre;
+  final List<MetodoPagoModel> metodosPago;
+
+  TipoCobro({required this.id, required this.nombre, required this.metodosPago});
+}
 
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
@@ -15,6 +26,19 @@ class FormaCobroPage extends StatefulWidget {
 
 class _FormaCobroPageState extends State<FormaCobroPage> {
   bool isPagoParcial = false;
+
+  // Variables para los métodos de pago
+  List<TipoCobro> tiposCobro = [];
+  TipoCobro? tipoCobroSeleccionado;
+  MetodoPagoModel? formaCobroSeleccionada;
+
+  // IDs y recargo para guardar en la base de datos
+  int? tipoCobroId;
+  int? formaCobroId;
+  double recargoSeleccionado = 0.0;
+
+  // Estado de carga
+  bool isLoading = true;
 
   // Tipo de envío seleccionado (0: retiro por sucursal, 1: envío a domicilio, 2: otro domicilio)
   int _selectedTipoEnvio = 0;
@@ -31,6 +55,160 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   // Datos de envío para guardar
   Map<String, dynamic> _datosEnvio = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Cargar los métodos de pago desde la base de datos
+    _cargarMetodosPago();
+  }
+
+  // Método para cargar los métodos de pago desde la base de datos
+  Future<void> _cargarMetodosPago() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // Obtener todos los métodos de pago de la base de datos
+      List<MetodoPagoModel> metodosPago = await DatabaseHelper.instance.getMetodosPago();
+
+      if (metodosPago.isEmpty) {
+        // Si no hay métodos de pago en la base de datos, crear algunos por defecto
+        // Este es un fallback por si la base de datos está vacía
+        metodosPago = [
+          MetodoPagoModel(id: 0, nombre: 'Efectivo', porcentajeRecargo: 0.0, acreditacionInmediata: 1),
+          MetodoPagoModel(id: 1, nombre: 'Tarjeta de Débito', porcentajeRecargo: 0.0, acreditacionInmediata: 1),
+          MetodoPagoModel(id: 2, nombre: 'Tarjeta de Crédito', porcentajeRecargo: 10.0, acreditacionInmediata: 0),
+        ];
+      }
+
+      // Agrupar los métodos de pago por tipo
+      Map<String, List<MetodoPagoModel>> metodosAgrupados = {};
+
+      for (var metodo in metodosPago) {
+        String tipoNombre = _obtenerTipoDeMetodo(metodo);
+
+        if (!metodosAgrupados.containsKey(tipoNombre)) {
+          metodosAgrupados[tipoNombre] = [];
+        }
+
+        metodosAgrupados[tipoNombre]!.add(metodo);
+      }
+
+      // Convertir el mapa a la lista de TipoCobro
+      List<TipoCobro> tipos = [];
+      int idTipo = 0;
+
+      metodosAgrupados.forEach((nombre, metodos) {
+        tipos.add(TipoCobro(
+          id: idTipo++,
+          nombre: nombre,
+          metodosPago: metodos,
+        ));
+      });
+
+      // Asegurarse de que "Efectivo" esté primero si existe
+      tipos.sort((a, b) {
+        if (a.nombre == 'Efectivo') return -1;
+        if (b.nombre == 'Efectivo') return 1;
+        return a.nombre.compareTo(b.nombre);
+      });
+
+      setState(() {
+        tiposCobro = tipos;
+
+        // Seleccionar el primer tipo por defecto si existe
+        if (tipos.isNotEmpty) {
+          tipoCobroSeleccionado = tipos.first;
+          tipoCobroId = tipoCobroSeleccionado?.id;
+
+          // Seleccionar el primer método del tipo por defecto si existe
+          if (tipoCobroSeleccionado!.metodosPago.isNotEmpty) {
+            formaCobroSeleccionada = tipoCobroSeleccionado!.metodosPago.first;
+            formaCobroId = formaCobroSeleccionada?.id;
+            recargoSeleccionado = formaCobroSeleccionada?.porcentajeRecargo ?? 0.0;
+          }
+        }
+
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error al cargar métodos de pago: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  // Función para determinar el tipo de cobro a partir del método de pago
+  String _obtenerTipoDeMetodo(MetodoPagoModel metodo) {
+    // Extraer el tipo del nombre del método
+    final nombre = metodo.nombre ?? '';
+
+    // Tipos de cobro conocidos (bancos y otros medios)
+    final tiposConocidos = [
+      'Efectivo',
+      'Banco Provincia',
+      'Banco Galicia',
+      'Mercado Pago',
+      'Tarjeta',
+      'Transferencia',
+    ];
+
+    // Verificar si el nombre contiene alguno de los tipos conocidos
+    for (var tipo in tiposConocidos) {
+      if (nombre.contains(tipo)) {
+        return tipo;
+      }
+    }
+
+    // Si no se encuentra un tipo conocido, usar la primera palabra del nombre
+    if (nombre.contains(' ')) {
+      return nombre.split(' ')[0];
+    }
+
+    return nombre;  // Si no hay espacios, usar el nombre completo
+  }
+
+  // Método para actualizar la selección del tipo de cobro
+  void _onTipoCobroChanged(TipoCobro? newValue) {
+    setState(() {
+      // Actualizar el tipo de cobro seleccionado
+      tipoCobroSeleccionado = newValue;
+      tipoCobroId = newValue?.id;
+
+      // Resetear la forma de cobro y el recargo
+      formaCobroSeleccionada = null;
+      formaCobroId = null;
+      recargoSeleccionado = 0.0;
+
+      // Preseleccionar el primer método de pago si existe
+      if (tipoCobroSeleccionado != null && tipoCobroSeleccionado!.metodosPago.isNotEmpty) {
+        formaCobroSeleccionada = tipoCobroSeleccionado!.metodosPago.first;
+        formaCobroId = formaCobroSeleccionada?.id;
+        recargoSeleccionado = formaCobroSeleccionada?.porcentajeRecargo ?? 0.0;
+      }
+    });
+  }
+
+  // Método para actualizar la selección de forma de cobro
+  void _onFormaCobroChanged(MetodoPagoModel? newValue) {
+    setState(() {
+      // Actualizar la forma de cobro seleccionada
+      formaCobroSeleccionada = newValue;
+      formaCobroId = newValue?.id;
+
+      // Actualizar el recargo
+      if (newValue?.porcentajeRecargo != null) {
+        recargoSeleccionado = newValue!.porcentajeRecargo!;
+      } else {
+        recargoSeleccionado = 0.0;
+      }
+
+      print('Forma de cobro seleccionada: ${newValue?.nombre}, Recargo: $recargoSeleccionado%');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,29 +312,53 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                               SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                value: 'Efectivo',
-                                items: ['Efectivo', 'Tarjeta', 'Transferencia']
-                                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                                    .toList(),
-                                onChanged: (_) {},
-                                decoration: InputDecoration(
-                                  labelText: 'Tipo de cobro',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
+                              // Dropdown para seleccionar el tipo de cobro
+                              isLoading
+                                ? Center(child: CircularProgressIndicator())
+                                : DropdownButtonFormField<TipoCobro>(
+                                    value: tipoCobroSeleccionado,
+                                    items: tiposCobro.map((tipo) =>
+                                      DropdownMenuItem<TipoCobro>(
+                                        value: tipo,
+                                        child: Text(tipo.nombre),
+                                      )
+                                    ).toList(),
+                                    onChanged: _onTipoCobroChanged,
+                                    decoration: InputDecoration(
+                                      labelText: 'Tipo de cobro',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
                               SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                value: 'Efectivo',
-                                items: ['Efectivo', 'Tarjeta', 'Transferencia']
-                                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                                    .toList(),
-                                onChanged: (_) {},
-                                decoration: InputDecoration(
-                                  labelText: 'Forma de cobro',
-                                  border: OutlineInputBorder(),
+                              // Dropdown para seleccionar la forma de cobro
+                              isLoading
+                                ? Center(child: CircularProgressIndicator())
+                                : DropdownButtonFormField<MetodoPagoModel>(
+                                    value: formaCobroSeleccionada,
+                                    items: tipoCobroSeleccionado?.metodosPago.map((metodo) =>
+                                      DropdownMenuItem<MetodoPagoModel>(
+                                        value: metodo,
+                                        child: Text(metodo.nombre ?? 'Sin nombre'),
+                                      )
+                                    ).toList() ?? [],
+                                    onChanged: _onFormaCobroChanged,
+                                    decoration: InputDecoration(
+                                      labelText: 'Forma de cobro',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                              // Mostrar el recargo si hay alguno
+                              if (recargoSeleccionado > 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
@@ -802,7 +1004,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     );
   }
 
-  // Guarda la venta con la información de envío
+  // Guarda la venta con la información de envío y cobro
   void _guardarVentaConEnvio() {
     // Validar que hay tipo de envío
     if (_selectedTipoEnvio == 1 && (_datosEnvio.isEmpty || _datosEnvio['tipo_envio'] != 'domicilio_cliente')) {
@@ -819,12 +1021,47 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       return;
     }
 
-    // Aquí irá la lógica para guardar la venta con los datos de envío
+    // Validar que hay método de pago seleccionado
+    if (formaCobroId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Por favor seleccione una forma de cobro')),
+      );
+      return;
+    }
+
+    // Preparar datos de cobro para guardar
+    final datosCobro = {
+      'tipo_cobro_id': tipoCobroId,
+      'tipo_cobro_nombre': tipoCobroSeleccionado?.nombre,
+      'forma_cobro_id': formaCobroId,
+      'forma_cobro_nombre': formaCobroSeleccionada?.nombre,
+      'recargo': recargoSeleccionado,
+    };
+
+    // Combinar datos de envío con datos de cobro
+    final datosCompletos = {
+      ..._datosEnvio,
+      'cobro': datosCobro,
+      'pago_total': !isPagoParcial,
+    };
+
+    // Aquí irá la lógica para guardar la venta con los datos de envío y cobro
     // Por ahora, solo mostramos los datos que se guardarían
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Venta guardada con datos de envío: ${_datosEnvio['tipo_envio'] ?? "retiro_sucursal"}')),
+      SnackBar(
+        content: Text(
+          'Venta guardada: ${isPagoParcial ? "Pago dividido" : "Pago total"}, ' +
+          'Método: ${formaCobroSeleccionada?.nombre ?? "Ninguno"}, ' +
+          'Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%'
+        ),
+      ),
     );
 
-    print('Datos de envío: $_datosEnvio');
+    print('Datos completos de la venta:');
+    print('- Envío: ${_datosEnvio['tipo_envio'] ?? "retiro_sucursal"}');
+    print('- Método de pago: ${formaCobroSeleccionada?.nombre ?? "No seleccionado"}');
+    print('- Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%');
+    print('- IDs para BD: tipoCobroId=$tipoCobroId, formaCobroId=$formaCobroId');
+    print('- Datos completos: $datosCompletos');
   }
 }
