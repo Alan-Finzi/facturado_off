@@ -5,6 +5,7 @@ import '../bloc/cubit_productos/productos_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/metodo_pago_model.dart';
+import '../models/pago_parcial_model.dart';
 import '../widget/buscar_cliente.dart';
 
 // Modelo para agrupar los métodos de pago por tipo
