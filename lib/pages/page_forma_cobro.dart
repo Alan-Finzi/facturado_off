@@ -670,7 +670,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                                   children: [
                                     Text('Recargo total:'),
                                     Text(
-                                      '\$${productosState.calcularTotalRecargoPesos().toStringAsFixed(2)}',
+                                      '\$${context.read<ProductosCubit>().calcularTotalRecargoPesos().toStringAsFixed(2)}',
                                       style: TextStyle(color: Colors.red),
                                     ),
                                   ],
