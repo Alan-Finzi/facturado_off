@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../bloc/cubit_productos/productos_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/metodo_pago_model.dart';
@@ -205,6 +206,14 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       } else {
         recargoSeleccionado = 0.0;
       }
+
+      // Actualizar el estado global con los datos de la forma de pago
+      final productosCubit = context.read<ProductosCubit>();
+      productosCubit.updateFormaPago(
+        formaCobroId,
+        formaCobroSeleccionada?.nombre,
+        recargoSeleccionado
+      );
 
       print('Forma de cobro seleccionada: ${newValue?.nombre}, Recargo: $recargoSeleccionado%');
     });
@@ -412,49 +421,287 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                         ),
                       ],
                     ),
+
+                    // Nuevo: Resumen con recargo
+                    SizedBox(height: 20),
+                    Text(
+                      'Resumen',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Mostrar recargo en el resumen
+                            // Esto se implementará completo con el ResumenVentaConRecargo
+                            if (recargoSeleccionado > 0)
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  'El recargo de ${recargoSeleccionado.toStringAsFixed(1)}% se aplicará al total',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                                leading: Icon(Icons.warning, color: Colors.orange),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 )
               else
-              // === Bloque de pago parcial (sin cambios) ===
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        '+ Agregar Método de Pago',
-                        style: TextStyle(color: Colors.orange),
-                      ),
-                    ),
-                    SizedBox(height: 16.0),
-                    const Row(
+              // === Bloque de pago parcial (actualizado) ===
+                BlocBuilder<ProductosCubit, ProductosState>(
+                  builder: (context, productosState) {
+                    // Informar al cubit que estamos en modo de pago dividido
+                    // Nota: esto debería llamarse solo una vez al iniciar
+                    if (!productosState.esPagoDividido) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        context.read<ProductosCubit>().setPagoDividido(true);
+                      });
+                    }
+
+                    // Calcular total a pagar
+                    double totalAPagar = 0;
+                    for (var producto in productosState.productosSeleccionados) {
+                      totalAPagar += producto.precioFinal ?? 0;
+                    }
+
+                    // Aplicar descuento general
+                    final descuentoGral = (productosState.descuentoGeneral / 100) * totalAPagar;
+                    totalAPagar -= descuentoGral;
+
+                    // Obtener pagos parciales y total pagado
+                    final pagosParciales = productosState.pagosParciales;
+                    final totalPagado = productosState.pagosParciales.fold(
+                      0.0, (sum, pago) => sum + pago.montoTotal
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'Monto Total',
-                              prefixText: '\$ ',
-                              border: OutlineInputBorder(),
+                        // Sección de pagos parciales ya agregados
+                        if (pagosParciales.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pagos agregados',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              SizedBox(height: 8),
+                              // Lista de pagos parciales
+                              ...pagosParciales.asMap().entries.map((entry) {
+                                int index = entry.key;
+                                PagoParcial pago = entry.value;
+                                return Card(
+                                  margin: EdgeInsets.symmetric(vertical: 4),
+                                  child: ListTile(
+                                    title: Text(
+                                      '${pago.tipoCobroNombre} - ${pago.formaCobroNombre}',
+                                      style: TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                    subtitle: pago.porcentajeRecargo > 0
+                                      ? Text('Recargo: ${pago.porcentajeRecargo.toStringAsFixed(1)}%')
+                                      : null,
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '\$${pago.montoPago.toStringAsFixed(2)}',
+                                          style: TextStyle(fontWeight: FontWeight.w500),
+                                        ),
+                                        if (pago.montoRecargo > 0)
+                                          Text(
+                                            ' + \$${pago.montoRecargo.toStringAsFixed(2)}',
+                                            style: TextStyle(color: Colors.red, fontSize: 12),
+                                          ),
+                                        IconButton(
+                                          icon: Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () {
+                                            context.read<ProductosCubit>().eliminarPagoParcial(index);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              SizedBox(height: 16),
+                            ],
+                          ),
+
+                        // Formulario para agregar nuevo pago parcial
+                        Text(
+                          'Agregar nuevo pago',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        SizedBox(height: 8),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                // Dropdown para tipo de cobro
+                                DropdownButtonFormField<TipoCobro>(
+                                  value: tipoCobroSeleccionado,
+                                  items: tiposCobro.map((tipo) =>
+                                    DropdownMenuItem<TipoCobro>(
+                                      value: tipo,
+                                      child: Text(tipo.nombre),
+                                    )
+                                  ).toList(),
+                                  onChanged: _onTipoCobroChanged,
+                                  decoration: InputDecoration(
+                                    labelText: 'Tipo de cobro',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                // Dropdown para forma de cobro
+                                DropdownButtonFormField<MetodoPagoModel>(
+                                  value: formaCobroSeleccionada,
+                                  items: tipoCobroSeleccionado?.metodosPago.map((metodo) =>
+                                    DropdownMenuItem<MetodoPagoModel>(
+                                      value: metodo,
+                                      child: Text(metodo.nombre ?? 'Sin nombre'),
+                                    )
+                                  ).toList() ?? [],
+                                  onChanged: _onFormaCobroChanged,
+                                  decoration: InputDecoration(
+                                    labelText: 'Forma de cobro',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                // Campo para monto
+                                TextField(
+                                  controller: TextEditingController(
+                                    text: (totalAPagar - totalPagado).toStringAsFixed(2),
+                                  ),
+                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                  decoration: InputDecoration(
+                                    labelText: 'Monto a pagar',
+                                    border: OutlineInputBorder(),
+                                    prefixText: '\$ ',
+                                  ),
+                                ),
+
+                                // Mostrar recargo si aplica
+                                if (recargoSeleccionado > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      'Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+
+                                SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    // Obtener monto del campo de texto
+                                    final montoText = (totalAPagar - totalPagado).toStringAsFixed(2);
+                                    final monto = double.tryParse(montoText) ?? 0.0;
+
+                                    // Crear pago parcial
+                                    final pago = PagoParcial(
+                                      tipoCobroId: tipoCobroId,
+                                      tipoCobroNombre: tipoCobroSeleccionado?.nombre,
+                                      formaCobroId: formaCobroId,
+                                      formaCobroNombre: formaCobroSeleccionada?.nombre,
+                                      montoPago: monto,
+                                      porcentajeRecargo: recargoSeleccionado,
+                                    );
+
+                                    // Agregar al estado
+                                    context.read<ProductosCubit>().agregarPagoParcial(pago);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: Size(double.infinity, 48),
+                                  ),
+                                  child: Text('Agregar pago'),
+                                ),
+                              ],
                             ),
-                            keyboardType: TextInputType.number,
                           ),
                         ),
-                        SizedBox(width: 16.0),
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'A cobrar total',
-                              prefixText: '\$ ',
-                              border: OutlineInputBorder(),
+
+                        SizedBox(height: 20),
+
+                        // Resumen de pagos
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Resumen de pagos',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Total a pagar:'),
+                                    Text(
+                                      '\$${totalAPagar.toStringAsFixed(2)}',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                Divider(),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Pagado:'),
+                                    Text('\$${totalPagado.toStringAsFixed(2)}'),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Recargo total:'),
+                                    Text(
+                                      '\$${productosState.calcularTotalRecargoPesos().toStringAsFixed(2)}',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ],
+                                ),
+                                Divider(),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      totalAPagar - totalPagado > 0
+                                      ? 'Saldo pendiente:'
+                                      : 'Vuelto:',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      '\$${(totalAPagar - totalPagado).abs().toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        color: totalAPagar - totalPagado > 0
+                                          ? Colors.red
+                                          : Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            keyboardType: TextInputType.number,
                           ),
                         ),
                       ],
-                    ),
-                    SizedBox(height: 8.0),
-                    Text('Deuda: \$ 0,00'),
-                  ],
+                    );
+                  },
                 ),
             SizedBox(height: 16.0),
 
@@ -1006,6 +1253,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   // Guarda la venta con la información de envío y cobro
   void _guardarVentaConEnvio() {
+    final productosCubit = context.read<ProductosCubit>();
+
     // Validar que hay tipo de envío
     if (_selectedTipoEnvio == 1 && (_datosEnvio.isEmpty || _datosEnvio['tipo_envio'] != 'domicilio_cliente')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1021,22 +1270,111 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       return;
     }
 
-    // Validar que hay método de pago seleccionado
-    if (formaCobroId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor seleccione una forma de cobro')),
-      );
-      return;
-    }
+    // Validaciones según tipo de pago
+    if (isPagoParcial) {
+      // Validar pagos parciales
+      final pagosParciales = productosCubit.state.pagosParciales;
+      if (pagosParciales.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Por favor agregue al menos un método de pago')),
+        );
+        return;
+      }
 
-    // Preparar datos de cobro para guardar
-    final datosCobro = {
-      'tipo_cobro_id': tipoCobroId,
-      'tipo_cobro_nombre': tipoCobroSeleccionado?.nombre,
-      'forma_cobro_id': formaCobroId,
-      'forma_cobro_nombre': formaCobroSeleccionada?.nombre,
-      'recargo': recargoSeleccionado,
-    };
+      // Verificar si se pagó el monto completo
+      double totalAPagar = 0;
+      for (var producto in productosCubit.state.productosSeleccionados) {
+        totalAPagar += producto.precioFinal ?? 0;
+      }
+
+      // Aplicar descuento general
+      final descuentoGral = (productosCubit.state.descuentoGeneral / 100) * totalAPagar;
+      totalAPagar -= descuentoGral;
+
+      // Calcular total pagado
+      final totalPagado = productosCubit.calcularTotalPagado();
+
+      // Verificar si hay saldo pendiente
+      if (totalAPagar > totalPagado) {
+        // Mostrar advertencia y preguntar si quiere continuar
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Monto insuficiente'),
+            content: Text('El monto total pagado (\$${totalPagado.toStringAsFixed(2)}) es menor que el total a pagar (\$${totalAPagar.toStringAsFixed(2)}). ¿Desea guardar la venta con saldo pendiente?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _completarGuardado(productosCubit);
+                },
+                child: Text('Continuar'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Si todo está bien, guardar
+      _completarGuardado(productosCubit);
+
+    } else {
+      // Pago total - Validar que hay método de pago seleccionado
+      if (formaCobroId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Por favor seleccione una forma de cobro')),
+        );
+        return;
+      }
+
+      // Si todo está bien, guardar
+      _completarGuardado(productosCubit);
+    }
+  }
+
+  // Método auxiliar para completar el guardado de la venta
+  void _completarGuardado(ProductosCubit productosCubit) {
+    // Preparar datos según el tipo de pago
+    Map<String, dynamic> datosCobro;
+
+    if (isPagoParcial) {
+      // Para pago dividido, guardar lista de pagos parciales
+      final pagosParciales = productosCubit.state.pagosParciales;
+
+      // Convertir pagos parciales a formato para guardar
+      final pagosList = pagosParciales.map((pago) => pago.toMap()).toList();
+
+      // Calcular recargo total en pesos
+      final recargoTotalPesos = productosCubit.calcularTotalRecargoPesos();
+
+      // Calcular el porcentaje efectivo de recargo
+      final totalAPagar = productosCubit.state.productosSeleccionados.fold(
+        0.0, (sum, producto) => sum + (producto.precioFinal ?? 0)
+      );
+      final porcentajeEfectivo = totalAPagar > 0 ? (recargoTotalPesos / totalAPagar) * 100 : 0.0;
+
+      datosCobro = {
+        'es_pago_dividido': true,
+        'pagos_parciales': pagosList,
+        'recargo_total_pesos': recargoTotalPesos,
+        'recargo_porcentaje_efectivo': porcentajeEfectivo,
+      };
+    } else {
+      // Para pago total, usar el método seleccionado
+      datosCobro = {
+        'es_pago_dividido': false,
+        'tipo_cobro_id': tipoCobroId,
+        'tipo_cobro_nombre': tipoCobroSeleccionado?.nombre,
+        'forma_cobro_id': formaCobroId,
+        'forma_cobro_nombre': formaCobroSeleccionada?.nombre,
+        'recargo_porcentaje': recargoSeleccionado,
+      };
+    }
 
     // Combinar datos de envío con datos de cobro
     final datosCompletos = {
@@ -1051,17 +1389,35 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       SnackBar(
         content: Text(
           'Venta guardada: ${isPagoParcial ? "Pago dividido" : "Pago total"}, ' +
-          'Método: ${formaCobroSeleccionada?.nombre ?? "Ninguno"}, ' +
-          'Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%'
+          (isPagoParcial
+            ? '${productosCubit.state.pagosParciales.length} métodos de pago, ' +
+              'Recargo total: \$${productosCubit.calcularTotalRecargoPesos().toStringAsFixed(2)}'
+            : 'Método: ${formaCobroSeleccionada?.nombre ?? "Ninguno"}, ' +
+              'Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%'
+          )
         ),
       ),
     );
 
     print('Datos completos de la venta:');
     print('- Envío: ${_datosEnvio['tipo_envio'] ?? "retiro_sucursal"}');
-    print('- Método de pago: ${formaCobroSeleccionada?.nombre ?? "No seleccionado"}');
-    print('- Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%');
-    print('- IDs para BD: tipoCobroId=$tipoCobroId, formaCobroId=$formaCobroId');
+
+    if (isPagoParcial) {
+      print('- Pago dividido con ${productosCubit.state.pagosParciales.length} métodos de pago');
+      print('- Recargo total: \$${productosCubit.calcularTotalRecargoPesos().toStringAsFixed(2)}');
+
+      for (int i = 0; i < productosCubit.state.pagosParciales.length; i++) {
+        final pago = productosCubit.state.pagosParciales[i];
+        print('  Pago ${i+1}: ${pago.tipoCobroNombre} - ${pago.formaCobroNombre}');
+        print('    Monto: \$${pago.montoPago.toStringAsFixed(2)}');
+        print('    Recargo: ${pago.porcentajeRecargo.toStringAsFixed(2)}% = \$${pago.montoRecargo.toStringAsFixed(2)}');
+      }
+    } else {
+      print('- Método de pago: ${formaCobroSeleccionada?.nombre ?? "No seleccionado"}');
+      print('- Recargo: ${recargoSeleccionado.toStringAsFixed(2)}%');
+      print('- IDs para BD: tipoCobroId=$tipoCobroId, formaCobroId=$formaCobroId');
+    }
+
     print('- Datos completos: $datosCompletos');
   }
 }

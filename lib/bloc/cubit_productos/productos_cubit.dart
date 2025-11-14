@@ -4,6 +4,7 @@ import '../../calculos/calculo_iva.dart';
 import '../../models/Producto_precio_stock.dart';
 import '../../models/datos_facturacion_model.dart';
 import '../../models/lista_precio_model.dart';
+import '../../models/pago_parcial_model.dart';
 import '../../models/producto.dart';
 import '../../models/user.dart';
 import '../../services/user_repository.dart';
@@ -82,7 +83,20 @@ class ProductosCubit extends Cubit<ProductosState> {
   void updateDescuentoGeneral(double descuento) {
     emit(state.copyWith(descuentoGeneral: descuento));
   }
-  
+
+  /// Actualiza la información sobre la forma de pago seleccionada y su recargo
+  /// @param formaPagoId El ID de la forma de pago seleccionada
+  /// @param formaPagoNombre El nombre de la forma de pago seleccionada
+  /// @param recargoPago El porcentaje de recargo asociado a la forma de pago
+  void updateFormaPago(int? formaPagoId, String? formaPagoNombre, double recargoPago) {
+    emit(state.copyWith(
+      formaPagoId: formaPagoId,
+      formaPagoNombre: formaPagoNombre,
+      recargoPago: recargoPago,
+      precioTotal: !state.precioTotal, // Forzar recálculo de precios
+    ));
+  }
+
   void updateListaPreciosInfo(int listaId, String nombre) {
     emit(state.copyWith(listaPrecios: listaId, nombreListaPrecios: nombre));
   }
@@ -362,4 +376,99 @@ class ProductosCubit extends Cubit<ProductosState> {
     }
   }
 
+  /// Configura si el pago será dividido o total
+  void setPagoDividido(bool value) {
+    emit(state.copyWith(
+      esPagoDividido: value,
+      // Si cambiamos de pago dividido a pago total, limpiamos los pagos parciales
+      pagosParciales: value ? state.pagosParciales : [],
+      // Forzar recálculo de precios
+      precioTotal: !state.precioTotal,
+    ));
+  }
+
+  /// Agrega un nuevo pago parcial a la lista
+  void agregarPagoParcial(PagoParcial pago) {
+    final pagosActualizados = List<PagoParcial>.from(state.pagosParciales);
+    pagosActualizados.add(pago);
+
+    // Recalcular recargo total para el resumen
+    final double recargoTotal = calcularRecargoTotal(pagosActualizados);
+
+    emit(state.copyWith(
+      pagosParciales: pagosActualizados,
+      recargoPago: recargoTotal,
+      precioTotal: !state.precioTotal, // Forzar recálculo de precios
+    ));
+  }
+
+  /// Elimina un pago parcial de la lista
+  void eliminarPagoParcial(int index) {
+    if (index < 0 || index >= state.pagosParciales.length) return;
+
+    final pagosActualizados = List<PagoParcial>.from(state.pagosParciales);
+    pagosActualizados.removeAt(index);
+
+    // Recalcular recargo total
+    final double recargoTotal = calcularRecargoTotal(pagosActualizados);
+
+    emit(state.copyWith(
+      pagosParciales: pagosActualizados,
+      recargoPago: recargoTotal,
+      precioTotal: !state.precioTotal,
+    ));
+  }
+
+  /// Actualiza un pago parcial existente
+  void actualizarPagoParcial(int index, PagoParcial pago) {
+    if (index < 0 || index >= state.pagosParciales.length) return;
+
+    final pagosActualizados = List<PagoParcial>.from(state.pagosParciales);
+    pagosActualizados[index] = pago;
+
+    // Recalcular recargo total
+    final double recargoTotal = calcularRecargoTotal(pagosActualizados);
+
+    emit(state.copyWith(
+      pagosParciales: pagosActualizados,
+      recargoPago: recargoTotal,
+      precioTotal: !state.precioTotal,
+    ));
+  }
+
+  /// Calcula el recargo total en porcentaje basado en la lista de pagos parciales
+  double calcularRecargoTotal(List<PagoParcial> pagos) {
+    if (pagos.isEmpty) return 0.0;
+
+    // Sumamos todos los montos de pago y recargos
+    double montoTotalPagos = pagos.fold(0, (sum, pago) => sum + pago.montoPago);
+    double recargoTotalPesos = pagos.fold(0, (sum, pago) => sum + pago.montoRecargo);
+
+    // Calculamos el porcentaje efectivo de recargo
+    if (montoTotalPagos == 0) return 0.0;
+    return (recargoTotalPesos / montoTotalPagos) * 100;
+  }
+
+  /// Calcula el total pagado (incluyendo recargos) de todos los pagos parciales
+  double calcularTotalPagado() {
+    return state.pagosParciales.fold(
+      0, (sum, pago) => sum + pago.montoTotal
+    );
+  }
+
+  /// Calcula el total de recargo en pesos
+  double calcularTotalRecargoPesos() {
+    return state.pagosParciales.fold(
+      0, (sum, pago) => sum + pago.montoRecargo
+    );
+  }
+
+  /// Limpia todos los pagos parciales
+  void limpiarPagosParciales() {
+    emit(state.copyWith(
+      pagosParciales: [],
+      recargoPago: 0.0,
+      precioTotal: !state.precioTotal,
+    ));
+  }
 }

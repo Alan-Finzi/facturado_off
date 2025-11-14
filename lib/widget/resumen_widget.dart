@@ -31,10 +31,13 @@ class ResumenTabla extends StatelessWidget {
                 // Utilizar el descuento general del estado
                 const descuentoPromos = 0.0;
                 final descuentoGral = (state.descuentoGeneral / 100) * subtotal;
-                const recargo = 0.0;
-                
-                // Recalculamos el total final restando el descuento general
-                totalFinal -= descuentoGral;
+
+                // Calcular el recargo basado en la forma de pago seleccionada
+                final recargoPorcentaje = state.recargoPago;
+                final recargo = (recargoPorcentaje / 100) * (subtotal - descuentoGral);
+
+                // Recalculamos el total final restando el descuento y sumando el recargo
+                totalFinal = totalFinal - descuentoGral + recargo;
 
                 return Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -65,8 +68,19 @@ class ResumenTabla extends StatelessWidget {
                             ),
                             TableRow(
                                 children: [
-                                    const Text('+ Recargo (0%)', style: TextStyle(fontSize: 10)),
-                                    Text('+ \$${recargo.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                                    Text('+ Recargo (${recargoPorcentaje.toStringAsFixed(1)}%)',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: recargoPorcentaje > 0 ? Colors.red : Colors.grey
+                                        )
+                                    ),
+                                    Text(
+                                        '+ \$${recargo.toStringAsFixed(2)}',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                            color: recargoPorcentaje > 0 ? Colors.red : Colors.grey
+                                        )
+                                    ),
                                 ],
                             ),
                             TableRow(

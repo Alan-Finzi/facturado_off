@@ -1,5 +1,7 @@
 part of 'productos_cubit.dart';
 
+import '../../models/pago_parcial_model.dart';
+
 /// Estado para el cubit de productos que almacena toda la información necesaria
 /// para la gestión de productos, facturación y ventas
 class ProductosState extends Equatable {
@@ -48,6 +50,21 @@ class ProductosState extends Equatable {
  /// Porcentaje de descuento general a aplicar
  final double descuentoGeneral;
 
+ /// Porcentaje de recargo de la forma de pago
+ final double recargoPago;
+
+ /// ID de la forma de pago seleccionada
+ final int? formaPagoId;
+
+ /// Nombre de la forma de pago seleccionada
+ final String? formaPagoNombre;
+
+ /// Indica si el pago es dividido o total
+ final bool esPagoDividido;
+
+ /// Lista de pagos parciales cuando se utiliza pago dividido
+ final List<PagoParcial> pagosParciales;
+
  /// Constructor del estado con valores por defecto para la mayoría de propiedades
  ProductosState({
   required this.currentListProductCubit,
@@ -64,7 +81,12 @@ class ProductosState extends Equatable {
   this.productosSeleccionados = const [],
   this.listaPrecios = 1,
   this.nombreListaPrecios = 'Precio base',
- this.descuentoGeneral = 0.0,
+  this.descuentoGeneral = 0.0,
+  this.recargoPago = 0.0,
+  this.formaPagoId,
+  this.formaPagoNombre,
+  this.esPagoDividido = false,
+  this.pagosParciales = const [],
  });
 
  /// Permite crear una nueva copia del estado con algunas propiedades actualizadas
@@ -84,6 +106,11 @@ class ProductosState extends Equatable {
   int? listaPrecios,
   String? nombreListaPrecios,
   double? descuentoGeneral,
+  double? recargoPago,
+  int? formaPagoId,
+  String? formaPagoNombre,
+  bool? esPagoDividido,
+  List<PagoParcial>? pagosParciales,
  }) {
   return ProductosState(
    currentListProductCubit: currentListProductCubit ?? this.currentListProductCubit,
@@ -99,6 +126,11 @@ class ProductosState extends Equatable {
    listaPrecios: listaPrecios ?? this.listaPrecios,
    nombreListaPrecios: nombreListaPrecios ?? this.nombreListaPrecios,
    descuentoGeneral: descuentoGeneral ?? this.descuentoGeneral,
+   recargoPago: recargoPago ?? this.recargoPago,
+   formaPagoId: formaPagoId ?? this.formaPagoId,
+   formaPagoNombre: formaPagoNombre ?? this.formaPagoNombre,
+   esPagoDividido: esPagoDividido ?? this.esPagoDividido,
+   pagosParciales: pagosParciales ?? this.pagosParciales,
    precioTotal: precioTotal ?? this.precioTotal,
    isLoading: isLoading ?? this.isLoading,
   );
@@ -122,5 +154,10 @@ class ProductosState extends Equatable {
   listaPrecios,
   nombreListaPrecios,
   descuentoGeneral,
+  recargoPago,
+  formaPagoId,
+  formaPagoNombre,
+  esPagoDividido,
+  pagosParciales,
  ];
 }
