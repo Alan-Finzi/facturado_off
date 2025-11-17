@@ -145,7 +145,12 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   // Función para determinar el tipo de cobro a partir del método de pago
   String _obtenerTipoDeMetodo(MetodoPagoModel metodo) {
-    // Extraer el tipo del nombre del método
+    // Si tenemos información de la entidad, usarla como tipo principal
+    if (metodo.entidadNombre != null && metodo.entidadNombre!.isNotEmpty) {
+      return metodo.entidadNombre!;
+    }
+
+    // Si no hay información de entidad, extraer el tipo del nombre del método
     final nombre = metodo.nombre ?? '';
 
     // Tipos de cobro conocidos (bancos y otros medios)
@@ -156,6 +161,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       'Mercado Pago',
       'Tarjeta',
       'Transferencia',
+      'BBVA Francés',
+      'Banco Santander',
     ];
 
     // Verificar si el nombre contiene alguno de los tipos conocidos

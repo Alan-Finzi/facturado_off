@@ -72,7 +72,7 @@ class DatabaseHelper {
 
     return await  openDatabase(
       path,
-      version: 28, // Incrementado para incluir tabla de métodos de pago
+      version: 29, // Incrementado para incluir nuevos campos en tabla de métodos de pago
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -92,9 +92,32 @@ class DatabaseHelper {
               descripcion TEXT,
               eliminado INTEGER,
               created_at TEXT,
-              updated_at TEXT
+              updated_at TEXT,
+              entidad_nombre TEXT,
+              entidad_id INTEGER
             )
           ''');
+        }
+
+        if (oldVersion < 29) {
+          // Migración para agregar nuevos campos a la tabla metodos_pago
+          try {
+            // Verificar si las columnas ya existen
+            var columnas = await db.rawQuery("PRAGMA table_info('metodos_pago')");
+
+            // Si no existe la columna entidad_nombre, agregar las nuevas columnas
+            if (!columnas.any((col) => col['name'] == 'entidad_nombre')) {
+              await db.execute('''
+                ALTER TABLE metodos_pago ADD COLUMN entidad_nombre TEXT;
+              ''');
+              await db.execute('''
+                ALTER TABLE metodos_pago ADD COLUMN entidad_id INTEGER;
+              ''');
+              print('Se agregaron las columnas entidad_nombre y entidad_id a la tabla metodos_pago');
+            }
+          } catch (e) {
+            print('Error al migrar la tabla metodos_pago: $e');
+          }
         }
       },
     );

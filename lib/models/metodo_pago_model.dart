@@ -10,6 +10,9 @@ class MetodoPagoModel {
   final int? eliminado;
   final String? createdAt;
   final String? updatedAt;
+  // Nuevos campos para guardar información de la entidad/banco
+  final String? entidadNombre;
+  final int? entidadId;
 
   MetodoPagoModel({
     this.id,
@@ -21,6 +24,8 @@ class MetodoPagoModel {
     this.eliminado,
     this.createdAt,
     this.updatedAt,
+    this.entidadNombre,
+    this.entidadId,
   });
 
   // Constructor desde JSON
@@ -37,6 +42,8 @@ class MetodoPagoModel {
       eliminado: json['eliminado'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
+      entidadNombre: json['entidad_nombre'],
+      entidadId: json['entidad_id'],
     );
   }
 
@@ -52,13 +59,15 @@ class MetodoPagoModel {
       'eliminado': eliminado,
       'created_at': createdAt,
       'updated_at': updatedAt,
+      'entidad_nombre': entidadNombre,
+      'entidad_id': entidadId,
     };
   }
 
   // Para debugging
   @override
   String toString() {
-    return 'MetodoPagoModel{id: $id, nombre: $nombre, comercioId: $comercioId, porcentajeRecargo: $porcentajeRecargo, acreditacionInmediata: $acreditacionInmediata}';
+    return 'MetodoPagoModel{id: $id, nombre: $nombre, comercioId: $comercioId, porcentajeRecargo: $porcentajeRecargo, acreditacionInmediata: $acreditacionInmediata, entidadNombre: $entidadNombre}';
   }
 
   // Convertir lista de métodos de pago desde JSON

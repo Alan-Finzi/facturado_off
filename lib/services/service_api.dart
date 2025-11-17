@@ -330,9 +330,51 @@ class ApiServices{
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+        List<MetodoPagoModel> metodosPago = [];
 
-        // Mapear la respuesta al modelo MetodoPagoModel
-        List<MetodoPagoModel> metodosPago = data.map((json) => MetodoPagoModel.fromJson(json)).toList();
+        // Procesar la estructura anidada del JSON
+        for (var entidad in data) {
+          // Si hay un array de metodos_pago, procesarlo
+          if (entidad['metodos_pago'] != null && entidad['metodos_pago'] is List) {
+            List<dynamic> metodosEntidad = entidad['metodos_pago'];
+
+            for (var metodo in metodosEntidad) {
+              // Crear un nuevo mapa con los campos correctos
+              Map<String, dynamic> metodoProcesado = {
+                'id': metodo['id'],
+                'nombre': metodo['nombre'],
+                'comercio_id': metodo['comercio_id'],
+                // Mapear el campo recargo a porcentaje_recargo
+                'porcentaje_recargo': metodo['recargo'],
+                'acreditacion_inmediata': metodo['acreditacion_inmediata'] ?? 0,
+                'descripcion': metodo['descripcion'],
+                'eliminado': metodo['eliminado'],
+                'created_at': metodo['created_at'],
+                'updated_at': metodo['updated_at'],
+                // Añadir el nombre de la entidad/banco como contexto
+                'entidad_nombre': entidad['nombre'],
+                'entidad_id': entidad['id'],
+              };
+
+              metodosPago.add(MetodoPagoModel.fromJson(metodoProcesado));
+            }
+          } else {
+            // Si no tiene array de metodos_pago, podría ser un método directo (como Efectivo)
+            Map<String, dynamic> metodoProcesado = {
+              'id': entidad['id'],
+              'nombre': entidad['nombre'],
+              'comercio_id': entidad['comercio_id'],
+              'porcentaje_recargo': entidad['recargo'] ?? 0,
+              'acreditacion_inmediata': entidad['acreditacion_inmediata'] ?? 1,
+              'descripcion': entidad['descripcion'],
+              'eliminado': entidad['eliminado'] ?? 0,
+            };
+
+            metodosPago.add(MetodoPagoModel.fromJson(metodoProcesado));
+          }
+        }
+
+        print('Métodos de pago procesados: ${metodosPago.length}');
 
         // Insertar o actualizar los datos en la base de datos
         await DatabaseHelper.instance.insertMetodosPago(metodosPago);
