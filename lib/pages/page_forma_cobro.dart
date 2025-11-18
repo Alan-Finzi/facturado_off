@@ -691,9 +691,15 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                                     ListTile(
                                       contentPadding: EdgeInsets.zero,
                                       title: Text('Total a pagar', style: TextStyle(fontWeight: FontWeight.bold)),
-                                      trailing: Text(
-                                        '\$${resultados.totalConRecargo.toStringAsFixed(2)}',
-                                        style: TextStyle(fontWeight: FontWeight.bold)
+                                      trailing: Builder(
+                                        builder: (context) {
+                                          // Guardar este valor para que sea utilizado por el botón "Paga el total"
+                                          _montoTotal = resultados.totalConRecargo;
+                                          return Text(
+                                            '\$${_montoTotal.toStringAsFixed(2)}',
+                                            style: TextStyle(fontWeight: FontWeight.bold)
+                                          );
+                                        }
                                       ),
                                     ),
                                   ],
@@ -718,15 +724,9 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                       });
                     }
 
-                    // Calcular total a pagar
-                    double totalAPagar = 0;
-                    for (var producto in productosState.productosSeleccionados) {
-                      totalAPagar += producto.precioFinal ?? 0;
-                    }
-
-                    // Aplicar descuento general
-                    final descuentoGral = (productosState.descuentoGeneral / 100) * totalAPagar;
-                    totalAPagar -= descuentoGral;
+                    // Calcular total a pagar usando el método centralizado
+                    final resultadosCalculo = _calcularTotales();
+                    double totalAPagar = resultadosCalculo.totalConRecargo; // Incluye subtotal + recargo
 
                     // Obtener pagos parciales y total pagado
                     final pagosParciales = productosState.pagosParciales;
@@ -1534,15 +1534,9 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         return;
       }
 
-      // Verificar si se pagó el monto completo
-      double totalAPagar = 0;
-      for (var producto in productosCubit.state.productosSeleccionados) {
-        totalAPagar += producto.precioFinal ?? 0;
-      }
-
-      // Aplicar descuento general
-      final descuentoGral = (productosCubit.state.descuentoGeneral / 100) * totalAPagar;
-      totalAPagar -= descuentoGral;
+      // Verificar si se pagó el monto completo usando el método centralizado
+      final resultadosCalculo = _calcularTotales();
+      double totalAPagar = resultadosCalculo.totalConRecargo; // Incluye subtotal + recargo
 
       // Calcular total pagado
       final totalPagado = productosCubit.calcularTotalPagado();
@@ -1606,9 +1600,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       final recargoTotalPesos = productosCubit.calcularTotalRecargoPesos();
 
       // Calcular el porcentaje efectivo de recargo
-      final totalAPagar = productosCubit.state.productosSeleccionados.fold(
-        0.0, (sum, producto) => sum + (producto.precioFinal ?? 0)
-      );
+      final resultadosCalculo = _calcularTotales();
+      final totalAPagar = resultadosCalculo.totalConRecargo; // Usar el método centralizado
       final porcentajeEfectivo = totalAPagar > 0 ? (recargoTotalPesos / totalAPagar) * 100 : 0.0;
 
       datosCobro = {
