@@ -55,6 +55,15 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
   final _cpController = TextEditingController();
   final _barrioController = TextEditingController();
 
+  // Controladores para monto a pagar y vuelto
+  final _montoInputController = TextEditingController();
+  final _vueltoController = TextEditingController();
+
+  // Variables para validación de monto
+  String? _errorMonto;
+  double _montoTotal = 0.0;
+  bool _montoValido = false;
+
   // Datos de envío para guardar
   Map<String, dynamic> _datosEnvio = {};
 
@@ -63,6 +72,112 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     super.initState();
     // Cargar los métodos de pago desde la base de datos
     _cargarMetodosPago();
+
+    // Inicializar los controladores con valores vacíos
+    _montoInputController.text = '';
+    _vueltoController.text = '';
+
+    // Agregar listeners a los controladores para validación en tiempo real
+    _montoInputController.addListener(_validarMonto);
+  }
+
+  @override
+  void dispose() {
+    // Limpiar controladores cuando se destruya el widget
+    _montoInputController.removeListener(_validarMonto);
+    _montoInputController.dispose();
+    _vueltoController.dispose();
+    _calleController.dispose();
+    _alturaController.dispose();
+    _pisoController.dispose();
+    _deptoController.dispose();
+    _localidadController.dispose();
+    _provinciaController.dispose();
+    _cpController.dispose();
+    _barrioController.dispose();
+    super.dispose();
+  }
+
+  // Método para calcular el total a pagar incluyendo recargo
+  double _calcularTotalConRecargo() {
+    final productosCubit = context.read<ProductosCubit>();
+    double totalSinRecargo = 0.0;
+
+    // Sumar todos los productos
+    for (var producto in productosCubit.state.productosSeleccionados) {
+      totalSinRecargo += producto.precioFinal ?? 0.0;
+    }
+
+    // Aplicar descuento general
+    final descuentoGeneral = (productosCubit.state.descuentoGeneral / 100) * totalSinRecargo;
+    totalSinRecargo -= descuentoGeneral;
+
+    // Aplicar recargo según la forma de cobro seleccionada
+    double montoRecargo = 0.0;
+    if (recargoSeleccionado > 0) {
+      montoRecargo = (recargoSeleccionado / 100) * totalSinRecargo;
+    }
+
+    return totalSinRecargo + montoRecargo;
+  }
+
+  // Validar el monto ingresado
+  void _validarMonto() {
+    if (_montoInputController.text.isEmpty) {
+      setState(() {
+        _errorMonto = null;
+        _montoValido = false;
+      });
+      return;
+    }
+
+    double? monto = double.tryParse(_montoInputController.text);
+    if (monto == null) {
+      setState(() {
+        _errorMonto = 'Por favor ingrese un monto válido';
+        _montoValido = false;
+      });
+      return;
+    }
+
+    if (monto < _montoTotal) {
+      setState(() {
+        _errorMonto = 'El monto es menor al total a pagar';
+        _montoValido = false;
+      });
+    } else {
+      setState(() {
+        _errorMonto = null;
+        _montoValido = true;
+        // Calcular vuelto
+        _vueltoController.text = (monto - _montoTotal).toStringAsFixed(2);
+      });
+    }
+  }
+
+  // Método para manejar el botón "Paga el total"
+  void _handlePagaElTotal() {
+    // Verificar que se haya seleccionado un tipo y forma de cobro
+    if (tipoCobroSeleccionado == null || formaCobroSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Por favor selecciona método y forma de cobro primero'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Calcular el total con recargo
+    _montoTotal = _calcularTotalConRecargo();
+
+    // Actualizar el campo de monto con el total a pagar
+    setState(() {
+      _montoInputController.text = _montoTotal.toStringAsFixed(2);
+      _vueltoController.text = '0.00';  // Reiniciar el vuelto
+      _errorMonto = null; // Limpiar mensajes de error previos
+      _montoValido = true; // El monto es válido porque es exactamente el total
+    });
   }
 
   // Método para cargar los métodos de pago desde la base de datos
@@ -130,6 +245,21 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
             formaCobroSeleccionada = tipoCobroSeleccionado!.metodosPago.first;
             formaCobroId = formaCobroSeleccionada?.id;
             recargoSeleccionado = formaCobroSeleccionada?.porcentajeRecargo ?? 0.0;
+
+            // Actualizar el estado global con los datos de la forma de pago
+            final productosCubit = context.read<ProductosCubit>();
+            productosCubit.updateFormaPago(
+              formaCobroId,
+              formaCobroSeleccionada?.nombre,
+              recargoSeleccionado
+            );
+
+            // Calcular el total inicial
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                _montoTotal = _calcularTotalConRecargo();
+              });
+            });
           }
         }
 
@@ -223,7 +353,18 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         recargoSeleccionado
       );
 
-      print('Forma de cobro seleccionada: ${newValue?.nombre}, Recargo: $recargoSeleccionado%');
+      // Recalcular el monto total con el nuevo recargo
+      _montoTotal = _calcularTotalConRecargo();
+
+      // Si el campo de monto está vacío, se auto-completa con el total
+      if (_montoInputController.text.isEmpty) {
+        _montoInputController.text = _montoTotal.toStringAsFixed(2);
+      } else {
+        // Si ya hay un monto ingresado, validar si sigue siendo suficiente
+        _validarMonto();
+      }
+
+      print('Forma de cobro seleccionada: ${newValue?.nombre}, Recargo: $recargoSeleccionado%, Total: $_montoTotal');
     });
   }
 
@@ -395,19 +536,24 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                                 children: [
                                   Expanded(
                                     child: TextField(
-                                      keyboardType: TextInputType.number,
+                                      controller: _montoInputController,
+                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                                       decoration: InputDecoration(
                                         labelText:
                                         'Ingresa el monto con el que va a pagar tu cliente',
                                         border: OutlineInputBorder(),
+                                        errorText: _errorMonto,
+                                        errorStyle: TextStyle(color: Colors.red),
+                                        prefixText: '\$ ',
                                       ),
+                                      onChanged: (value) {
+                                        _validarMonto();
+                                      },
                                     ),
                                   ),
                                   SizedBox(width: 8),
                                   ElevatedButton(
-                                    onPressed: () {
-                                      // Acción para llenar con el total
-                                    },
+                                    onPressed: _handlePagaElTotal,
                                     style: ElevatedButton.styleFrom(
                                       padding:
                                       EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -418,12 +564,22 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                               ),
                               SizedBox(height: 12),
                               TextField(
+                                controller: _vueltoController,
                                 readOnly: true,
                                 decoration: InputDecoration(
                                   labelText: 'Vuelto a entregar',
                                   border: OutlineInputBorder(),
+                                  prefixText: '\$ ',
                                 ),
                               ),
+                              if (_errorMonto != null)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    _errorMonto!,
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
