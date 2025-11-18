@@ -79,6 +79,19 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
     // Agregar listeners a los controladores para validación en tiempo real
     _montoInputController.addListener(_validarMonto);
+
+    // Escuchar cambios en el cubit de productos para actualizar el total cuando cambie la lista de precios
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productosCubit = context.read<ProductosCubit>();
+      productosCubit.stream.listen((state) {
+        // Recalcular el total cuando cambia el estado de los productos (incluyendo cambios en la lista de precios)
+        if (mounted) {
+          setState(() {
+            _montoTotal = _calcularTotalConRecargo();
+          });
+        }
+      });
+    });
   }
 
   @override
@@ -103,13 +116,16 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     final productosCubit = context.read<ProductosCubit>();
     double totalSinRecargo = 0.0;
 
+    // Obtener el estado actual del cubit para asegurar datos actualizados
+    final productosState = productosCubit.state;
+
     // Sumar todos los productos
-    for (var producto in productosCubit.state.productosSeleccionados) {
+    for (var producto in productosState.productosSeleccionados) {
       totalSinRecargo += producto.precioFinal ?? 0.0;
     }
 
     // Aplicar descuento general
-    final descuentoGeneral = (productosCubit.state.descuentoGeneral / 100) * totalSinRecargo;
+    final descuentoGeneral = (productosState.descuentoGeneral / 100) * totalSinRecargo;
     totalSinRecargo -= descuentoGeneral;
 
     // Aplicar recargo según la forma de cobro seleccionada
@@ -117,6 +133,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     if (recargoSeleccionado > 0) {
       montoRecargo = (recargoSeleccionado / 100) * totalSinRecargo;
     }
+
+    // Imprimir información para depuración
+    print('Total sin recargo: $totalSinRecargo');
+    print('Recargo aplicado: $montoRecargo (${recargoSeleccionado}%)');
+    print('Total con recargo: ${totalSinRecargo + montoRecargo}');
 
     return totalSinRecargo + montoRecargo;
   }
@@ -600,17 +621,70 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Mostrar recargo en el resumen
-                            // Esto se implementará completo con el ResumenVentaConRecargo
+                            // Mostrar el subtotal (sin recargo)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text('Subtotal'),
+                              trailing: Builder(
+                                builder: (context) {
+                                  final productosCubit = context.read<ProductosCubit>();
+                                  double subtotal = 0.0;
+                                  for (var producto in productosCubit.state.productosSeleccionados) {
+                                    subtotal += producto.precioFinal ?? 0.0;
+                                  }
+                                  // Aplicar descuento general
+                                  final descuentoGeneral = (productosCubit.state.descuentoGeneral / 100) * subtotal;
+                                  subtotal -= descuentoGeneral;
+
+                                  return Text('\$${subtotal.toStringAsFixed(2)}');
+                                },
+                              ),
+                            ),
+
+                            // Mostrar recargo
                             if (recargoSeleccionado > 0)
                               ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(
-                                  'El recargo de ${recargoSeleccionado.toStringAsFixed(1)}% se aplicará al total',
+                                  'Recargo (${recargoSeleccionado.toStringAsFixed(1)}%)',
                                   style: TextStyle(color: Colors.red),
                                 ),
-                                leading: Icon(Icons.warning, color: Colors.orange),
+                                trailing: Builder(
+                                  builder: (context) {
+                                    final productosCubit = context.read<ProductosCubit>();
+                                    double subtotal = 0.0;
+                                    for (var producto in productosCubit.state.productosSeleccionados) {
+                                      subtotal += producto.precioFinal ?? 0.0;
+                                    }
+                                    // Aplicar descuento general
+                                    final descuentoGeneral = (productosCubit.state.descuentoGeneral / 100) * subtotal;
+                                    subtotal -= descuentoGeneral;
+
+                                    // Calcular el recargo
+                                    final montoRecargo = (recargoSeleccionado / 100) * subtotal;
+                                    return Text('\$${montoRecargo.toStringAsFixed(2)}', style: TextStyle(color: Colors.red));
+                                  },
+                                ),
                               ),
+
+                            // Total con recargo
+                            if (recargoSeleccionado > 0)
+                              Divider(),
+
+                            // Total a pagar (con recargo)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text('Total a pagar', style: TextStyle(fontWeight: FontWeight.bold)),
+                              trailing: Builder(
+                                builder: (context) {
+                                  _montoTotal = _calcularTotalConRecargo(); // Actualizar _montoTotal con el valor calculado
+                                  return Text(
+                                    '\$${_montoTotal.toStringAsFixed(2)}',
+                                    style: TextStyle(fontWeight: FontWeight.bold)
+                                  );
+                                }
+                              ),
+                            ),
                           ],
                         ),
                       ),
