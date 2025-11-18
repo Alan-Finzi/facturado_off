@@ -17,6 +17,19 @@ class TipoCobro {
   TipoCobro({required this.id, required this.nombre, required this.metodosPago});
 }
 
+// Estructura para almacenar los resultados del cálculo de total
+class ResultadoCalculo {
+  final double subtotal;
+  final double montoRecargo;
+  final double totalConRecargo;
+
+  ResultadoCalculo({
+    required this.subtotal,
+    required this.montoRecargo,
+    required this.totalConRecargo,
+  });
+}
+
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
 
@@ -115,18 +128,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     super.dispose();
   }
 
-  // Estructura para almacenar los resultados del cálculo de total
-  class ResultadoCalculo {
-    final double subtotal;
-    final double montoRecargo;
-    final double totalConRecargo;
-
-    ResultadoCalculo({
-      required this.subtotal,
-      required this.montoRecargo,
-      required this.totalConRecargo,
-    });
-  }
+  // Esta sección ha sido movida fuera de la clase
 
   // Método centralizado para calcular el total a pagar y todos los valores relacionados
   ResultadoCalculo _calcularTotales() {
