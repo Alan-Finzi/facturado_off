@@ -87,7 +87,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         // Recalcular el total cuando cambia el estado de los productos (incluyendo cambios en la lista de precios)
         if (mounted) {
           setState(() {
-            _montoTotal = _calcularTotalConRecargo();
+            // Usar el método centralizado para calcular el total
+            final resultados = _calcularTotales();
+            _montoTotal = resultados.totalConRecargo;
+
+            print('ProductosCubit actualizado - Nuevo total: $_montoTotal');
           });
         }
       });
@@ -111,35 +115,60 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     super.dispose();
   }
 
-  // Método para calcular el total a pagar incluyendo recargo
-  double _calcularTotalConRecargo() {
+  // Estructura para almacenar los resultados del cálculo de total
+  class ResultadoCalculo {
+    final double subtotal;
+    final double montoRecargo;
+    final double totalConRecargo;
+
+    ResultadoCalculo({
+      required this.subtotal,
+      required this.montoRecargo,
+      required this.totalConRecargo,
+    });
+  }
+
+  // Método centralizado para calcular el total a pagar y todos los valores relacionados
+  ResultadoCalculo _calcularTotales() {
     final productosCubit = context.read<ProductosCubit>();
-    double totalSinRecargo = 0.0;
 
     // Obtener el estado actual del cubit para asegurar datos actualizados
     final productosState = productosCubit.state;
 
-    // Sumar todos los productos
+    // Paso 1: Calcular subtotal (suma de productos)
+    double subtotal = 0.0;
     for (var producto in productosState.productosSeleccionados) {
-      totalSinRecargo += producto.precioFinal ?? 0.0;
+      subtotal += producto.precioFinal ?? 0.0;
     }
 
-    // Aplicar descuento general
-    final descuentoGeneral = (productosState.descuentoGeneral / 100) * totalSinRecargo;
-    totalSinRecargo -= descuentoGeneral;
+    // Paso 2: Aplicar descuento general
+    final descuentoGeneral = (productosState.descuentoGeneral / 100) * subtotal;
+    subtotal -= descuentoGeneral;
 
-    // Aplicar recargo según la forma de cobro seleccionada
+    // Paso 3: Calcular recargo si aplica
     double montoRecargo = 0.0;
     if (recargoSeleccionado > 0) {
-      montoRecargo = (recargoSeleccionado / 100) * totalSinRecargo;
+      montoRecargo = (recargoSeleccionado / 100) * subtotal;
     }
 
-    // Imprimir información para depuración
-    print('Total sin recargo: $totalSinRecargo');
-    print('Recargo aplicado: $montoRecargo (${recargoSeleccionado}%)');
-    print('Total con recargo: ${totalSinRecargo + montoRecargo}');
+    // Paso 4: Calcular total con recargo
+    final totalConRecargo = subtotal + montoRecargo;
 
-    return totalSinRecargo + montoRecargo;
+    // Imprimir información para depuración
+    print('Subtotal (con descuento): $subtotal');
+    print('Recargo aplicado: $montoRecargo (${recargoSeleccionado}%)');
+    print('Total con recargo: $totalConRecargo');
+
+    return ResultadoCalculo(
+      subtotal: subtotal,
+      montoRecargo: montoRecargo,
+      totalConRecargo: totalConRecargo,
+    );
+  }
+
+  // Método para obtener solo el total con recargo (para compatibilidad)
+  double _calcularTotalConRecargo() {
+    return _calcularTotales().totalConRecargo;
   }
 
   // Validar el monto ingresado
@@ -189,8 +218,9 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       return;
     }
 
-    // Calcular el total con recargo
-    _montoTotal = _calcularTotalConRecargo();
+    // Calcular el total con recargo usando el método centralizado
+    final resultados = _calcularTotales();
+    _montoTotal = resultados.totalConRecargo;
 
     // Actualizar el campo de monto con el total a pagar
     setState(() {
@@ -374,8 +404,9 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         recargoSeleccionado
       );
 
-      // Recalcular el monto total con el nuevo recargo
-      _montoTotal = _calcularTotalConRecargo();
+      // Recalcular el monto total con el nuevo recargo usando el método centralizado
+      final resultados = _calcularTotales();
+      _montoTotal = resultados.totalConRecargo;
 
       // Si el campo de monto está vacío, se auto-completa con el total
       if (_montoInputController.text.isEmpty) {
@@ -621,69 +652,51 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Mostrar el subtotal (sin recargo)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text('Subtotal'),
-                              trailing: Builder(
-                                builder: (context) {
-                                  final productosCubit = context.read<ProductosCubit>();
-                                  double subtotal = 0.0;
-                                  for (var producto in productosCubit.state.productosSeleccionados) {
-                                    subtotal += producto.precioFinal ?? 0.0;
-                                  }
-                                  // Aplicar descuento general
-                                  final descuentoGeneral = (productosCubit.state.descuentoGeneral / 100) * subtotal;
-                                  subtotal -= descuentoGeneral;
+                            // Usar nuestro método centralizado para todos los cálculos
+                            Builder(
+                              builder: (context) {
+                                final resultados = _calcularTotales();
+                                _montoTotal = resultados.totalConRecargo; // Actualizar _montoTotal
 
-                                  return Text('\$${subtotal.toStringAsFixed(2)}');
-                                },
-                              ),
-                            ),
+                                return Column(
+                                  children: [
+                                    // Subtotal
+                                    ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text('Subtotal'),
+                                      trailing: Text('\$${resultados.subtotal.toStringAsFixed(2)}'),
+                                    ),
 
-                            // Mostrar recargo
-                            if (recargoSeleccionado > 0)
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(
-                                  'Recargo (${recargoSeleccionado.toStringAsFixed(1)}%)',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                                trailing: Builder(
-                                  builder: (context) {
-                                    final productosCubit = context.read<ProductosCubit>();
-                                    double subtotal = 0.0;
-                                    for (var producto in productosCubit.state.productosSeleccionados) {
-                                      subtotal += producto.precioFinal ?? 0.0;
-                                    }
-                                    // Aplicar descuento general
-                                    final descuentoGeneral = (productosCubit.state.descuentoGeneral / 100) * subtotal;
-                                    subtotal -= descuentoGeneral;
+                                    // Mostrar recargo si aplica
+                                    if (recargoSeleccionado > 0)
+                                      ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: Text(
+                                          'Recargo (${recargoSeleccionado.toStringAsFixed(1)}%)',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                        trailing: Text(
+                                          '\$${resultados.montoRecargo.toStringAsFixed(2)}',
+                                          style: TextStyle(color: Colors.red)
+                                        ),
+                                      ),
 
-                                    // Calcular el recargo
-                                    final montoRecargo = (recargoSeleccionado / 100) * subtotal;
-                                    return Text('\$${montoRecargo.toStringAsFixed(2)}', style: TextStyle(color: Colors.red));
-                                  },
-                                ),
-                              ),
+                                    // Separador si hay recargo
+                                    if (recargoSeleccionado > 0)
+                                      Divider(),
 
-                            // Total con recargo
-                            if (recargoSeleccionado > 0)
-                              Divider(),
-
-                            // Total a pagar (con recargo)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text('Total a pagar', style: TextStyle(fontWeight: FontWeight.bold)),
-                              trailing: Builder(
-                                builder: (context) {
-                                  _montoTotal = _calcularTotalConRecargo(); // Actualizar _montoTotal con el valor calculado
-                                  return Text(
-                                    '\$${_montoTotal.toStringAsFixed(2)}',
-                                    style: TextStyle(fontWeight: FontWeight.bold)
-                                  );
-                                }
-                              ),
+                                    // Total a pagar (siempre incluye recargo si aplica)
+                                    ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text('Total a pagar', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      trailing: Text(
+                                        '\$${resultados.totalConRecargo.toStringAsFixed(2)}',
+                                        style: TextStyle(fontWeight: FontWeight.bold)
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
                             ),
                           ],
                         ),
