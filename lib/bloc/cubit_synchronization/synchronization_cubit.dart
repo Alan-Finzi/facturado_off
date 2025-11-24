@@ -17,32 +17,34 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
   Future<void> startSynchronization(String token, String email, LoginCubit loginCubit) async {
     try {
-
       emit(SynchronizationInProgress(progress: 0.0, currentTask: "Iniciando sincronización"));
 
       await apiServices.fetchUsersData(token, email, loginCubit);
-      emit(const SynchronizationInProgress(progress: 0.1, currentTask: "Sincronización de Productos"));
+      emit(const SynchronizationInProgress(progress: 0.1, currentTask: "Sincronización de Usuarios"));
 
       await apiServices.fetchProductosIvas(token);
       emit(const SynchronizationInProgress(progress: 0.2, currentTask: "Sincronización Productos Ivas"));
 
-      emit(const SynchronizationInProgress(progress: 0.3, currentTask: "Sincronización en progreso"));
-
       await apiServices.fetchDatosFacturacion(token);
-      emit(const SynchronizationInProgress(progress: 0.4, currentTask: "Sincronización de Productos" ));
+      emit(const SynchronizationInProgress(progress: 0.3, currentTask: "Sincronización Datos Facturación"));
 
       await apiServices.fetchVariaciones(token); // Esta llamada obtiene todos los productos con su stock y precios
-      emit(const SynchronizationInProgress(progress: 0.5, currentTask: "Sincronización Datos Facturacion" ));
-
-      emit(const SynchronizationInProgress(progress: 0.6, currentTask: "Sincronización en progreso"));
+      emit(const SynchronizationInProgress(progress: 0.5, currentTask: "Sincronización de Productos"));
 
       await apiServices.fetchClientesMostrador(token);
-      emit(const SynchronizationInProgress(progress: 0.7, currentTask: "Sincronización Clientes"));
-
-      emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización en progreso"));
+      emit(const SynchronizationInProgress(progress: 0.6, currentTask: "Sincronización Clientes"));
 
       await apiServices.fetchCategorias(token);
-      emit(const SynchronizationInProgress(progress: 0.9, currentTask: "Sincronización Categorías"));
+      emit(const SynchronizationInProgress(progress: 0.7, currentTask: "Sincronización Categorías"));
+
+      // Agregar la sincronización de métodos de pago
+      try {
+        emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización Métodos de Pago"));
+        await apiServices.fetchMetodosPago(token);
+      } catch (e) {
+        // Si falla la obtención de métodos de pago, registrar pero continuar con la sincronización
+        print('Error al sincronizar métodos de pago: $e');
+      }
 
       emit(SynchronizationInProgress(progress: 1, currentTask: "Sincronización completada"));
       final directory = await getApplicationDocumentsDirectory();

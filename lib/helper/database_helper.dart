@@ -6,11 +6,14 @@ import '../models/categorias_model.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/datos_facturacion_model.dart';
 import '../models/lista_precio_model.dart';
+import '../models/payment_method.dart';
+import '../models/payment_provider.dart';
 import '../models/producto.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_lista_precios_model.dart';
 import '../models/productos_maestro.dart';
 import '../models/productos_stock_sucursales.dart';
+import '../models/sync_queue.dart';
 import '../models/user.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
@@ -112,6 +115,58 @@ class DatabaseHelper {
         image TEXT,
         casa_central_user_id INTEGER,
         id_lista_precio INTEGER
+      )
+    ''');
+
+    // Tabla para proveedores de métodos de pago
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS payment_providers (
+        id INTEGER PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        creador TEXT,
+        creador_id INTEGER,
+        tipo INTEGER,
+        muestra_sucursales INTEGER,
+        comercio_id INTEGER,
+        cbu TEXT,
+        cuit TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // Tabla para métodos de pago
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS payment_methods (
+        id INTEGER PRIMARY KEY,
+        provider_id INTEGER,
+        nombre TEXT NOT NULL,
+        categoria INTEGER,
+        cuenta INTEGER,
+        recargo REAL NOT NULL,
+        descripcion TEXT,
+        comercio_id INTEGER,
+        creador_id INTEGER,
+        muestra_sucursales INTEGER,
+        acreditacion_inmediata INTEGER,
+        eliminado INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (provider_id) REFERENCES payment_providers(id)
+      )
+    ''');
+
+    // Tabla para la cola de sincronización
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        resource_type TEXT NOT NULL,
+        resource_id INTEGER NOT NULL,
+        operation TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        attempts INTEGER DEFAULT 0,
+        error_message TEXT
       )
     ''');
 
@@ -916,6 +971,205 @@ class DatabaseHelper {
    final db = await instance.database;
    await db.update('clientes_mostrador', {'modificado': 0}, where: 'id_cliente = ?', whereArgs: [idCliente]);
  }
+
+  /// Métodos para payment_providers
+
+  /// Inserta un proveedor de pago y sus métodos de pago asociados
+  Future<void> insertPaymentProvider(Map<String, dynamic> providerJson) async {
+    try {
+      final db = await database;
+      final provider = PaymentProvider.fromJson(providerJson);
+
+      // Inserta el proveedor usando UPSERT (replace)
+      await db.insert(
+        'payment_providers',
+        provider.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      // Si tiene métodos de pago asociados, insértelos también
+      if (provider.metodosPago != null && provider.metodosPago!.isNotEmpty) {
+        for (final method in provider.metodosPago!) {
+          await db.insert(
+            'payment_methods',
+            method.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+
+          // Agregar a la cola de sincronización
+          await insertSyncQueueItem(
+            resourceType: 'payment_method',
+            resourceId: method.id,
+            operation: 'upsert',
+            payload: jsonEncode(method.toMap()),
+          );
+        }
+      }
+
+      // Reportar progreso
+      print('Proveedor de pago guardado: ${provider.nombre} (+1%)');
+
+    } catch (e) {
+      print('Error al insertar proveedor de pago: $e');
+      rethrow;
+    }
+  }
+
+  /// Obtiene todos los proveedores de pago
+  Future<List<PaymentProvider>> getPaymentProviders() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('payment_providers');
+
+    final List<PaymentProvider> providers = [];
+
+    for (final providerMap in maps) {
+      final provider = PaymentProvider.fromJson(providerMap);
+
+      // Obtener los métodos de pago para este proveedor
+      final methodsMaps = await db.query(
+        'payment_methods',
+        where: 'provider_id = ?',
+        whereArgs: [provider.id],
+      );
+
+      final methods = methodsMaps
+          .map((methodMap) => PaymentMethod.fromJson(methodMap))
+          .toList();
+
+      // Crear un nuevo proveedor con los métodos incluidos
+      providers.add(provider.copyWith(metodosPago: methods));
+    }
+
+    return providers;
+  }
+
+  /// Obtiene un proveedor de pago por ID con sus métodos de pago
+  Future<PaymentProvider?> getPaymentProviderById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'payment_providers',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+
+    final provider = PaymentProvider.fromJson(maps.first);
+
+    // Obtener los métodos de pago para este proveedor
+    final methodsMaps = await db.query(
+      'payment_methods',
+      where: 'provider_id = ?',
+      whereArgs: [id],
+    );
+
+    final methods = methodsMaps
+        .map((methodMap) => PaymentMethod.fromJson(methodMap))
+        .toList();
+
+    return provider.copyWith(metodosPago: methods);
+  }
+
+  /// Métodos para payment_methods
+
+  /// Inserta o actualiza un método de pago
+  Future<void> insertPaymentMethod(PaymentMethod method) async {
+    final db = await database;
+
+    // Insertar el método usando UPSERT
+    await db.insert(
+      'payment_methods',
+      method.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    // Agregar a la cola de sincronización
+    await insertSyncQueueItem(
+      resourceType: 'payment_method',
+      resourceId: method.id,
+      operation: 'upsert',
+      payload: jsonEncode(method.toMap()),
+    );
+  }
+
+  /// Obtiene todos los métodos de pago
+  Future<List<PaymentMethod>> getPaymentMethods() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('payment_methods');
+
+    return maps.map((map) => PaymentMethod.fromJson(map)).toList();
+  }
+
+  /// Obtiene un método de pago por ID
+  Future<PaymentMethod?> getPaymentMethodById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'payment_methods',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    return maps.isNotEmpty ? PaymentMethod.fromJson(maps.first) : null;
+  }
+
+  /// Métodos para sync_queue
+
+  /// Inserta un elemento en la cola de sincronización
+  Future<int> insertSyncQueueItem({
+    required String resourceType,
+    required int resourceId,
+    required String operation,
+    required String payload,
+  }) async {
+    final db = await database;
+
+    final syncItem = SyncQueue(
+      resourceType: resourceType,
+      resourceId: resourceId,
+      operation: operation,
+      payload: payload,
+      status: 'pending',
+      createdAt: DateTime.now().toIso8601String(),
+    );
+
+    return await db.insert('sync_queue', syncItem.toMap());
+  }
+
+  /// Obtiene elementos pendientes en la cola de sincronización
+  Future<List<SyncQueue>> getPendingSyncItems() async {
+    final db = await database;
+    final maps = await db.query(
+      'sync_queue',
+      where: 'status = ?',
+      whereArgs: ['pending'],
+      orderBy: 'created_at ASC', // Los más antiguos primero
+    );
+
+    return maps.map((map) => SyncQueue.fromJson(map)).toList();
+  }
+
+  /// Actualiza el estado de un elemento en la cola de sincronización
+  Future<void> updateSyncQueueItemStatus(int id, SyncQueue updatedItem) async {
+    final db = await database;
+
+    await db.update(
+      'sync_queue',
+      updatedItem.toMap(),
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Elimina elementos completados de la cola de sincronización
+  Future<int> cleanCompletedSyncItems() async {
+    final db = await database;
+
+    return await db.delete(
+      'sync_queue',
+      where: 'status = ?',
+      whereArgs: ['done'],
+    );
+  }
 
 
   Future<void> updateCliente(ClientesMostrador cliente) async {

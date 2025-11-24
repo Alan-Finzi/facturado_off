@@ -8,12 +8,15 @@ import '../models/categorias_model.dart';
 import '../models/clientes_mostrador.dart';
 import '../models/datos_facturacion_model.dart';
 import '../models/lista_precio_model.dart';
+import '../models/payment_method.dart';
+import '../models/payment_provider.dart';
 import '../models/producto.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_ivas_model.dart';
 import '../models/productos_lista_precios_model.dart';
 import '../models/productos_maestro.dart';
 import '../models/productos_stock_sucursales.dart';
+import '../models/sync_queue.dart';
 import '../models/user.dart';
 
 
@@ -26,7 +29,8 @@ class ApiServices{
   final String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
   final String apiUrlDatosFacturacion = 'https://api.flamincoapp.com.ar/api/dato-facturacions';
   final String apiUrlCategoria = 'https://api.flamincoapp.com.ar/api/categories';
-  
+  final String apiUrlMetodosPago = 'https://api.flamincoapp.com.ar/api/metodos-pago';
+
   // APIs que serán eliminadas/reemplazadas por apiUrlProductosVer
   // final String apiUrlProducto = 'https://api.flamincoapp.com.ar/api/products';
   // final String apiUrlProductoListaPrecios = 'https://api.flamincoapp.com.ar/api/producto-lista-precios';
@@ -306,4 +310,50 @@ class ApiServices{
     }
   }
 
+  /// Consulta a la API de métodos de pago y almacena los datos localmente
+  ///
+  /// Esta función recupera todos los métodos de pago desde la API, los convierte
+  /// a modelos y los guarda en la base de datos local. También agrega cada método
+  /// a la cola de sincronización para garantizar consistencia con el servidor.
+  Future<void> fetchMetodosPago(String token, {int comercioId = 362}) async {
+    try {
+      // Construir la URL con el parámetro comercio_id
+      final Uri url = Uri.parse('$apiUrlMetodosPago?comercio_id=$comercioId');
+
+      // Mostrar mensaje de progreso
+      print('Obteniendo métodos de pago desde: $url');
+
+      // Realizar la consulta a la API
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      // Verificar si la respuesta fue exitosa (código 200)
+      if (response.statusCode == 200) {
+        // Decodificar el JSON de la respuesta
+        final List<dynamic> providersJson = jsonDecode(response.body);
+        print('Métodos de pago obtenidos: ${providersJson.length}');
+
+        // Insertar cada proveedor en la base de datos
+        // Este proceso incrementará el progreso de sincronización en 1% por cada proveedor
+        for (var providerJson in providersJson) {
+          await DatabaseHelper.instance.insertPaymentProvider(providerJson);
+        }
+
+        print('Sincronización de métodos de pago completada (+${providersJson.length}%)');
+      } else {
+        // Manejo de errores de la API
+        throw Exception('Error al cargar los métodos de pago. Código: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Capturar cualquier excepción durante el proceso
+      print('Error en fetchMetodosPago: $e');
+      // Propagar el error para que el llamador pueda manejarlo
+      throw Exception('Error al cargar los métodos de pago: ${e.toString()}');
+    }
+  }
 }

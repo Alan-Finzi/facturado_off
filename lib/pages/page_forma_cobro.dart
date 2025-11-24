@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
+import '../bloc/cubit_productos/productos_cubit.dart';
+import '../helper/database_helper.dart';
 import '../models/clientes_mostrador.dart';
 import '../widget/buscar_cliente.dart';
+import '../widget/payment_methods_form_widget.dart';
+import '../widget/resumen_widget.dart';
 
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
@@ -34,217 +39,145 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Forma de Cobro'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            // Sección Cliente - Usando el widget de búsqueda unificado
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: BuscarClienteWidget(
-                    clearProductsOnSelection: false, // No limpiar productos al seleccionar
-                  ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Vendedor'),
-                      ElevatedButton.icon(
-                        icon: Icon(Icons.person),
-                        label: Text('DEMO'),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return BlocProvider(
+      create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance),
+      child: Builder(
+        builder: (context) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Forma de Cobro'),
             ),
-            SizedBox(height: 16.0),
-
-            // Sección Forma de Cobro
-            Text(
-              'Forma de cobro',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.0),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        isPagoParcial = false;
-                      });
-                    },
-                    child: Text('Pago total'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: !isPagoParcial ? Colors.grey : null,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.0),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        isPagoParcial = true;
-                      });
-                    },
-                    child: Text('Pago parcial / pago dividido'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPagoParcial ? Colors.grey : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.0),
-
-            if (isPagoParcial)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Agregar Método de Pago
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      '+ Agregar Método de Pago',
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                  ),
-                  SizedBox(height: 16.0),
-                  const Row(
-                    children: [
-                      // Monto Total
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Monto Total',
-                            prefixText: '\$ ',
-                            border: OutlineInputBorder(),
+            body: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Sección Cliente - Usando el widget de búsqueda unificado
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: BuscarClienteWidget(
+                            clearProductsOnSelection: false, // No limpiar productos al seleccionar
                           ),
-                          keyboardType: TextInputType.number,
+                        ),
+                        SizedBox(width: 8.0),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Vendedor'),
+                              ElevatedButton.icon(
+                                icon: Icon(Icons.person),
+                                label: Text('DEMO'),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.0),
+
+                    // Mostrar resumen de productos seleccionados
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Resumen de venta',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            SizedBox(height: 8.0),
+                            ResumenTabla(),
+                          ],
                         ),
                       ),
-                      SizedBox(width: 16.0),
-                      // A Cobrar Total
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            labelText: 'A cobrar total',
-                            prefixText: '\$ ',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
+                    ),
+                    SizedBox(height: 16.0),
+
+                    // Sección Forma de Cobro (usando el widget especializado)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: PaymentMethodsFormWidget(),
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 8.0),
-                  Text('Deuda: \$ 0,00'),
-                ],
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Monto a Pagar
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText:
-                      'Ingresa el monto con el que va a pagar tu cliente',
-                      border: OutlineInputBorder(),
                     ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  SizedBox(height: 8.0),
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Vuelto a entregar',
-                      border: OutlineInputBorder(),
+                    SizedBox(height: 16.0),
+
+                    // Sección Tipo de Envío
+                    Text(
+                      'Tipo de envío',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    readOnly: true,
-                  ),
-                ],
+                    SizedBox(height: 8.0),
+                    RadioListTile(
+                      value: 0,
+                      groupValue: _selectedTipoEnvio,
+                      onChanged: (int? value) {
+                        setState(() {
+                          _selectedTipoEnvio = value ?? 0;
+                          _datosEnvio = {'tipo_envio': 'retiro_sucursal'};
+                        });
+                      },
+                      title: Text('Retiro por sucursal'),
+                    ),
+                    RadioListTile(
+                      value: 1,
+                      groupValue: _selectedTipoEnvio,
+                      onChanged: (int? value) {
+                        setState(() {
+                          _selectedTipoEnvio = value ?? 1;
+                        });
+                        _validarDomicilioCliente();
+                      },
+                      title: Text('Envío a domicilio del cliente'),
+                    ),
+                    RadioListTile(
+                      value: 2,
+                      groupValue: _selectedTipoEnvio,
+                      onChanged: (int? value) {
+                        setState(() {
+                          _selectedTipoEnvio = value ?? 2;
+                        });
+                        _mostrarFormularioDomicilio();
+                      },
+                      title: Text('Envío a otro domicilio'),
+                    ),
+
+                    // Mostrar información según tipo de envío seleccionado
+                    if (_selectedTipoEnvio == 1) _buildDomicilioClienteInfo(),
+                    if (_selectedTipoEnvio == 2) _buildOtroDomicilioInfo(),
+                    SizedBox(height: 20),
+
+                    // Botones Anterior y Guardar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                          onPressed: widget.onBackPressed, // Usamos el callback aquí
+                          child: Text('Anterior'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _guardarVentaConEnvio();
+                          },
+                          child: Text('Guardar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            SizedBox(height: 16.0),
-
-            // Sección Tipo de Envío
-            Text(
-              'Tipo de envío',
-              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8.0),
-            RadioListTile(
-              value: 0,
-              groupValue: _selectedTipoEnvio,
-              onChanged: (int? value) {
-                setState(() {
-                  _selectedTipoEnvio = value ?? 0;
-                  _datosEnvio = {'tipo_envio': 'retiro_sucursal'};
-                });
-              },
-              title: Text('Retiro por sucursal'),
-            ),
-            RadioListTile(
-              value: 1,
-              groupValue: _selectedTipoEnvio,
-              onChanged: (int? value) {
-                setState(() {
-                  _selectedTipoEnvio = value ?? 1;
-                });
-                _validarDomicilioCliente();
-              },
-              title: Text('Envío a domicilio del cliente'),
-            ),
-            RadioListTile(
-              value: 2,
-              groupValue: _selectedTipoEnvio,
-              onChanged: (int? value) {
-                setState(() {
-                  _selectedTipoEnvio = value ?? 2;
-                });
-                _mostrarFormularioDomicilio();
-              },
-              title: Text('Envío a otro domicilio'),
-            ),
-
-            // Mostrar información según tipo de envío seleccionado
-            if (_selectedTipoEnvio == 1) _buildDomicilioClienteInfo(),
-            if (_selectedTipoEnvio == 2) _buildOtroDomicilioInfo(),
-            SizedBox(height: 20),
-
-            // Botones Anterior y Guardar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: widget.onBackPressed, // Usamos el callback aquí
-                  child: Text('Anterior'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _guardarVentaConEnvio();
-                  },
-                  child: Text('Guardar'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      )),
+          );
+        }
+      ),
     );
   }
 
