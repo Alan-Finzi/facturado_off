@@ -35,7 +35,7 @@ class DatabaseHelper {
   /// La base de datos se mantiene como singleton para eficiencia
   Future<Database> get database async {
     if (_database != null) return _database!;
-    // Comentamos la línea que elimina la base de datos para que persistan los datos
+    // Si se requiere limpiar la base de datos al inicio, descomente la siguiente línea
     // await deleteDatabaseIfExists();
     _database = await _initDatabase();
     return _database!;
@@ -63,105 +63,203 @@ class DatabaseHelper {
     return _queryCache[key];
   }
 
+  /// Elimina la base de datos existente para comenzar desde cero
+  /// Puede ser útil durante pruebas o cuando hay cambios importantes de esquema
   Future<void> deleteDatabaseIfExists() async {
-    String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
-    await deleteDatabase(path);
+    try {
+      // Cerrar la base de datos si está abierta
+      if (_database != null) {
+        await _database!.close();
+        _database = null;
+      }
+
+      // Eliminar el archivo de la base de datos
+      String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
+      bool exists = await databaseExists(path);
+
+      if (exists) {
+        print('Eliminando base de datos existente en: $path');
+        await deleteDatabase(path);
+        print('Base de datos eliminada correctamente');
+      } else {
+        print('No existe base de datos para eliminar en: $path');
+      }
+
+      // Limpiar caché
+      _queryCache.clear();
+      _cacheTimestamps.clear();
+    } catch (e) {
+      print('Error al eliminar la base de datos: $e');
+    }
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
-    print('La base de datos se guarda en la siguiente ruta: $path');
+    try {
+      String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
+      print('La base de datos se guarda en la siguiente ruta: $path');
 
-    return await  openDatabase(
-      path,
-      version: 28, // Incrementamos la versión para forzar la actualización de tablas de métodos de pago
-      onCreate: (db, version) async {
-        await _createTables(db);
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 24 || oldVersion < 28) {
-          await _createTables(db); // Llama a _createTables para crear las tablas nuevas
-        }
-
-        // Asegurarse de que las tablas de payment existan
-        if (oldVersion < 28) {
+      return await openDatabase(
+        path,
+        version: 29, // Incrementamos la versión para forzar la actualización de tablas
+        onCreate: (db, version) async {
+          print('Creando base de datos desde cero - versión $version');
           try {
-            // Forzar creación de tablas de métodos de pago
-            await db.execute('''
-              CREATE TABLE IF NOT EXISTS payment_providers (
-                id INTEGER PRIMARY KEY,
-                nombre TEXT NOT NULL,
-                creador TEXT,
-                creador_id INTEGER,
-                tipo INTEGER,
-                muestra_sucursales INTEGER,
-                comercio_id INTEGER,
-                cbu TEXT,
-                cuit TEXT,
-                updated_at TEXT
-              )
-            ''');
-
-            await db.execute('''
-              CREATE TABLE IF NOT EXISTS payment_methods (
-                id INTEGER PRIMARY KEY,
-                provider_id INTEGER,
-                nombre TEXT NOT NULL,
-                categoria INTEGER,
-                cuenta INTEGER,
-                recargo REAL NOT NULL,
-                descripcion TEXT,
-                comercio_id INTEGER,
-                creador_id INTEGER,
-                muestra_sucursales INTEGER,
-                acreditacion_inmediata INTEGER,
-                eliminado INTEGER DEFAULT 0,
-                created_at TEXT,
-                updated_at TEXT,
-                FOREIGN KEY (provider_id) REFERENCES payment_providers(id)
-              )
-            ''');
-
-            print('Tablas de métodos de pago verificadas/creadas con éxito');
+            await _createTables(db);
+            print('Tablas creadas con éxito');
           } catch (e) {
-            print('Error al crear tablas de métodos de pago: $e');
+            print('Error al crear tablas: $e');
+            throw e; // Re-lanzamos el error para manejarlo en el nivel superior
           }
-        }
-      },
-    );
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          print('Actualizando base de datos: $oldVersion → $newVersion');
+
+          // Manejo específico según la versión antigua
+          if (oldVersion < 29) {
+            try {
+              // En lugar de recrear todas las tablas, verificamos si existen y creamos sólo las faltantes
+              // Esto evitará los errores de "table already exists"
+              print('Verificando y actualizando tablas existentes');
+              await _updateTablesIfNeeded(db);
+
+              print('Base de datos actualizada exitosamente');
+            } catch (e) {
+              print('Error al actualizar tablas: $e');
+              // Si hay un error grave, intentamos recrear todas las tablas
+              try {
+                print('Intentando recrear todas las tablas después del error...');
+                await _dropAllTables(db);
+                await _createTables(db);
+                print('Recreación de tablas completada con éxito');
+              } catch (recreationError) {
+                print('Error al recrear tablas: $recreationError');
+                throw recreationError;
+              }
+            }
+          }
+        },
+        onOpen: (db) {
+          print('Base de datos abierta correctamente');
+        },
+        // Manejo de errores durante la apertura de la base de datos
+        onError: (error) {
+          print('Error al abrir la base de datos: $error');
+          return true; // Continuar a pesar del error
+        },
+      );
+    } catch (e) {
+      print('Error crítico al inicializar la base de datos: $e');
+      rethrow; // Propagamos el error al llamador
+    }
+  }
+
+  /// Método auxiliar para eliminar todas las tablas en caso de problemas graves
+  Future<void> _dropAllTables(Database db) async {
+    print('Eliminando todas las tablas existentes...');
+
+    try {
+      // Obtener lista de todas las tablas
+      final List<Map<String, dynamic>> tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'");
+
+      for (var table in tables) {
+        final tableName = table['name'];
+        print('Eliminando tabla: $tableName');
+        await db.execute('DROP TABLE IF EXISTS $tableName');
+      }
+
+      print('Todas las tablas fueron eliminadas correctamente');
+    } catch (e) {
+      print('Error al eliminar tablas: $e');
+      throw e;
+    }
+  }
+
+  /// Método para verificar y actualizar tablas existentes sin recrearlas
+  Future<void> _updateTablesIfNeeded(Database db) async {
+    try {
+      // Verificar y crear tablas de payment providers y methods con IF NOT EXISTS
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS payment_providers (
+          id INTEGER PRIMARY KEY,
+          nombre TEXT NOT NULL,
+          creador TEXT,
+          creador_id INTEGER,
+          tipo INTEGER,
+          muestra_sucursales INTEGER,
+          comercio_id INTEGER,
+          cbu TEXT,
+          cuit TEXT,
+          updated_at TEXT
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS payment_methods (
+          id INTEGER PRIMARY KEY,
+          provider_id INTEGER,
+          nombre TEXT NOT NULL,
+          categoria INTEGER,
+          cuenta INTEGER,
+          recargo REAL NOT NULL,
+          descripcion TEXT,
+          comercio_id INTEGER,
+          creador_id INTEGER,
+          muestra_sucursales INTEGER,
+          acreditacion_inmediata INTEGER,
+          eliminado INTEGER DEFAULT 0,
+          created_at TEXT,
+          updated_at TEXT,
+          FOREIGN KEY (provider_id) REFERENCES payment_providers(id)
+        )
+      ''');
+
+      print('Tablas de métodos de pago verificadas/creadas con éxito');
+    } catch (e) {
+      print('Error al actualizar tablas: $e');
+      throw e;
+    }
+  }
   }
 
 
 
   Future<void> _createTables(Database db) async {
-    await db.execute('''
-      CREATE TABLE users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT,
-        password TEXT,
-        nombre_usuario TEXT,
-        apellido_usuario TEXT,
-        cantidad_sucursales INTEGER,
-        cantidad_empleados INTEGER,
-        name TEXT,
-        sucursal INTEGER,
-        email TEXT,
-        profile TEXT,
-        status TEXT,
-        external_auth TEXT,
-        external_id TEXT,
-        email_verified_at TEXT,
-        confirmed_at TEXT,
-        plan INTEGER,
-        last_login TEXT,
-        cantidad_login INTEGER,
-        comercio_id INTEGER,
-        cliente_id INTEGER,
-        image TEXT,
-        casa_central_user_id INTEGER,
-        id_lista_precio INTEGER
-      )
-    ''');
+    try {
+      // Tabla users - Agregamos IF NOT EXISTS para evitar errores al recrear
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT,
+          password TEXT,
+          nombre_usuario TEXT,
+          apellido_usuario TEXT,
+          cantidad_sucursales INTEGER,
+          cantidad_empleados INTEGER,
+          name TEXT,
+          sucursal INTEGER,
+          email TEXT,
+          profile TEXT,
+          status TEXT,
+          external_auth TEXT,
+          external_id TEXT,
+          email_verified_at TEXT,
+          confirmed_at TEXT,
+          plan INTEGER,
+          last_login TEXT,
+          cantidad_login INTEGER,
+          comercio_id INTEGER,
+          cliente_id INTEGER,
+          image TEXT,
+          casa_central_user_id INTEGER,
+          id_lista_precio INTEGER
+        )
+      ''');
+      print('Tabla users creada/verificada con éxito');
+    } catch (e) {
+      print('Error al crear tabla users: $e');
+      throw e;
+    }
 
     // Tabla para proveedores de métodos de pago
     await db.execute('''
@@ -201,101 +299,126 @@ class DatabaseHelper {
     ''');
 
     // Tabla para la cola de sincronización
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS sync_queue (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        resource_type TEXT NOT NULL,
-        resource_id INTEGER NOT NULL,
-        operation TEXT NOT NULL,
-        payload TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        attempts INTEGER DEFAULT 0,
-        error_message TEXT
-      )
-    ''');
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_queue (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          resource_type TEXT NOT NULL,
+          resource_id INTEGER NOT NULL,
+          operation TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          attempts INTEGER DEFAULT 0,
+          error_message TEXT
+        )
+      ''');
+      print('Tabla sync_queue creada/verificada con éxito');
+    } catch (e) {
+      print('Error al crear tabla sync_queue: $e');
+      // Continuamos a pesar del error para crear otras tablas
+    }
 
-    await db.execute('''
-      CREATE TABLE Clientes_mostrador(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        creador_id INTEGER,
-        id_cliente TEXT,
-        activo INTEGER,
-        nombre TEXT,
-        sucursal_id INTEGER,
-        lista_precio INTEGER,
-        comercio_id INTEGER,
-        last_sale TEXT,
-        recontacto TEXT,
-        plazo_cuenta_corriente INTEGER,
-        monto_maximo_cuenta_corriente REAL,
-        saldo_inicial_cuenta_corriente REAL,
-        fecha_inicial_cuenta_corriente TEXT,
-        pais TEXT,
-        codigo_postal TEXT,
-        depto TEXT,
-        piso TEXT,
-        altura TEXT,
-        eliminado INTEGER,
-        email TEXT,
-        telefono TEXT,
-        observaciones TEXT,
-        localidad TEXT,
-        barrio TEXT,
-        provincia TEXT,
-        direccion TEXT,
-        dni TEXT,
-        status TEXT,
-        modificado INTEGER,
-        image TEXT,
-        wc_customer_id TEXT
-      )
-    ''');
+    try {
+      // Tabla Clientes_mostrador - Agregamos IF NOT EXISTS
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS Clientes_mostrador(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          creador_id INTEGER,
+          id_cliente TEXT,
+          activo INTEGER,
+          nombre TEXT,
+          sucursal_id INTEGER,
+          lista_precio INTEGER,
+          comercio_id INTEGER,
+          last_sale TEXT,
+          recontacto TEXT,
+          plazo_cuenta_corriente INTEGER,
+          monto_maximo_cuenta_corriente REAL,
+          saldo_inicial_cuenta_corriente REAL,
+          fecha_inicial_cuenta_corriente TEXT,
+          pais TEXT,
+          codigo_postal TEXT,
+          depto TEXT,
+          piso TEXT,
+          altura TEXT,
+          eliminado INTEGER,
+          email TEXT,
+          telefono TEXT,
+          observaciones TEXT,
+          localidad TEXT,
+          barrio TEXT,
+          provincia TEXT,
+          direccion TEXT,
+          dni TEXT,
+          status TEXT,
+          modificado INTEGER,
+          image TEXT,
+          wc_customer_id TEXT
+        )
+      ''');
+      print('Tabla Clientes_mostrador creada/verificada con éxito');
+    } catch (e) {
+      print('Error al crear tabla Clientes_mostrador: $e');
+      // Continuamos a pesar del error para crear otras tablas
+    }
 
     // Tabla: product
-    await db.execute('''
-  CREATE TABLE IF NOT EXISTS product(
-    id INTEGER PRIMARY KEY, -- id como clave primaria
-    producto_id INTEGER,
-    name TEXT,
-    tipo_producto TEXT,
-    producto_tipo TEXT,
-    precio_interno REAL,
-    barcode TEXT,
-    cost REAL,
-    alerts REAL,
-    image TEXT,
-    category_id INTEGER,
-    marca_id INTEGER,
-    comercio_id INTEGER,
-    stock_descubierto TEXT,
-    proveedor_id INTEGER,
-    eliminado INTEGER,
-    unidad_medida INTEGER,
-    wc_product_id INTEGER,
-    wc_push INTEGER,
-    wc_image TEXT,
-    etiquetas TEXT,
-    mostrador_canal INTEGER,
-    ecommerce_canal INTEGER,
-    wc_canal INTEGER,
-    descripcion TEXT,
-    receta_id INTEGER,
-    listas_precios TEXT, -- Almacena listas de precios en formato JSON
-    stocks TEXT,         -- Almacena stocks en formato JSON
-    category_name TEXT,  -- Nombre de la categoría
-    categoria TEXT,      -- Objeto categoría en formato JSON
-    UNIQUE(id)
-  );
-''');
+    try {
+      await db.execute('''
+      CREATE TABLE IF NOT EXISTS product(
+        id INTEGER PRIMARY KEY, -- id como clave primaria
+        producto_id INTEGER,
+        name TEXT,
+        tipo_producto TEXT,
+        producto_tipo TEXT,
+        precio_interno REAL,
+        barcode TEXT,
+        cost REAL,
+        alerts REAL,
+        image TEXT,
+        category_id INTEGER,
+        marca_id INTEGER,
+        comercio_id INTEGER,
+        stock_descubierto TEXT,
+        proveedor_id INTEGER,
+        eliminado INTEGER,
+        unidad_medida INTEGER,
+        wc_product_id INTEGER,
+        wc_push INTEGER,
+        wc_image TEXT,
+        etiquetas TEXT,
+        mostrador_canal INTEGER,
+        ecommerce_canal INTEGER,
+        wc_canal INTEGER,
+        descripcion TEXT,
+        receta_id INTEGER,
+        listas_precios TEXT, -- Almacena listas de precios en formato JSON
+        stocks TEXT,         -- Almacena stocks en formato JSON
+        category_name TEXT,  -- Nombre de la categoría
+        categoria TEXT,      -- Objeto categoría en formato JSON
+        UNIQUE(id)
+      );
+    ''');
+      print('Tabla product creada/verificada con éxito');
+    } catch (e) {
+      print('Error al crear tabla product: $e');
+      // Continuamos a pesar del error para crear otras tablas
+    }
 
 // Tabla: producto_response
-    await db.execute('''
-  CREATE TABLE IF NOT EXISTS producto_response (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    current_page INTEGER
-  );
-''');
+    try {
+      await db.execute('''
+      CREATE TABLE IF NOT EXISTS producto_response (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        current_page INTEGER
+      );
+      ''');
+      print('Tabla producto_response creada/verificada con éxito');
+    } catch (e) {
+      print('Error al crear tabla producto_response: $e');
+      // Continuamos a pesar del error para crear otras tablas
+    }
 
 // Tabla: producto_data
     await db.execute('''
