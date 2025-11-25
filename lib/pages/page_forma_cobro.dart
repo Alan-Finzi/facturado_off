@@ -94,22 +94,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Sección Resumen de Venta con valores actualizados
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Resumen de Venta',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            ResumenTabla(),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // Eliminado ResumenTabla duplicado - ya se muestra en page_nueva_venta.dart
                     SizedBox(height: 16.0),
 
                     // Sección Tipo de Envío

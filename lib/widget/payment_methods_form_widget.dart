@@ -224,16 +224,7 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                   // Obtener la instancia actualizada del PaymentMethodsCubit
                                   final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
-                                  // Si hay un método seleccionado, forzar una actualización del recargo
-                                  if (state.selectedMethodId != null) {
-                                    // Si hay un proveedor seleccionado, asegurarnos de que esté correctamente establecido
-                                    if (state.selectedProviderId != null) {
-                                      paymentMethodsCubit.selectPaymentProvider(state.selectedProviderId!);
-                                    }
-
-                                    // Esto garantiza que el recargo se calcula correctamente
-                                    paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
-
+                                  try {
                                     // Forzar una actualización del subtotal para recalcular el recargo
                                     final productosState = context.read<ProductosCubit>().state;
 
@@ -256,47 +247,82 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                     // Calcular el subtotal para recargo
                                     final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
 
-                                    // Actualizar el subtotal en el PaymentMethodsCubit
-                                    paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+                                    print('Subtotal para recargo: \$${subtotalParaRecargo.toStringAsFixed(2)}');
 
-                                    // Pequeña espera para asegurar que el estado se ha actualizado
-                                    Future.delayed(Duration(milliseconds: 100), () {
-                                      // Obtener el estado actual con el recargo actualizado
-                                      final currentState = paymentMethodsCubit.state;
-                                      if (currentState is PaymentMethodsLoaded) {
-                                        // Forzar una actualización del método de pago nuevamente
-                                        paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
+                                    // Si hay un método seleccionado, forzar una actualización del recargo
+                                    if (state.selectedMethodId != null && state.selectedProviderId != null) {
+                                      // Asegurarnos de que el proveedor esté correctamente establecido
+                                      paymentMethodsCubit.selectPaymentProvider(state.selectedProviderId!);
 
-                                        // Obtener el recargo más reciente
-                                        final recargoAmount = paymentMethodsCubit.getRecargoAmount();
-                                        print('Recargo calculado: \$${recargoAmount.toStringAsFixed(2)}');
+                                      // Seleccionar el método para calcular el recargo
+                                      paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
 
-                                        // Asegurar que usamos el total más reciente
-                                        final totalWithRecargo = currentState.totalAmount;
-                                        print('Total con recargo: \$${totalWithRecargo.toStringAsFixed(2)}');
+                                      // Actualizar el subtotal en el PaymentMethodsCubit
+                                      paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
 
-                                        // Establecer este monto total como el monto de entrada
-                                        paymentMethodsCubit.setPayTotalAmount();
+                                      // Más tiempo de espera para asegurar la actualización completa
+                                      Future.delayed(Duration(milliseconds: 200), () {
+                                        try {
+                                          // Seleccionar el método nuevamente para asegurar el cálculo del recargo
+                                          paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
 
-                                        // Actualizar el campo de texto con el total (incluye recargo)
-                                        _inputAmountController.text = totalWithRecargo.toStringAsFixed(2);
+                                          // Obtener el estado más actualizado
+                                          final updatedState = paymentMethodsCubit.state;
+                                          if (updatedState is PaymentMethodsLoaded) {
+                                            // Obtener el recargo más reciente
+                                            final recargoAmount = paymentMethodsCubit.getRecargoAmount();
+                                            print('Recargo calculado: \$${recargoAmount.toStringAsFixed(2)}');
 
-                                        // Validar el monto
-                                        _validateAmount();
-                                      }
-                                    });
-                                  } else {
-                                    // Si no hay método seleccionado, usar el total sin recargo
-                                    final totalWithRecargo = state.totalAmount;
+                                            // Asegurar que usamos el total más reciente
+                                            final totalWithRecargo = updatedState.totalAmount;
+                                            print('Total con recargo: \$${totalWithRecargo.toStringAsFixed(2)}');
 
-                                    // Establecer este monto total como el monto de entrada
+                                            // Paso 1: Establecer el monto en el estado
+                                            paymentMethodsCubit.setPayTotalAmount();
+
+                                            // Paso 2: Actualizar directamente el controlador del texto
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              setState(() {
+                                                _inputAmountController.text = totalWithRecargo.toStringAsFixed(2);
+                                                _validateAmount();
+                                              });
+                                            });
+                                          }
+                                        } catch (e) {
+                                          print('Error actualizando el monto: $e');
+                                        }
+                                      });
+                                    } else {
+                                      // Si no hay método seleccionado, usar el subtotal con IVA sin recargo
+                                      final totalWithoutRecargo = subtotalParaRecargo;
+                                      print('Total sin recargo: \$${totalWithoutRecargo.toStringAsFixed(2)}');
+
+                                      // Actualizar el subtotal en el PaymentMethodsCubit
+                                      paymentMethodsCubit.updateSubtotalAmount(totalWithoutRecargo);
+
+                                      // Establecer el total como monto de entrada
+                                      paymentMethodsCubit.setPayTotalAmount();
+
+                                      // Actualizar el campo de texto con el total
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        setState(() {
+                                          _inputAmountController.text = totalWithoutRecargo.toStringAsFixed(2);
+                                          _validateAmount();
+                                        });
+                                      });
+                                    }
+                                  } catch (e) {
+                                    print('Error en Pagar total: $e');
+                                    // En caso de error, usar el total disponible en el estado actual
+                                    final currentTotal = state.totalAmount;
                                     paymentMethodsCubit.setPayTotalAmount();
 
-                                    // Actualizar el campo de texto con el monto total
-                                    _inputAmountController.text = totalWithRecargo.toStringAsFixed(2);
-
-                                    // Validar el monto
-                                    _validateAmount();
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      setState(() {
+                                        _inputAmountController.text = currentTotal.toStringAsFixed(2);
+                                        _validateAmount();
+                                      });
+                                    });
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
