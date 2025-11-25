@@ -199,8 +199,21 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
       final currentState = state as PaymentMethodsLoaded;
 
       try {
+        // Depurar los datos iniciales
+        print('== CALCULANDO RECARGO ==');
+        print('Subtotal para recargo: \$${currentState.subtotalAmount.toStringAsFixed(2)}');
+        print('Proveedor ID: ${currentState.selectedProviderId}');
+        print('Método ID: ${currentState.selectedMethodId}');
+
         // Obtener método seleccionado
         PaymentMethod? selectedMethod = _getSelectedMethod(currentState);
+
+        if (selectedMethod != null) {
+          print('Método encontrado: ${selectedMethod.nombre} con tasa de recargo: ${selectedMethod.recargo}%');
+        } else {
+          print('No se encontró un método de pago válido');
+          return 0.0;
+        }
 
         // Validar que tengamos un método y un subtotal válido
         if (selectedMethod != null && currentState.subtotalAmount > 0) {
@@ -213,6 +226,7 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
 
           // Calcular monto de recargo con valor limpio
           final recargoAmount = (currentState.subtotalAmount * recargo) / 100;
+          print('Cálculo de recargo: ${currentState.subtotalAmount} * ${recargo}% / 100 = $recargoAmount');
 
           // Verificar que el resultado es válido
           if (recargoAmount.isNaN || recargoAmount.isInfinite || recargoAmount < 0) {
@@ -221,12 +235,23 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
           }
 
           // Devolver valor redondeado a 2 decimales para consistencia
-          return double.parse(recargoAmount.toStringAsFixed(2));
+          final roundedValue = double.parse(recargoAmount.toStringAsFixed(2));
+          print('Recargo final (redondeado): \$${roundedValue.toStringAsFixed(2)}');
+
+          return roundedValue;
+        } else {
+          if (currentState.subtotalAmount <= 0) {
+            print('Subtotal inválido: ${currentState.subtotalAmount}');
+          }
+          return 0.0;
         }
       } catch (e) {
         print('Error al calcular recargo: $e');
+        print('StackTrace: ${StackTrace.current}');
         // Fallar silenciosamente con valor por defecto
       }
+    } else {
+      print('Estado no es PaymentMethodsLoaded: ${state.runtimeType}');
     }
 
     return 0.0;

@@ -452,29 +452,8 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
               SizedBox(height: 16.0),
 
-              // Total con recargo
-              Row(
-                children: [
-                  Text(
-                    'Total (incluye recargo): ',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '\$${state.totalAmount.toStringAsFixed(2)}',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
-              ),
-
-              // Mostrar detalles del recargo si existe
-              if (context.read<PaymentMethodsCubit>().getRecargoAmount() > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    'Recargo: \$${context.read<PaymentMethodsCubit>().getRecargoAmount().toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
+              // Espacio para mayor separación visual
+              SizedBox(height: 8.0),
             ],
           );
         }
@@ -564,18 +543,32 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
             final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
             print('Subtotal calculado para recargo: \$${subtotalParaRecargo.toStringAsFixed(2)}');
 
-            // Secuencia mejorada para actualización de estado:
+            // Secuencia optimizada para actualización de estado, garantizando que ResumenTabla
+            // reciba los eventos correctamente
+
+            // IMPORTANTE: Notificar a los listeners que vamos a hacer cambios importantes
+            print('=== AVISO DE CAMBIO IMPORTANTE DE MÉTODO DE PAGO ===');
+            print('Método seleccionado: $methodId con recargo pendiente de calcular');
+
             // 1. Primero actualiza el subtotal - esto es crítico para cálculos precisos
             paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
 
-            // 2. Luego selecciona el método de pago para que calcule el recargo con el subtotal correcto
+            // 2. Luego seleccionar el proveedor si es necesario para mantener consistencia
+            if (state.selectedProviderId != null) {
+              paymentMethodsCubit.selectPaymentProvider(state.selectedProviderId!);
+            }
+
+            // 3. Seleccionar el método de pago para calcular el recargo con el subtotal correcto
             paymentMethodsCubit.selectPaymentMethod(methodId);
 
-            // Depuración después del primer cálculo
+            // 4. Verificar el recargo calculado
             double recargoAmount = paymentMethodsCubit.getRecargoAmount();
-            print('Recargo calculado (primera actualización): \$${recargoAmount.toStringAsFixed(2)}');
+            print('Recargo calculado: \$${recargoAmount.toStringAsFixed(2)} (${methodId})');
             double totalConRecargo = subtotalParaRecargo + recargoAmount;
-            print('Total con recargo (primera actualización): \$${totalConRecargo.toStringAsFixed(2)}');
+            print('Total con recargo: \$${totalConRecargo.toStringAsFixed(2)}');
+
+            // 5. Forzar una segunda actualización del subtotal para asegurar que todos los listeners se actualicen
+            paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
 
             // Esperar a que Flutter procese el estado antes de la próxima actualización
             // Esto garantiza que las actualizaciones se procesen en el orden correcto
