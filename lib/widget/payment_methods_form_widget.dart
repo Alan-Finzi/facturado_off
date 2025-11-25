@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
+import '../models/payment_provider.dart';
 
 /// Widget que implementa la UI para seleccionar forma de pago
 /// y calcular recargos y vueltos

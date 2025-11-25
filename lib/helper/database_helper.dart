@@ -42,7 +42,7 @@ class DatabaseHelper {
   }
   
   /// Limpia la caché después de que expire el tiempo
-  void _cleanExpiredCache() {
+  void cleanExpiredCache() {
     final now = DateTime.now();
     _cacheTimestamps.removeWhere((key, timestamp) {
       final isExpired = now.difference(timestamp) > _cacheDuration;
@@ -50,16 +50,16 @@ class DatabaseHelper {
       return isExpired;
     });
   }
-  
+
   /// Almacena un resultado en la caché
-  void _cacheResult(String key, dynamic result) {
+  void cacheResult(String key, dynamic result) {
     _queryCache[key] = result;
     _cacheTimestamps[key] = DateTime.now();
   }
-  
+
   /// Obtiene un resultado de la caché si está disponible y no ha expirado
-  dynamic _getCachedResult(String key) {
-    _cleanExpiredCache();
+  dynamic getCachedResult(String key) {
+    cleanExpiredCache();
     return _queryCache[key];
   }
 
@@ -570,7 +570,7 @@ class DatabaseHelper {
   }
   Future<void> insertProductoResponse(ProductoResponse productoResponse) async {
     try {
-      final db = await database;
+      final db = await this.database;
 
       // Inserta la cabecera de ProductoResponse
       int responseId = await db.insert(
@@ -737,7 +737,7 @@ class DatabaseHelper {
 
   Future<ProductoResponse> getProductoResponseBySucursalId(
       int sucursalId, int listaId) async {
-    final db = await database;
+    final db = await this.database;
 
     // Ejecutar consulta para obtener productos con sus datos básicos y campos JSON
     final List<Map<String, dynamic>> rows = await db.rawQuery('''
@@ -1045,26 +1045,26 @@ class DatabaseHelper {
   /// Obtiene todos los productos de la base de datos con caché para mejorar rendimiento
   Future<List<ProductoModel>> getProductos() async {
     const cacheKey = 'all_productos';
-    
+
     // Verificar si existe en caché
-    final cachedResult = _getCachedResult(cacheKey);
+    final cachedResult = getCachedResult(cacheKey);
     if (cachedResult != null) {
       return cachedResult as List<ProductoModel>;
     }
-    
+
     // Consultar la base de datos
-    final db = await database;
+    final db = await this.database;
     final maps = await db.query('productos');
     final result = maps.map((map) => ProductoModel.fromMap(map)).toList();
-    
+
     // Guardar en caché
-    _cacheResult(cacheKey, result);
-    
+    cacheResult(cacheKey, result);
+
     return result;
   }
 
   Future<void> insertOrUpdateProductos(List<ProductoModel> productos) async {
-    final db = await database;
+    final db = await this.database;
     await db.transaction((txn) async {
       for (var producto in productos) {
         await txn.insert(
@@ -1077,7 +1077,7 @@ class DatabaseHelper {
   }
 
   Future<void> insertListaPrecios(List<ListaPreciosModel> listaPrecios) async {
-    final db = await database;
+    final db = await this.database;
 
     await db.transaction((txn) async {
       for (var listaPrecio in listaPrecios) {
@@ -1130,13 +1130,13 @@ class DatabaseHelper {
 
 
  Future<List<ClientesMostrador>> getClientesModificados() async {
-   final db = await instance.database;
+   final db = await this.database;
    final maps = await db.query('clientes_mostrador', where: 'modificado = 1');
    return maps.map((e) => ClientesMostrador.fromJson(e)).toList();
  }
 
    Future<void> marcarClienteSincronizado(String? idCliente) async {
-   final db = await instance.database;
+   final db = await this.database;
    await db.update('clientes_mostrador', {'modificado': 0}, where: 'id_cliente = ?', whereArgs: [idCliente]);
  }
 
@@ -1507,20 +1507,20 @@ class DatabaseHelper {
     const cacheKey = 'all_clientes';
 
     // Temporalmente desactivamos la caché para asegurar que siempre obtenemos datos frescos
-    // final cachedResult = _getCachedResult(cacheKey);
+    // final cachedResult = getCachedResult(cacheKey);
     // if (cachedResult != null) {
     //   return cachedResult as List<ClientesMostrador>;
     // }
 
     // Consultar la base de datos
-    Database db = await database;
+    Database db = await this.database;
     final List<Map<String, dynamic>> maps = await db.query('Clientes_mostrador');
     print('Clientes encontrados en BD: ${maps.length}');
 
     final result = List.generate(maps.length, (i) => ClientesMostrador.fromJson(maps[i]));
 
     // Guardar en caché
-    _cacheResult(cacheKey, result);
+    cacheResult(cacheKey, result);
 
     return result;
   }
@@ -1875,7 +1875,5 @@ WHERE
 
     return datumMap.values.toList();
   }
-
-
 }
 
