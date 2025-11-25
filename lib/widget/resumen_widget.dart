@@ -71,8 +71,9 @@ class ResumenTabla extends StatelessWidget {
                                 final totalFinal = subtotal - descuentoGral + totalIva + recargoAmount;
 
                                 // Actualizar el total en el PaymentMethodsCubit
-                                if (paymentState is PaymentMethodsLoaded &&
-                                    subtotal > 0 && subtotal != paymentState.subtotalAmount) {
+                                // Siempre actualizamos el subtotal en el PaymentMethodsCubit para que se calcule el recargo
+                                if (paymentState is PaymentMethodsLoaded && subtotal > 0) {
+                                    // Usar microtask para evitar errores de setState durante la construcción
                                     Future.microtask(() {
                                         paymentMethodsCubit.updateSubtotalAmount(
                                             subtotal - descuentoGral + totalIva
@@ -170,7 +171,7 @@ class ResumenTabla extends StatelessWidget {
                             Text('+ \$${totalIva.toStringAsFixed(2)}', textAlign: TextAlign.right),
                         ],
                     ),
-                    if (recargoAmount > 0) TableRow(
+                    TableRow(
                         children: [
                             Text('+ Recargo (${recargoRate.toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 10)),
                             Text('+ \$${recargoAmount.toStringAsFixed(2)}', textAlign: TextAlign.right),

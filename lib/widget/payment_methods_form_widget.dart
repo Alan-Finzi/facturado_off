@@ -23,17 +23,29 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = context.read<ProductosCubit>().state;
+      final productosState = context.read<ProductosCubit>().state;
       // Obtener el total de la venta desde el cubit de productos
       double subtotal = 0.0;
-      for (var producto in state.productosSeleccionados) {
+      double totalIva = 0.0;
+
+      // Calcular subtotal y IVA
+      for (var producto in productosState.productosSeleccionados) {
         final precioLista = producto.precioLista ?? 0;
         final cantidad = producto.cantidad ?? 1;
+        final precioFinal = producto.precioFinal ?? 0;
+
         subtotal += precioLista * cantidad;
+        totalIva += (precioFinal - (precioLista * cantidad));
       }
 
+      // Calcular descuento general
+      final descuentoGral = (productosState.descuentoGeneral / 100) * subtotal;
+
+      // Calcular el monto subtotal (ya con descuento e IVA) para usarse en el recargo
+      final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
+
       // Actualizar el subtotal en el PaymentMethodsCubit
-      context.read<PaymentMethodsCubit>().updateSubtotalAmount(subtotal);
+      context.read<PaymentMethodsCubit>().updateSubtotalAmount(subtotalParaRecargo);
 
       // Cargar los proveedores y métodos de pago
       context.read<PaymentMethodsCubit>().loadPaymentProviders();
@@ -209,8 +221,16 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                               flex: 2,
                               child: ElevatedButton(
                                 onPressed: () {
+                                  // Primero, asegurarse de que el total incluye el recargo actualizado
+                                  final totalWithRecargo = state.totalAmount;
+
+                                  // Establecer este monto total como el monto de entrada
                                   context.read<PaymentMethodsCubit>().setPayTotalAmount();
-                                  _inputAmountController.text = state.totalAmount.toStringAsFixed(2);
+
+                                  // Actualizar el campo de texto con el monto total (incluye recargo)
+                                  _inputAmountController.text = totalWithRecargo.toStringAsFixed(2);
+
+                                  // Validar el monto
                                   _validateAmount();
                                 },
                                 style: ElevatedButton.styleFrom(
