@@ -238,12 +238,28 @@ class ResumenTabla extends StatelessWidget {
                                         if (recargoAmount > 0)
                                             Icon(Icons.payment, size: 12, color: Colors.red[700]),
                                         SizedBox(width: recargoAmount > 0 ? 4.0 : 0),
-                                        Text(
-                                            '+ Recargo (${recargoRate.toStringAsFixed(1)}%)',
-                                            style: TextStyle(
-                                                fontSize: recargoAmount > 0 ? 11 : 10,
-                                                fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
-                                                color: recargoAmount > 0 ? Colors.red[700] : Colors.grey
+                                        RichText(
+                                            text: TextSpan(
+                                                children: [
+                                                    TextSpan(
+                                                        text: '+ Recargo ',
+                                                        style: TextStyle(
+                                                            fontSize: recargoAmount > 0 ? 11 : 10,
+                                                            fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                            color: recargoAmount > 0 ? Colors.red[700] : Colors.grey
+                                                        ),
+                                                    ),
+                                                    TextSpan(
+                                                        text: '(${recargoRate.toStringAsFixed(1)}%)',
+                                                        style: TextStyle(
+                                                            fontSize: recargoAmount > 0 ? 11 : 10,
+                                                            fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                            color: recargoAmount > 0 ? Colors.red[900] : Colors.grey,
+                                                            backgroundColor: recargoAmount > 0 ? Colors.yellow[100] : null,
+                                                        ),
+                                                    ),
+                                                ],
+                                                style: DefaultTextStyle.of(context).style,
                                             ),
                                         ),
                                     ],
