@@ -62,8 +62,12 @@ class ResumenTabla extends StatelessWidget {
                                             orElse: () => throw Exception('Método no encontrado'),
                                         );
 
+                                        // Obtener la tasa de recargo del método seleccionado
                                         recargoRate = selectedMethod.recargo;
-                                        recargoAmount = (subtotal - descuentoGral + totalIva) * (recargoRate / 100);
+
+                                        // Calcular el monto de recargo directamente desde el PaymentMethodsCubit
+                                        // para asegurar consistencia entre el cálculo y lo que se muestra
+                                        recargoAmount = paymentMethodsCubit.getRecargoAmount();
                                     }
                                 }
 
@@ -73,17 +77,27 @@ class ResumenTabla extends StatelessWidget {
                                 // Actualizar el total en el PaymentMethodsCubit
                                 // Siempre actualizamos el subtotal en el PaymentMethodsCubit para que se calcule el recargo
                                 if (paymentState is PaymentMethodsLoaded && subtotal > 0) {
-                                    // Usar microtask para evitar errores de setState durante la construcción
-                                    Future.microtask(() {
-                                        // Calculamos el subtotal para recargo (subtotal - descuento + IVA)
-                                        final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
+                                    // Calculamos el subtotal para recargo (subtotal - descuento + IVA)
+                                    final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
 
-                                        // Forzar actualización del subtotal para que se recalcule el recargo
-                                        // incluso si el valor es el mismo
+                                    // Forzar actualización inmediata para asegurar que el estado se actualice correctamente
+                                    paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+
+                                    // Si hay un método seleccionado, actualizar inmediatamente
+                                    if (paymentState.selectedProviderId != null) {
+                                        paymentMethodsCubit.selectPaymentProvider(paymentState.selectedProviderId!);
+                                    }
+
+                                    if (paymentState.selectedMethodId != null) {
+                                        paymentMethodsCubit.selectPaymentMethod(paymentState.selectedMethodId!);
+                                    }
+
+                                    // Usar microtask para asegurar actualizaciones adicionales después de que el framework haya procesado el estado
+                                    Future.microtask(() {
+                                        // Actualizar nuevamente para asegurar que el recargo se calcule correctamente
                                         paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
 
-                                        // Si hay un método seleccionado, forzar la actualización del recargo
-                                        // Esto es crucial para que se calcule correctamente el recargo
+                                        // Forzar actualizaciones adicionales si hay un método seleccionado
                                         if (paymentState.selectedMethodId != null) {
                                             // Primero seleccionamos el proveedor si es necesario
                                             if (paymentState.selectedProviderId != null) {
@@ -91,6 +105,31 @@ class ResumenTabla extends StatelessWidget {
                                             }
                                             // Luego seleccionamos el método de pago para calcular el recargo
                                             paymentMethodsCubit.selectPaymentMethod(paymentState.selectedMethodId!);
+
+                                            // Obtener recargo actualizado para depuración
+                                            final updatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
+                                            final updatedTotal = subtotalParaRecargo + updatedRecargoAmount;
+
+                                            print('=== RESUMEN TABLA - Actualizaciones ===');
+                                            print('Subtotal para recargo: \$${subtotalParaRecargo.toStringAsFixed(2)}');
+                                            print('Recargo en ResumenTabla: \$${updatedRecargoAmount.toStringAsFixed(2)}');
+                                            print('Total con recargo: \$${updatedTotal.toStringAsFixed(2)}');
+
+                                            // Implementar una verificación adicional para asegurar la consistencia de estado
+                                            Future.delayed(Duration(milliseconds: 100), () {
+                                                // Esta actualización final garantiza que el recargo se ha calculado completamente
+                                                paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+                                                if (paymentState.selectedMethodId != null) {
+                                                    paymentMethodsCubit.selectPaymentMethod(paymentState.selectedMethodId!);
+
+                                                    // Verificar si hubo cambios significativos
+                                                    final finalRecargoAmount = paymentMethodsCubit.getRecargoAmount();
+                                                    if ((finalRecargoAmount - updatedRecargoAmount).abs() > 0.01) {
+                                                        print('Detectada inconsistencia en recargo: ${finalRecargoAmount.toStringAsFixed(2)} vs ${updatedRecargoAmount.toStringAsFixed(2)}');
+                                                    }
+                                                }
+                                                print('=== RESUMEN TABLA - Sincronización finalizada ===');
+                                            });
                                         }
                                     });
                                 }
@@ -187,14 +226,41 @@ class ResumenTabla extends StatelessWidget {
                     ),
                     // Siempre mostrar la fila de recargo, incluso cuando es cero
                     TableRow(
+                        decoration: recargoAmount > 0 ? BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(4),
+                        ) : null,
                         children: [
-                            Text('+ Recargo (${recargoRate.toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 10, fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal)),
-                            Text('+ \$${recargoAmount.toStringAsFixed(2)}',
-                                 textAlign: TextAlign.right,
-                                 style: TextStyle(
-                                     fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
-                                     color: recargoAmount > 0 ? Colors.red : null
-                                 )),
+                            Padding(
+                                padding: recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
+                                child: Row(
+                                    children: [
+                                        if (recargoAmount > 0)
+                                            Icon(Icons.payment, size: 12, color: Colors.red[700]),
+                                        SizedBox(width: recargoAmount > 0 ? 4.0 : 0),
+                                        Text(
+                                            '+ Recargo (${recargoRate.toStringAsFixed(1)}%)',
+                                            style: TextStyle(
+                                                fontSize: recargoAmount > 0 ? 11 : 10,
+                                                fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                color: recargoAmount > 0 ? Colors.red[700] : Colors.grey
+                                            ),
+                                        ),
+                                    ],
+                                ),
+                            ),
+                            Padding(
+                                padding: recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
+                                child: Text(
+                                    '+ \$${recargoAmount.toStringAsFixed(2)}',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                        fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                        color: recargoAmount > 0 ? Colors.red[700] : Colors.grey,
+                                        fontSize: recargoAmount > 0 ? 12 : 10
+                                    )
+                                ),
+                            ),
                         ],
                     ),
                     const TableRow(

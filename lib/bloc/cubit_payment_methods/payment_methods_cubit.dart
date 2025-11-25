@@ -193,14 +193,39 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
     return 0.0;
   }
 
-  /// Calcula el monto del recargo
+  /// Calcula el monto del recargo con manejo mejorado de errores y consistencia
   double getRecargoAmount() {
     if (state is PaymentMethodsLoaded) {
       final currentState = state as PaymentMethodsLoaded;
 
-      PaymentMethod? selectedMethod = _getSelectedMethod(currentState);
-      if (selectedMethod != null && currentState.subtotalAmount > 0) {
-        return (currentState.subtotalAmount * selectedMethod.recargo) / 100;
+      try {
+        // Obtener método seleccionado
+        PaymentMethod? selectedMethod = _getSelectedMethod(currentState);
+
+        // Validar que tengamos un método y un subtotal válido
+        if (selectedMethod != null && currentState.subtotalAmount > 0) {
+          // Calcular recargo con protección para valores inválidos
+          final recargo = selectedMethod.recargo;
+          if (recargo.isNaN || recargo.isInfinite) {
+            print('Error: Valor de recargo inválido (${selectedMethod.recargo})');
+            return 0.0;
+          }
+
+          // Calcular monto de recargo con valor limpio
+          final recargoAmount = (currentState.subtotalAmount * recargo) / 100;
+
+          // Verificar que el resultado es válido
+          if (recargoAmount.isNaN || recargoAmount.isInfinite || recargoAmount < 0) {
+            print('Error: Cálculo de recargo inválido: $recargoAmount');
+            return 0.0;
+          }
+
+          // Devolver valor redondeado a 2 decimales para consistencia
+          return double.parse(recargoAmount.toStringAsFixed(2));
+        }
+      } catch (e) {
+        print('Error al calcular recargo: $e');
+        // Fallar silenciosamente con valor por defecto
       }
     }
 
