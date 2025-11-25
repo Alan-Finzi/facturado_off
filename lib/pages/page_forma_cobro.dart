@@ -39,10 +39,14 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Create PaymentMethodsCubit and expose it through the widget tree
     return BlocProvider(
       create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance),
       child: Builder(
         builder: (context) {
+          // Get the provided PaymentMethodsCubit instance
+          final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+
           return Scaffold(
             appBar: AppBar(
               title: Text('Forma de Cobro'),
