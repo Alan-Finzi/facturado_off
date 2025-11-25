@@ -141,11 +141,7 @@ class DatabaseHelper {
         onOpen: (db) {
           print('Base de datos abierta correctamente');
         },
-        // Manejo de errores durante la apertura de la base de datos
-        onError: (error) {
-          print('Error al abrir la base de datos: $error');
-          return true; // Continuar a pesar del error
-        },
+
       );
     } catch (e) {
       print('Error crítico al inicializar la base de datos: $e');
