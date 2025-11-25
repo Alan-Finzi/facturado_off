@@ -75,14 +75,21 @@ class ResumenTabla extends StatelessWidget {
                                 if (paymentState is PaymentMethodsLoaded && subtotal > 0) {
                                     // Usar microtask para evitar errores de setState durante la construcción
                                     Future.microtask(() {
+                                        // Calculamos el subtotal para recargo (subtotal - descuento + IVA)
+                                        final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
+
                                         // Forzar actualización del subtotal para que se recalcule el recargo
                                         // incluso si el valor es el mismo
-                                        paymentMethodsCubit.updateSubtotalAmount(
-                                            subtotal - descuentoGral + totalIva
-                                        );
+                                        paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
 
                                         // Si hay un método seleccionado, forzar la actualización del recargo
+                                        // Esto es crucial para que se calcule correctamente el recargo
                                         if (paymentState.selectedMethodId != null) {
+                                            // Primero seleccionamos el proveedor si es necesario
+                                            if (paymentState.selectedProviderId != null) {
+                                                paymentMethodsCubit.selectPaymentProvider(paymentState.selectedProviderId!);
+                                            }
+                                            // Luego seleccionamos el método de pago para calcular el recargo
                                             paymentMethodsCubit.selectPaymentMethod(paymentState.selectedMethodId!);
                                         }
                                     });
@@ -178,10 +185,16 @@ class ResumenTabla extends StatelessWidget {
                             Text('+ \$${totalIva.toStringAsFixed(2)}', textAlign: TextAlign.right),
                         ],
                     ),
+                    // Siempre mostrar la fila de recargo, incluso cuando es cero
                     TableRow(
                         children: [
-                            Text('+ Recargo (${recargoRate.toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 10)),
-                            Text('+ \$${recargoAmount.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                            Text('+ Recargo (${recargoRate.toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 10, fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal)),
+                            Text('+ \$${recargoAmount.toStringAsFixed(2)}',
+                                 textAlign: TextAlign.right,
+                                 style: TextStyle(
+                                     fontWeight: recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                     color: recargoAmount > 0 ? Colors.red : null
+                                 )),
                         ],
                     ),
                     const TableRow(

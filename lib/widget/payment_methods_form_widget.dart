@@ -226,16 +226,54 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
                                   // Si hay un método seleccionado, forzar una actualización del recargo
                                   if (state.selectedMethodId != null) {
+                                    // Si hay un proveedor seleccionado, asegurarnos de que esté correctamente establecido
+                                    if (state.selectedProviderId != null) {
+                                      paymentMethodsCubit.selectPaymentProvider(state.selectedProviderId!);
+                                    }
+
                                     // Esto garantiza que el recargo se calcula correctamente
                                     paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
 
+                                    // Forzar una actualización del subtotal para recalcular el recargo
+                                    final productosState = context.read<ProductosCubit>().state;
+
+                                    // Calcular subtotal y IVA desde ProductosCubit
+                                    double subtotal = 0.0;
+                                    double totalIva = 0.0;
+
+                                    for (var producto in productosState.productosSeleccionados) {
+                                      final precioLista = producto.precioLista ?? 0;
+                                      final cantidad = producto.cantidad ?? 1;
+                                      final precioFinal = producto.precioFinal ?? 0;
+
+                                      subtotal += precioLista * cantidad;
+                                      totalIva += (precioFinal - (precioLista * cantidad));
+                                    }
+
+                                    // Calcular descuento general
+                                    final descuentoGral = (productosState.descuentoGeneral / 100) * subtotal;
+
+                                    // Calcular el subtotal para recargo
+                                    final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
+
+                                    // Actualizar el subtotal en el PaymentMethodsCubit
+                                    paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+
                                     // Pequeña espera para asegurar que el estado se ha actualizado
-                                    Future.delayed(Duration(milliseconds: 50), () {
+                                    Future.delayed(Duration(milliseconds: 100), () {
                                       // Obtener el estado actual con el recargo actualizado
                                       final currentState = paymentMethodsCubit.state;
                                       if (currentState is PaymentMethodsLoaded) {
+                                        // Forzar una actualización del método de pago nuevamente
+                                        paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
+
+                                        // Obtener el recargo más reciente
+                                        final recargoAmount = paymentMethodsCubit.getRecargoAmount();
+                                        print('Recargo calculado: \$${recargoAmount.toStringAsFixed(2)}');
+
                                         // Asegurar que usamos el total más reciente
                                         final totalWithRecargo = currentState.totalAmount;
+                                        print('Total con recargo: \$${totalWithRecargo.toStringAsFixed(2)}');
 
                                         // Establecer este monto total como el monto de entrada
                                         paymentMethodsCubit.setPayTotalAmount();
