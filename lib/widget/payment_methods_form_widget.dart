@@ -291,8 +291,8 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                     // Importante: Establecer el total en el estado
                                     paymentMethodsCubit.setPayTotalAmount();
 
-                                    // Programar una verificación posterior para asegurar sincronización
-                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    // Secuencia mejorada para garantizar que todos los componentes se actualicen correctamente
+                                    Future.delayed(Duration(milliseconds: 50), () {
                                       try {
                                         // Verificar que el estado está correctamente sincronizado
                                         if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
@@ -300,26 +300,40 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                           final stateAmount = currentState.totalAmount;
                                           final difference = (stateAmount - totalWithRecargo).abs();
 
-                                          if (difference > 0.01) {
-                                            print('Detectada discrepancia entre estado ($stateAmount) y cálculo local ($totalWithRecargo)');
-                                            print('Ejecutando sincronización adicional...');
+                                          // Asegurar que el recargo se aplica correctamente
+                                          if (state.selectedMethodId != null) {
+                                            print('Forzando actualización de recargo para método: ${state.selectedMethodId}');
 
-                                            // Realizar sincronización adicional
+                                            // Secuencia de actualizaciones espaciadas para garantizar propagación
                                             paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
-                                            if (currentState.selectedMethodId != null) {
-                                              paymentMethodsCubit.selectPaymentMethod(currentState.selectedMethodId!);
-                                            }
-                                            paymentMethodsCubit.setPayTotalAmount();
+                                            paymentMethodsCubit.selectPaymentProvider(state.selectedProviderId!);
+                                            paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
 
-                                            // Actualizar UI si es necesario
-                                            setState(() {
-                                              _inputAmountController.text = currentState.totalAmount.toStringAsFixed(2);
-                                              _validateAmount();
+                                            // Segunda verificación del recargo
+                                            final updatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
+                                            print('Recargo recalculado: \$${updatedRecargoAmount.toStringAsFixed(2)}');
+
+                                            // Forzar otra actualización después de un breve retraso
+                                            Future.delayed(Duration(milliseconds: 50), () {
+                                              // Re-aplicar los valores para forzar la notificación de cambio
+                                              paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+                                              paymentMethodsCubit.selectPaymentMethod(state.selectedMethodId!);
+                                              paymentMethodsCubit.setPayTotalAmount();
+
+                                              // Actualizar UI si es necesario
+                                              if (mounted) {
+                                                setState(() {
+                                                  _inputAmountController.text = paymentMethodsCubit.state is PaymentMethodsLoaded
+                                                      ? (paymentMethodsCubit.state as PaymentMethodsLoaded).totalAmount.toStringAsFixed(2)
+                                                      : totalWithRecargo.toStringAsFixed(2);
+                                                  _validateAmount();
+                                                });
+                                              }
+
+                                              print('Sincronización completada con múltiples actualizaciones');
                                             });
-
-                                            print('Sincronización completada. Valor final: ${currentState.totalAmount.toStringAsFixed(2)}');
                                           } else {
-                                            print('Estado correctamente sincronizado');
+                                            print('No hay método de pago seleccionado, no se aplica recargo');
                                           }
                                         }
                                       } catch (e) {
@@ -558,6 +572,8 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
               paymentMethodsCubit.selectPaymentProvider(state.selectedProviderId!);
             }
 
+            // Secuencia mejorada con retrasos cortos para garantizar la propagación correcta de eventos
+
             // 3. Seleccionar el método de pago para calcular el recargo con el subtotal correcto
             paymentMethodsCubit.selectPaymentMethod(methodId);
 
@@ -567,28 +583,34 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
             double totalConRecargo = subtotalParaRecargo + recargoAmount;
             print('Total con recargo: \$${totalConRecargo.toStringAsFixed(2)}');
 
-            // 5. Forzar una segunda actualización del subtotal para asegurar que todos los listeners se actualicen
-            paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
-
-            // Esperar a que Flutter procese el estado antes de la próxima actualización
-            // Esto garantiza que las actualizaciones se procesen en el orden correcto
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              // Ejecutar una segunda ronda de actualizaciones para garantizar sincronización
+            // 5. Secuencia de actualización con retrasos para garantizar propagación correcta
+            Future.delayed(Duration(milliseconds: 50), () {
+              // Forzar una segunda actualización del subtotal
               paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+
+              // Re-seleccionar el método para asegurar consistencia
               paymentMethodsCubit.selectPaymentMethod(methodId);
 
-              // Depuración después de la segunda actualización
-              final updatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
-              print('Recargo recalculado (segunda actualización): \$${updatedRecargoAmount.toStringAsFixed(2)}');
-              final updatedTotalConRecargo = subtotalParaRecargo + updatedRecargoAmount;
-              print('Total con recargo (segunda actualización): \$${updatedTotalConRecargo.toStringAsFixed(2)}');
-
-              // Uso de un microtask para asegurar que todas las actualizaciones se completen
-              // antes de cualquier cambio adicional
-              Future.microtask(() {
-                // Una última actualización para asegurar consistencia completa
+              // Disparar una tercera ronda de actualizaciones después de un breve retraso
+              Future.delayed(Duration(milliseconds: 50), () {
+                // Volver a establecer el subtotal y método
                 paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+                paymentMethodsCubit.selectPaymentMethod(methodId);
+
+                // Verificar el recargo final
+                final finalRecargoAmount = paymentMethodsCubit.getRecargoAmount();
+                print('Recargo final (después de múltiples actualizaciones): \$${finalRecargoAmount.toStringAsFixed(2)}');
                 print('=== CAMBIO DE MÉTODO DE PAGO - Finalizado ===');
+
+                // Asegurarse de que la UI se actualice correctamente
+                if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+                  // Modificación sutil de estado para forzar actualizaciones en todos los widgets
+                  final currentState = paymentMethodsCubit.state as PaymentMethodsLoaded;
+                  if (currentState.subtotalAmount > 0) {
+                    // Actualizar con el mismo valor para forzar notificación de cambio
+                    paymentMethodsCubit.updateSubtotalAmount(currentState.subtotalAmount);
+                  }
+                }
               });
             });
 

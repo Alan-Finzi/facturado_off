@@ -6,16 +6,75 @@ import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 
 
-class ResumenTabla extends StatelessWidget {
+class ResumenTabla extends StatefulWidget {
     const ResumenTabla({super.key});
+
+    @override
+    _ResumenTablaState createState() => _ResumenTablaState();
+}
+
+class _ResumenTablaState extends State<ResumenTabla> {
+    // Store recargo information to persist between builds
+    double _recargoRate = 0.0;
+    double _recargoAmount = 0.0;
+
+    @override
+    void initState() {
+        super.initState();
+        // Initialize with a post-frame callback to ensure proper context
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateRecargoFromPaymentMethod();
+        });
+    }
+
+    // This method will force update the recargo information from the payment method
+    void _updateRecargoFromPaymentMethod() {
+        final PaymentMethodsCubit? paymentMethodsCubit = _getPaymentMethodsCubit(context);
+        if (paymentMethodsCubit != null && paymentMethodsCubit.state is PaymentMethodsLoaded) {
+            final loadedState = paymentMethodsCubit.state as PaymentMethodsLoaded;
+
+            // Only calculate if we have a selected method
+            if (loadedState.selectedMethodId != null &&
+                loadedState.selectedProviderId != null &&
+                loadedState.subtotalAmount > 0) {
+
+                // Get the recargo amount from the cubit
+                final calculatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
+
+                // Update the stored values
+                if (mounted) {
+                    setState(() {
+                        _recargoAmount = calculatedRecargoAmount;
+
+                        // Try to get the recargo rate from the selected method
+                        try {
+                            final selectedProvider = loadedState.providers.firstWhere(
+                                (p) => p.id == loadedState.selectedProviderId,
+                            );
+
+                            if (selectedProvider.metodosPago != null) {
+                                final selectedMethod = selectedProvider.metodosPago!.firstWhere(
+                                    (m) => m.id == loadedState.selectedMethodId,
+                                );
+                                _recargoRate = selectedMethod.recargo;
+                            }
+                        } catch (e) {
+                            print('Error getting recargo rate: $e');
+                        }
+                    });
+                }
+
+                print('ResumenTabla: _updateRecargoFromPaymentMethod - Recargo updated to ${_recargoAmount.toStringAsFixed(2)} (${_recargoRate.toStringAsFixed(1)}%)');
+            }
+        }
+    }
 
     @override
     Widget build(BuildContext context) {
         return BlocBuilder<ProductosCubit, ProductosState>(
             builder: (context, productosState) {
                 // Check if PaymentMethodsCubit is available in the context
-                final PaymentMethodsCubit? paymentMethodsCubit =
-                    _getPaymentMethodsCubit(context);
+                final PaymentMethodsCubit? paymentMethodsCubit = _getPaymentMethodsCubit(context);
 
                 final productos = productosState.productosSeleccionados;
 
@@ -37,112 +96,57 @@ class ResumenTabla extends StatelessWidget {
                 const descuentoPromos = 0.0;
                 final descuentoGral = (productosState.descuentoGeneral / 100) * subtotal;
 
-                // Calcular recargo según el método de pago seleccionado si está disponible
-                double recargoRate = 0.0;
-                double recargoAmount = 0.0;
+                // Calculate the subtotal for recargo (used to update PaymentMethodsCubit)
+                final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
+
+                // Calculate final total with recargo
+                final totalFinal = subtotal - descuentoGral + totalIva + _recargoAmount;
 
                 // Build UI with or without PaymentMethodsCubit based on availability
                 Widget buildTableContent() {
-                    // Calculate basic totals that don't depend on payment method
-                    double totalFinal = subtotal - descuentoGral + totalIva + recargoAmount;
-
                     if (paymentMethodsCubit != null) {
-                        // If PaymentMethodsCubit is available, use it to calculate recargo
-                        return BlocBuilder<PaymentMethodsCubit, PaymentMethodsState>(
-                            builder: (context, paymentState) {
-                                // Safe way to handle different payment states
-                                if (paymentState is PaymentMethodsLoaded) {
-                                    final loadedState = paymentState;
+                        // Update the subtotal in the PaymentMethodsCubit to ensure proper recargo calculation
+                        if (subtotal > 0) {
+                            paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
 
-                                    // Calculate the subtotal for recargo
-                                    final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
-
-                                    // Update provider and method if available
-                                    if (loadedState.selectedProviderId != null &&
-                                        loadedState.selectedMethodId != null) {
-
-                                        try {
-                                            final selectedProvider = loadedState.providers.firstWhere(
-                                                (p) => p.id == loadedState.selectedProviderId,
-                                                orElse: () => throw Exception('Proveedor no encontrado'),
-                                            );
-
-                                            if (selectedProvider.metodosPago != null) {
-                                                final selectedMethod = selectedProvider.metodosPago!.firstWhere(
-                                                    (m) => m.id == loadedState.selectedMethodId,
-                                                    orElse: () => throw Exception('Método no encontrado'),
-                                                );
-
-                                                // Set recargo rate and amount
-                                                recargoRate = selectedMethod.recargo;
-                                                recargoAmount = paymentMethodsCubit.getRecargoAmount();
-                                            }
-                                        } catch (e) {
-                                            print('Error al buscar método de pago: $e');
-                                        }
+                            // Add a listener to update recargo when payment state changes
+                            return BlocListener<PaymentMethodsCubit, PaymentMethodsState>(
+                                listener: (context, paymentState) {
+                                    if (paymentState is PaymentMethodsLoaded) {
+                                        // Update the recargo information when payment method changes
+                                        _updateRecargoFromPaymentMethod();
                                     }
-
-                                    // Update state if needed
-                                    if (subtotal > 0) {
-                                        // Paso 1: Actualizar el subtotal en el cubit
-                                        paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
-
-                                        // Paso 2: Si hay un método seleccionado, forzar actualización
-                                        if (loadedState.selectedProviderId != null) {
-                                            paymentMethodsCubit.selectPaymentProvider(loadedState.selectedProviderId!);
-                                        }
-
-                                        if (loadedState.selectedMethodId != null) {
-                                            paymentMethodsCubit.selectPaymentMethod(loadedState.selectedMethodId!);
-
-                                            // Verify recargo calculation
-                                            final calculatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
-                                            if ((calculatedRecargoAmount - recargoAmount).abs() > 0.01) {
-                                                recargoAmount = calculatedRecargoAmount;
-                                                print('ResumenTabla: Recargo actualizado a ${recargoAmount.toStringAsFixed(2)}');
-                                            }
-                                        }
-
-                                        // Microtask for secondary updates
-                                        Future.microtask(() {
-                                            paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
-
-                                            if (loadedState.selectedMethodId != null) {
-                                                if (loadedState.selectedProviderId != null) {
-                                                    paymentMethodsCubit.selectPaymentProvider(loadedState.selectedProviderId!);
-                                                }
-
-                                                paymentMethodsCubit.selectPaymentMethod(loadedState.selectedMethodId!);
-
-                                                // Debug logging
-                                                final updatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
-                                                final updatedTotal = subtotalParaRecargo + updatedRecargoAmount;
-
-                                                print('=== RESUMEN TABLA - Actualizaciones ===');
-                                                print('Subtotal para recargo: \$${subtotalParaRecargo.toStringAsFixed(2)}');
-                                                print('Recargo en ResumenTabla: \$${updatedRecargoAmount.toStringAsFixed(2)}');
-                                                print('Total con recargo: \$${updatedTotal.toStringAsFixed(2)}');
-                                            }
-                                        });
+                                },
+                                // Use BlocBuilder to rebuild when payment state changes
+                                child: BlocBuilder<PaymentMethodsCubit, PaymentMethodsState>(
+                                    builder: (context, paymentState) {
+                                        // We always return the table with current values
+                                        return _buildTable(
+                                            subtotal: subtotal,
+                                            descuentoPromos: descuentoPromos,
+                                            descuentoGral: descuentoGral,
+                                            totalIva: totalIva,
+                                            recargoRate: _recargoRate,
+                                            recargoAmount: _recargoAmount,
+                                            totalFinal: totalFinal,
+                                            productosState: productosState,
+                                        );
                                     }
-
-                                    // Calculate final total with recargo
-                                    totalFinal = subtotal - descuentoGral + totalIva + recargoAmount;
-                                }
-
-                                // Return the built table with current values
-                                return _buildTable(
-                                    subtotal: subtotal,
-                                    descuentoPromos: descuentoPromos,
-                                    descuentoGral: descuentoGral,
-                                    totalIva: totalIva,
-                                    recargoRate: recargoRate,
-                                    recargoAmount: recargoAmount,
-                                    totalFinal: totalFinal,
-                                    productosState: productosState,
-                                );
-                            }
-                        );
+                                ),
+                            );
+                        } else {
+                            // If subtotal is 0, just show the table without recargo
+                            return _buildTable(
+                                subtotal: subtotal,
+                                descuentoPromos: descuentoPromos,
+                                descuentoGral: descuentoGral,
+                                totalIva: totalIva,
+                                recargoRate: _recargoRate,
+                                recargoAmount: _recargoAmount,
+                                totalFinal: totalFinal,
+                                productosState: productosState,
+                            );
+                        }
                     } else {
                         // If PaymentMethodsCubit is not available, show table without recargo
                         return _buildTable(
@@ -150,9 +154,9 @@ class ResumenTabla extends StatelessWidget {
                             descuentoPromos: descuentoPromos,
                             descuentoGral: descuentoGral,
                             totalIva: totalIva,
-                            recargoRate: recargoRate,
-                            recargoAmount: recargoAmount,
-                            totalFinal: totalFinal,
+                            recargoRate: 0.0,
+                            recargoAmount: 0.0,
+                            totalFinal: subtotal - descuentoGral + totalIva,
                             productosState: productosState,
                         );
                     }
