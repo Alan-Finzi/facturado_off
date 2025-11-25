@@ -92,46 +92,157 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tipo de pago (total o parcial)
+              // Título de método de cobro
               Text(
-                'Forma de cobro',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                'Método de cobro',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              SizedBox(height: 8.0),
+              SizedBox(height: 16.0),
+
+              // Dos columnas: Métodos de pago y monto a pagar
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Columna izquierda: Selectores de método de pago
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        context.read<PaymentMethodsCubit>().setPaymentType(false);
-                      },
-                      child: Text('Pago total'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: !state.isPartialPayment ? Colors.grey : null,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tipo de cobro (dropdown de providers)
+                        Text('Tipo de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
+                        DropdownButton<int>(
+                          value: state.selectedProviderId,
+                          isExpanded: true,
+                          hint: Text('Seleccione tipo de cobro'),
+                          onChanged: (int? providerId) {
+                            if (providerId != null) {
+                              context.read<PaymentMethodsCubit>().selectPaymentProvider(providerId);
+                            }
+                          },
+                          items: state.providers.map((provider) {
+                            return DropdownMenuItem<int>(
+                              value: provider.id,
+                              child: Text(provider.nombre),
+                            );
+                          }).toList(),
+                        ),
+                        SizedBox(height: 16.0),
+
+                        // Forma de cobro (dropdown de métodos del provider seleccionado)
+                        Text('Forma de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
+                        _buildPaymentMethodsDropdown(context, state),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 8.0),
+                  SizedBox(width: 16.0),
+
+                  // Columna derecha: Monto a pagar
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        context.read<PaymentMethodsCubit>().setPaymentType(true);
-                      },
-                      child: Text('Pago parcial / pago dividido'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: state.isPartialPayment ? Colors.grey : null,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Monto a pagar
+                        TextField(
+                          controller: _inputAmountController,
+                          focusNode: _inputAmountFocusNode,
+                          decoration: InputDecoration(
+                            labelText: 'Ingresa el monto con el que va a pagar tu cliente',
+                            prefixText: '\$ ',
+                            border: OutlineInputBorder(),
+                            errorText: _inputError,
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                          ],
+                          onChanged: (value) {
+                            final amount = double.tryParse(value) ?? 0.0;
+                            context.read<PaymentMethodsCubit>().updateInputAmount(amount);
+                            _validateAmount();
+                          },
+                        ),
+                        SizedBox(height: 10.0),
+
+                        // Botón "Paga el total"
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(), // Espacio vacío a la izquierda
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                context.read<PaymentMethodsCubit>().setPayTotalAmount();
+                                _inputAmountController.text = state.totalAmount.toStringAsFixed(2);
+                                _validateAmount();
+                              },
+                              child: Text('Pagar el total'),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 20.0),
+
+                        // Vuelto a entregar (si corresponde)
+                        if (state.inputAmount >= state.totalAmount)
+                          Container(
+                            padding: EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.green),
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
+                            child: Text(
+                              'Vuelto a entregar: \$${(state.inputAmount - state.totalAmount).toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          )
+                        else if (state.inputAmount > 0)
+                          Container(
+                            padding: EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.red),
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
+                            child: Text(
+                              'Falta: \$${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
+
               SizedBox(height: 16.0),
 
-              // Contenido basado en tipo de pago
-              if (state.isPartialPayment)
-                _buildPartialPaymentContent(context, state)
-              else
-                _buildTotalPaymentContent(context, state),
+              // Total con recargo
+              Row(
+                children: [
+                  Text(
+                    'Total (incluye recargo): ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '\$${state.totalAmount.toStringAsFixed(2)}',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+
+              // Mostrar detalles del recargo si existe
+              if (context.read<PaymentMethodsCubit>().getRecargoAmount() > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    'Recargo: \$${context.read<PaymentMethodsCubit>().getRecargoAmount().toStringAsFixed(2)}',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
             ],
           );
         }
@@ -139,224 +250,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
         // Estado inicial o no controlado
         return const Center(child: Text('Cargando opciones de pago...'));
       },
-    );
-  }
-
-  // Construye la UI para pago parcial
-  Widget _buildPartialPaymentContent(BuildContext context, PaymentMethodsLoaded state) {
-    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // UI de dos columnas
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Columna izquierda: Selección de método de pago
-            Expanded(
-              child: _buildPaymentMethodSelectors(context, state),
-            ),
-            SizedBox(width: 16.0),
-            // Columna derecha: Resumen de montos
-            Expanded(
-              child: _buildTotalsColumn(context, state),
-            ),
-          ],
-        ),
-
-        // Botón para agregar otro método de pago
-        TextButton(
-          onPressed: () {
-            // Aquí iría la lógica para agregar otro método de pago
-          },
-          child: Text(
-            '+ Agregar Método de Pago',
-            style: TextStyle(color: Colors.orange),
-          ),
-        ),
-        SizedBox(height: 16.0),
-
-        // Monto total y A cobrar total
-        Row(
-          children: [
-            // Monto Total
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'Monto Total',
-                  prefixText: '\$ ',
-                  border: OutlineInputBorder(),
-                ),
-                readOnly: true,
-                controller: TextEditingController(
-                    text: state.totalAmount.toStringAsFixed(2)),
-                keyboardType: TextInputType.number,
-              ),
-            ),
-            SizedBox(width: 16.0),
-            // A Cobrar Total
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'A cobrar total',
-                  prefixText: '\$ ',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                controller: TextEditingController(
-                    text: state.inputAmount.toStringAsFixed(2)),
-                onChanged: (value) {
-                  final amount = double.tryParse(value) ?? 0.0;
-                  paymentMethodsCubit.updateInputAmount(amount);
-                },
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8.0),
-
-        // Deuda (diferencia entre total y monto ingresado)
-        Text(
-          'Deuda: \$ ${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
-          style: TextStyle(
-            color: state.totalAmount > state.inputAmount ? Colors.red : Colors.black,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Construye la UI para pago total
-  Widget _buildTotalPaymentContent(BuildContext context, PaymentMethodsLoaded state) {
-    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
-    final recargoAmount = paymentMethodsCubit.getChangeAmount();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // UI de dos columnas
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Columna izquierda: Selección de método de pago
-            Expanded(
-              child: _buildPaymentMethodSelectors(context, state),
-            ),
-            SizedBox(width: 16.0),
-            // Columna derecha: Monto y resumen
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Monto a pagar
-                  TextField(
-                    controller: _inputAmountController,
-                    focusNode: _inputAmountFocusNode,
-                    decoration: InputDecoration(
-                      labelText: 'Ingresa el monto con el que va a pagar tu cliente',
-                      prefixText: '\$ ',
-                      border: OutlineInputBorder(),
-                      errorText: _inputError,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                    ],
-                    onChanged: (value) {
-                      final amount = double.tryParse(value) ?? 0.0;
-                      paymentMethodsCubit.updateInputAmount(amount);
-                      _validateAmount();
-                    },
-                  ),
-                  SizedBox(height: 10.0),
-
-                  // Botón "Paga el total"
-                  ElevatedButton(
-                    onPressed: () {
-                      paymentMethodsCubit.setPayTotalAmount();
-                      // Actualizar el controlador con el nuevo valor
-                      _inputAmountController.text = state.totalAmount.toStringAsFixed(2);
-                      _validateAmount();
-                    },
-                    child: Text('Paga el total'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(double.infinity, 50),
-                    ),
-                  ),
-                  SizedBox(height: 16.0),
-
-                  // Monto con recargo
-                  Text(
-                    'Total (incluye recargo): \$${state.totalAmount.toStringAsFixed(2)}',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-
-                  // Mostrar detalles del recargo si existe
-                  if (paymentMethodsCubit.getRecargoAmount() > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        'Recargo: \$${paymentMethodsCubit.getRecargoAmount().toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-
-                  SizedBox(height: 16.0),
-
-                  // Vuelto a entregar (si corresponde)
-                  if (state.inputAmount >= state.totalAmount)
-                    Text(
-                      'Vuelto a entregar: \$${(state.inputAmount - state.totalAmount).toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    )
-                  else if (state.inputAmount > 0)
-                    Text(
-                      'Falta: \$${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // Construye la columna de totales para el pago parcial
-  Widget _buildTotalsColumn(BuildContext context, PaymentMethodsLoaded state) {
-    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
-    final recargoAmount = paymentMethodsCubit.getRecargoAmount();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Mostrar subtotal y recargo
-        Text(
-          'Subtotal: \$${state.subtotalAmount.toStringAsFixed(2)}',
-          style: TextStyle(fontWeight: FontWeight.w500),
-        ),
-        if (recargoAmount > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text(
-              'Recargo (${_getSelectedMethodRate(state)}%): \$${recargoAmount.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 14),
-            ),
-          ),
-        Divider(),
-        Text(
-          'Total: \$${state.totalAmount.toStringAsFixed(2)}',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ],
     );
   }
 
@@ -376,47 +269,21 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
     return '0';
   }
 
-  // Construye los selectores de método de pago (tipo de cobro y forma de cobro)
-  Widget _buildPaymentMethodSelectors(BuildContext context, PaymentMethodsLoaded state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Tipo de cobro (dropdown de providers)
-        Text('Tipo de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
-        DropdownButton<int>(
-          value: state.selectedProviderId,
-          isExpanded: true,
-          hint: Text('Seleccione tipo de cobro'),
-          onChanged: (int? providerId) {
-            if (providerId != null) {
-              context.read<PaymentMethodsCubit>().selectPaymentProvider(providerId);
-            }
-          },
-          items: state.providers.map((provider) {
-            return DropdownMenuItem<int>(
-              value: provider.id,
-              child: Text(provider.nombre),
-            );
-          }).toList(),
-        ),
-        SizedBox(height: 16.0),
-
-        // Forma de cobro (dropdown de métodos del provider seleccionado)
-        Text('Forma de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
-        _buildPaymentMethodsDropdown(context, state),
-      ],
-    );
-  }
-
   // Construye el dropdown de métodos de pago basado en el proveedor seleccionado
   Widget _buildPaymentMethodsDropdown(BuildContext context, PaymentMethodsLoaded state) {
     // Encontrar el proveedor seleccionado
-    final selectedProvider = state.selectedProviderId != null
-        ? state.providers.firstWhere(
-            (p) => p.id == state.selectedProviderId,
-            orElse: () => null as PaymentProvider,
-          )
-        : null;
+    PaymentProvider? selectedProvider;
+
+    if (state.selectedProviderId != null) {
+      try {
+        selectedProvider = state.providers.firstWhere(
+          (p) => p.id == state.selectedProviderId,
+        );
+      } catch (e) {
+        // Si no se encuentra, dejamos selectedProvider como null
+        print('Proveedor con ID ${state.selectedProviderId} no encontrado');
+      }
+    }
 
     // Si no hay proveedor seleccionado o no tiene métodos, mostrar dropdown vacío
     if (selectedProvider == null ||

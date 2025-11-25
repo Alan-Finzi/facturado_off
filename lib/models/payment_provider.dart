@@ -58,22 +58,72 @@ class PaymentProvider {
     // Procesa la lista de métodos de pago si existe
     List<PaymentMethod>? metodos;
     if (json['metodos_pago'] != null) {
-      metodos = (json['metodos_pago'] as List)
-          .map((metodo) => PaymentMethod.fromJson(metodo, providerId: json['id'] ?? 0))
-          .toList();
+      try {
+        metodos = (json['metodos_pago'] as List)
+            .map((metodo) => PaymentMethod.fromJson(metodo, providerId: json['id'] ?? 0))
+            .toList();
+      } catch (e) {
+        print('Error al procesar metodos_pago: $e para provider ID: ${json['id']}');
+        metodos = []; // Evitar que sea null
+      }
+    } else {
+      metodos = []; // Inicializar con lista vacía en lugar de null
+    }
+
+    // Asegurarse de que el ID sea un entero
+    int id;
+    try {
+      if (json['id'] is int) {
+        id = json['id'];
+      } else if (json['id'] is String) {
+        id = int.tryParse(json['id']) ?? 0;
+      } else {
+        id = 0;
+      }
+    } catch (_) {
+      id = 0;
+      print('Error al parsear ID de provider: ${json['id']}');
+    }
+
+    // Parsear creador_id como entero
+    int? creadorId;
+    if (json['creador_id'] != null) {
+      try {
+        if (json['creador_id'] is int) {
+          creadorId = json['creador_id'];
+        } else if (json['creador_id'] is String) {
+          creadorId = int.tryParse(json['creador_id']);
+        }
+      } catch (e) {
+        print('Error al parsear creador_id: ${json['creador_id']}');
+      }
+    }
+
+    // Parsear comercio_id como entero
+    int? comercioId;
+    if (json['comercio_id'] != null) {
+      try {
+        if (json['comercio_id'] is int) {
+          comercioId = json['comercio_id'];
+        } else if (json['comercio_id'] is String) {
+          comercioId = int.tryParse(json['comercio_id']);
+        }
+      } catch (e) {
+        print('Error al parsear comercio_id: ${json['comercio_id']}');
+      }
     }
 
     return PaymentProvider(
-      id: json['id'] ?? 0,
+      id: id,
       nombre: json['nombre'] ?? '',
-      creador: json['creador'],
-      creadorId: json['creador_id'],
-      tipo: json['tipo'],
-      muestraSucursales: json['muestra_sucursales'],
-      comercioId: json['comercio_id'],
-      cbu: json['cbu'],
-      cuit: json['cuit'],
-      updatedAt: json['updated_at'],
+      creador: json['creador']?.toString(),
+      creadorId: creadorId,
+      tipo: json['tipo'] is int ? json['tipo'] : (int.tryParse(json['tipo']?.toString() ?? '') ?? null),
+      muestraSucursales: json['muestra_sucursales'] is int ? json['muestra_sucursales'] : (int.tryParse(json['muestra_sucursales']?.toString() ?? '') ?? null),
+      comercioId: comercioId,
+      cbu: json['cbu']?.toString(),
+      cuit: json['cuit']?.toString(),
+      updatedAt: json['updated_at']?.toString(),
       metodosPago: metodos,
     );
   }

@@ -90,9 +90,14 @@ class PaymentMethod {
 
     if (value is num) return value.toDouble();
 
+    // Para el caso de strings, asegurarse de limpiar cualquier formato
     try {
-      return double.tryParse(value.toString()) ?? 0.0;
+      // Limpiar el string: reemplazar comas por puntos y eliminar espacios
+      String cleanValue = value.toString().trim().replaceAll(',', '.');
+      // Intentar parsear a double
+      return double.tryParse(cleanValue) ?? 0.0;
     } catch (_) {
+      print('Error al parsear recargo: $value');
       return 0.0;
     }
   }

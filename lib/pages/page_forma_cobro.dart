@@ -82,22 +82,37 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Mostrar resumen de productos seleccionados
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Resumen de venta',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            SizedBox(height: 8.0),
-                            ResumenTabla(),
-                          ],
+                    // Mostrar resumen de productos seleccionados en la columna derecha
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Columna izquierda vacía para mantener la alineación
+                        Expanded(
+                          flex: 1,
+                          child: Container(),
                         ),
-                      ),
+
+                        // Columna derecha: Resumen de venta
+                        Expanded(
+                          flex: 1,
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Resumen de venta',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  SizedBox(height: 8.0),
+                                  ResumenTabla(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 16.0),
 

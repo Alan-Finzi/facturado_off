@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
@@ -335,18 +336,45 @@ class ApiServices{
       // Verificar si la respuesta fue exitosa (código 200)
       if (response.statusCode == 200) {
         // Decodificar el JSON de la respuesta
-        final List<dynamic> providersJson = jsonDecode(response.body);
-        print('Métodos de pago obtenidos: ${providersJson.length}');
+        final responseBody = response.body;
+
+        // Log para diagnóstico
+        print('Respuesta de API de métodos de pago recibida: ${responseBody.length} caracteres');
+
+        // Intentar decodificar el JSON
+        List<dynamic> providersJson;
+        try {
+          providersJson = jsonDecode(responseBody) as List<dynamic>;
+
+          // Validación extra para diagnóstico
+          print('JSON decodificado correctamente. Items: ${providersJson.length}');
+
+          // Mostrar estructura del primer elemento para diagnóstico
+          if (providersJson.isNotEmpty) {
+            _debugPaymentProvider(providersJson[0]);
+          }
+        } catch (e) {
+          print('Error al decodificar JSON: $e');
+          print('Primeros 100 caracteres de la respuesta: ${responseBody.substring(0, min(100, responseBody.length))}');
+          throw Exception('Error al procesar la respuesta de métodos de pago: ${e.toString()}');
+        }
 
         // Insertar cada proveedor en la base de datos
         // Este proceso incrementará el progreso de sincronización en 1% por cada proveedor
         for (var providerJson in providersJson) {
-          await DatabaseHelper.instance.insertPaymentProvider(providerJson);
+          try {
+            await DatabaseHelper.instance.insertPaymentProvider(providerJson);
+          } catch (e) {
+            print('Error al insertar proveedor: $e');
+            print('Datos del proveedor con error: $providerJson');
+          }
         }
 
         print('Sincronización de métodos de pago completada (+${providersJson.length}%)');
       } else {
         // Manejo de errores de la API
+        print('Error HTTP: ${response.statusCode} - ${response.reasonPhrase}');
+        print('Body de respuesta: ${response.body}');
         throw Exception('Error al cargar los métodos de pago. Código: ${response.statusCode}');
       }
     } catch (e) {
@@ -354,6 +382,30 @@ class ApiServices{
       print('Error en fetchMetodosPago: $e');
       // Propagar el error para que el llamador pueda manejarlo
       throw Exception('Error al cargar los métodos de pago: ${e.toString()}');
+    }
+  }
+
+  /// Método de diagnóstico para imprimir la estructura de un proveedor de pago
+  void _debugPaymentProvider(dynamic provider) {
+    try {
+      print('=== Debug de PaymentProvider ===');
+      print('ID: ${provider['id']} (${provider['id'].runtimeType})');
+      print('Nombre: ${provider['nombre']} (${provider['nombre'].runtimeType})');
+
+      if (provider['metodos_pago'] != null) {
+        print('Métodos de pago: ${(provider['metodos_pago'] as List).length}');
+
+        if ((provider['metodos_pago'] as List).isNotEmpty) {
+          final metodo = (provider['metodos_pago'] as List)[0];
+          print('Primer método - ID: ${metodo['id']} (${metodo['id'].runtimeType})');
+          print('Primer método - Nombre: ${metodo['nombre']} (${metodo['nombre'].runtimeType})');
+          print('Primer método - Recargo: ${metodo['recargo']} (${metodo['recargo'].runtimeType})');
+        }
+      } else {
+        print('No tiene métodos de pago');
+      }
+    } catch (e) {
+      print('Error en debug de provider: $e');
     }
   }
 }
