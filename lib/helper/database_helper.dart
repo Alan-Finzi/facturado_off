@@ -74,13 +74,58 @@ class DatabaseHelper {
 
     return await  openDatabase(
       path,
-      version: 27, // Incrementa este número si ya estabas en 23
+      version: 28, // Incrementamos la versión para forzar la actualización de tablas de métodos de pago
       onCreate: (db, version) async {
         await _createTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 24) {
+        if (oldVersion < 24 || oldVersion < 28) {
           await _createTables(db); // Llama a _createTables para crear las tablas nuevas
+        }
+
+        // Asegurarse de que las tablas de payment existan
+        if (oldVersion < 28) {
+          try {
+            // Forzar creación de tablas de métodos de pago
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS payment_providers (
+                id INTEGER PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                creador TEXT,
+                creador_id INTEGER,
+                tipo INTEGER,
+                muestra_sucursales INTEGER,
+                comercio_id INTEGER,
+                cbu TEXT,
+                cuit TEXT,
+                updated_at TEXT
+              )
+            ''');
+
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS payment_methods (
+                id INTEGER PRIMARY KEY,
+                provider_id INTEGER,
+                nombre TEXT NOT NULL,
+                categoria INTEGER,
+                cuenta INTEGER,
+                recargo REAL NOT NULL,
+                descripcion TEXT,
+                comercio_id INTEGER,
+                creador_id INTEGER,
+                muestra_sucursales INTEGER,
+                acreditacion_inmediata INTEGER,
+                eliminado INTEGER DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT,
+                FOREIGN KEY (provider_id) REFERENCES payment_providers(id)
+              )
+            ''');
+
+            print('Tablas de métodos de pago verificadas/creadas con éxito');
+          } catch (e) {
+            print('Error al crear tablas de métodos de pago: $e');
+          }
         }
       },
     );
@@ -1017,30 +1062,173 @@ class DatabaseHelper {
 
   /// Obtiene todos los proveedores de pago
   Future<List<PaymentProvider>> getPaymentProviders() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('payment_providers');
+    try {
+      final db = await database;
 
-    final List<PaymentProvider> providers = [];
+      // Verificar si la tabla existe
+      final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='payment_providers'");
+      if (tables.isEmpty) {
+        print("La tabla payment_providers no existe, iniciando creación de tabla");
+        // Si la tabla no existe, crearla
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS payment_providers (
+            id INTEGER PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            creador TEXT,
+            creador_id INTEGER,
+            tipo INTEGER,
+            muestra_sucursales INTEGER,
+            comercio_id INTEGER,
+            cbu TEXT,
+            cuit TEXT,
+            updated_at TEXT
+          )
+        ''');
 
-    for (final providerMap in maps) {
-      final provider = PaymentProvider.fromJson(providerMap);
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS payment_methods (
+            id INTEGER PRIMARY KEY,
+            provider_id INTEGER,
+            nombre TEXT NOT NULL,
+            categoria INTEGER,
+            cuenta INTEGER,
+            recargo REAL NOT NULL,
+            descripcion TEXT,
+            comercio_id INTEGER,
+            creador_id INTEGER,
+            muestra_sucursales INTEGER,
+            acreditacion_inmediata INTEGER,
+            eliminado INTEGER DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (provider_id) REFERENCES payment_providers(id)
+          )
+        ''');
 
-      // Obtener los métodos de pago para este proveedor
-      final methodsMaps = await db.query(
-        'payment_methods',
-        where: 'provider_id = ?',
-        whereArgs: [provider.id],
-      );
+        // Insertar al menos un proveedor y método por defecto para evitar errores
+        await db.insert(
+          'payment_providers',
+          {
+            'id': 0,
+            'nombre': 'Efectivo',
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
 
-      final methods = methodsMaps
-          .map((methodMap) => PaymentMethod.fromJson(methodMap))
-          .toList();
+        await db.insert(
+          'payment_methods',
+          {
+            'id': 0,
+            'provider_id': 0,
+            'nombre': 'Efectivo',
+            'recargo': 0.0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
 
-      // Crear un nuevo proveedor con los métodos incluidos
-      providers.add(provider.copyWith(metodosPago: methods));
+        print("Tablas de métodos de pago creadas y datos por defecto insertados");
+
+        // Retornar un proveedor por defecto
+        final defaultProvider = PaymentProvider(
+          id: 0,
+          nombre: 'Efectivo',
+          metodosPago: [
+            PaymentMethod(
+              id: 0,
+              providerId: 0,
+              nombre: 'Efectivo',
+              recargo: 0.0,
+            ),
+          ],
+        );
+
+        return [defaultProvider];
+      }
+
+      // Consultar los proveedores si la tabla existe
+      final List<Map<String, dynamic>> maps = await db.query('payment_providers');
+      if (maps.isEmpty) {
+        // Si no hay proveedores, insertar uno por defecto
+        await db.insert(
+          'payment_providers',
+          {
+            'id': 0,
+            'nombre': 'Efectivo',
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        await db.insert(
+          'payment_methods',
+          {
+            'id': 0,
+            'provider_id': 0,
+            'nombre': 'Efectivo',
+            'recargo': 0.0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        final defaultProvider = PaymentProvider(
+          id: 0,
+          nombre: 'Efectivo',
+          metodosPago: [
+            PaymentMethod(
+              id: 0,
+              providerId: 0,
+              nombre: 'Efectivo',
+              recargo: 0.0,
+            ),
+          ],
+        );
+
+        return [defaultProvider];
+      }
+
+      final List<PaymentProvider> providers = [];
+
+      for (final providerMap in maps) {
+        try {
+          final provider = PaymentProvider.fromJson(providerMap);
+
+          // Obtener los métodos de pago para este proveedor
+          final methodsMaps = await db.query(
+            'payment_methods',
+            where: 'provider_id = ?',
+            whereArgs: [provider.id],
+          );
+
+          final methods = methodsMaps
+              .map((methodMap) => PaymentMethod.fromJson(methodMap))
+              .toList();
+
+          // Crear un nuevo proveedor con los métodos incluidos
+          providers.add(provider.copyWith(metodosPago: methods));
+        } catch (e) {
+          print('Error al procesar proveedor: $e');
+          // Continuar con el siguiente proveedor
+        }
+      }
+
+      return providers;
+    } catch (e) {
+      print('Error en getPaymentProviders: $e');
+      // Retornar un proveedor por defecto en caso de error
+      return [
+        PaymentProvider(
+          id: 0,
+          nombre: 'Efectivo',
+          metodosPago: [
+            PaymentMethod(
+              id: 0,
+              providerId: 0,
+              nombre: 'Efectivo',
+              recargo: 0.0,
+            ),
+          ],
+        )
+      ];
     }
-
-    return providers;
   }
 
   /// Obtiene un proveedor de pago por ID con sus métodos de pago

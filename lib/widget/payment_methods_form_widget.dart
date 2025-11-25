@@ -99,6 +99,37 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
               ),
               SizedBox(height: 16.0),
 
+              // Botones de tipo de pago (total o parcial)
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.read<PaymentMethodsCubit>().setPaymentType(false);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: !state.isPartialPayment ? Colors.grey[700] : null,
+                      ),
+                      child: Text('Pago total'),
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.read<PaymentMethodsCubit>().setPaymentType(true);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: state.isPartialPayment ? Colors.grey[700] : null,
+                        side: state.isPartialPayment ? null : BorderSide(color: Colors.grey),
+                      ),
+                      child: Text('Pago dividido o en Cuenta Corriente'),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16.0),
+
               // Dos columnas: Métodos de pago y monto a pagar
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
