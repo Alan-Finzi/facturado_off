@@ -173,45 +173,62 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Monto a pagar
-                        TextField(
-                          controller: _inputAmountController,
-                          focusNode: _inputAmountFocusNode,
-                          decoration: InputDecoration(
-                            labelText: 'Ingresa el monto con el que va a pagar tu cliente',
-                            prefixText: '\$ ',
-                            border: OutlineInputBorder(),
-                            errorText: _inputError,
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                          ],
-                          onChanged: (value) {
-                            final amount = double.tryParse(value) ?? 0.0;
-                            context.read<PaymentMethodsCubit>().updateInputAmount(amount);
-                            _validateAmount();
-                          },
-                        ),
-                        SizedBox(height: 10.0),
-
-                        // Botón "Paga el total"
+                        // Monto a pagar y botón en layout horizontal
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Campo de entrada para el monto
                             Expanded(
-                              child: Container(), // Espacio vacío a la izquierda
+                              flex: 3,
+                              child: TextField(
+                                controller: _inputAmountController,
+                                focusNode: _inputAmountFocusNode,
+                                decoration: InputDecoration(
+                                  labelText: 'Ingresa el monto',
+                                  prefixText: '\$ ',
+                                  border: OutlineInputBorder(),
+                                  errorText: _inputError,
+                                ),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                ],
+                                onChanged: (value) {
+                                  final amount = double.tryParse(value) ?? 0.0;
+                                  context.read<PaymentMethodsCubit>().updateInputAmount(amount);
+                                  _validateAmount();
+                                },
+                              ),
                             ),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                context.read<PaymentMethodsCubit>().setPayTotalAmount();
-                                _inputAmountController.text = state.totalAmount.toStringAsFixed(2);
-                                _validateAmount();
-                              },
-                              icon: Icon(Icons.money),
-                              label: Text('Pagar el total'),
-                              style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                                backgroundColor: Colors.green[700],
+
+                            // Espacio entre el campo de texto y el botón
+                            SizedBox(width: 10.0),
+
+                            // Botón "Paga el total" con el nuevo estilo
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  context.read<PaymentMethodsCubit>().setPayTotalAmount();
+                                  _inputAmountController.text = state.totalAmount.toStringAsFixed(2);
+                                  _validateAmount();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
+                                  side: BorderSide(color: Colors.black),
+                                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Pagar total',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                           ],

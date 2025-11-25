@@ -98,6 +98,9 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
   }
 
   /// Actualiza el monto subtotal y recalcula el total con el recargo
+  ///
+  /// subtotalAmount: Monto subtotal que puede incluir subtotal+IVA o ya tener aplicado descuento
+  ///
   void updateSubtotalAmount(double subtotalAmount) {
     if (state is PaymentMethodsLoaded) {
       final currentState = state as PaymentMethodsLoaded;
