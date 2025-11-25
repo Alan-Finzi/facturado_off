@@ -75,9 +75,16 @@ class ResumenTabla extends StatelessWidget {
                                 if (paymentState is PaymentMethodsLoaded && subtotal > 0) {
                                     // Usar microtask para evitar errores de setState durante la construcción
                                     Future.microtask(() {
+                                        // Forzar actualización del subtotal para que se recalcule el recargo
+                                        // incluso si el valor es el mismo
                                         paymentMethodsCubit.updateSubtotalAmount(
                                             subtotal - descuentoGral + totalIva
                                         );
+
+                                        // Si hay un método seleccionado, forzar la actualización del recargo
+                                        if (paymentState.selectedMethodId != null) {
+                                            paymentMethodsCubit.selectPaymentMethod(paymentState.selectedMethodId!);
+                                        }
                                     });
                                 }
 
