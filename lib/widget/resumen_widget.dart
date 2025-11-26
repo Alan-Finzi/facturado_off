@@ -186,7 +186,7 @@ class _ResumenTablaState extends State<ResumenTabla> {
                                     if (paymentState is PaymentMethodsLoaded) {
                                         // Update the recargo information when payment method changes
                                         // Forzar actualización inmediata cuando cambia el estado
-                                        _updateRecargoFromPaymentMethod(true);
+                                        _updateRecargoFromPaymentMethod(true, paymentState as PaymentMethodsLoaded);
                                     }
                                 },
                                 // Use BlocBuilder to rebuild when payment state changes
