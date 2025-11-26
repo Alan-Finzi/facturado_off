@@ -19,112 +19,124 @@ class _ResumenTablaState extends State<ResumenTabla> {
     // Store recargo information to persist between builds
     double _recargoRate = 0.0;
     double _recargoAmount = 0.0;
-    Timer? _updateTimer;
+    int _lastMethodId = -1;
+    int _lastProviderId = -1;
+    StreamSubscription? _stateSubscription;
 
     @override
     void initState() {
         super.initState();
         // Initialize with a post-frame callback to ensure proper context
         WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updateRecargoFromPaymentMethod(true);
+            final PaymentMethodsCubit? paymentMethodsCubit = _getPaymentMethodsCubit(context);
+            if (paymentMethodsCubit != null) {
+                // Suscribirse directamente al stream de estados del Cubit
+                _stateSubscription = paymentMethodsCubit.stream.listen((state) {
+                    if (state is PaymentMethodsLoaded) {
+                        // Verificar si hay cambio real en el método de pago o en el subtotal
+                        final methodChanged = state.selectedMethodId != _lastMethodId ||
+                                            state.selectedProviderId != _lastProviderId;
 
-            // Set up a periodic timer to check for updates
-            _updateTimer = Timer.periodic(Duration(milliseconds: 300), (_) {
-                if (mounted) {
-                    _updateRecargoFromPaymentMethod(false);
+                        // Verificar si hay cambio en el subtotal
+                        final subtotalChanged = state.subtotalAmount > 0;
+
+                        // Actualizar si cambió el método o si hay subtotal y es la primera carga
+                        if (methodChanged || subtotalChanged) {
+                            _lastMethodId = state.selectedMethodId ?? -1;
+                            _lastProviderId = state.selectedProviderId ?? -1;
+                            _updateRecargoFromPaymentMethod(true, state);
+                        }
+                    }
+                });
+
+                // Actualizamos al inicio con el estado actual
+                if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+                    _updateRecargoFromPaymentMethod(true, paymentMethodsCubit.state as PaymentMethodsLoaded);
                 }
-            });
+            }
         });
     }
 
     @override
     void dispose() {
-        _updateTimer?.cancel();
+        _stateSubscription?.cancel();
         super.dispose();
     }
 
     // This method will force update the recargo information from the payment method
-    void _updateRecargoFromPaymentMethod(bool forceUpdate) {
-        final PaymentMethodsCubit? paymentMethodsCubit = _getPaymentMethodsCubit(context);
-        if (paymentMethodsCubit != null) {
-            try {
-                if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
-                    final loadedState = paymentMethodsCubit.state as PaymentMethodsLoaded;
+    void _updateRecargoFromPaymentMethod(bool forceUpdate, PaymentMethodsLoaded loadedState) {
+        try {
+            // SIEMPRE intentar obtener la información del método seleccionado
+            double recargoRate = 0.0;
+            double finalRecargoAmount = 0.0;
 
-                    // SIEMPRE intentar obtener la información del método seleccionado
-                    double recargoRate = 0.0;
-                    if (loadedState.selectedProviderId != null && loadedState.selectedMethodId != null) {
-                        try {
-                            // Intentar encontrar el proveedor seleccionado
-                            final providerIndex = loadedState.providers.indexWhere(
-                                (p) => p.id == loadedState.selectedProviderId
+            if (loadedState.selectedProviderId != null && loadedState.selectedMethodId != null) {
+                try {
+                    // Intentar encontrar el proveedor seleccionado
+                    final providerIndex = loadedState.providers.indexWhere(
+                        (p) => p.id == loadedState.selectedProviderId
+                    );
+
+                    if (providerIndex >= 0) {
+                        final selectedProvider = loadedState.providers[providerIndex];
+
+                        // Intentar encontrar el método seleccionado
+                        if (selectedProvider.metodosPago != null && selectedProvider.metodosPago!.isNotEmpty) {
+                            final methodIndex = selectedProvider.metodosPago!.indexWhere(
+                                (m) => m.id == loadedState.selectedMethodId
                             );
 
-                            if (providerIndex >= 0) {
-                                final selectedProvider = loadedState.providers[providerIndex];
+                            if (methodIndex >= 0) {
+                                final selectedMethod = selectedProvider.metodosPago![methodIndex];
+                                recargoRate = selectedMethod.recargo;
 
-                                // Intentar encontrar el método seleccionado
-                                if (selectedProvider.metodosPago != null && selectedProvider.metodosPago!.isNotEmpty) {
-                                    final methodIndex = selectedProvider.metodosPago!.indexWhere(
-                                        (m) => m.id == loadedState.selectedMethodId
-                                    );
+                                // Solo calcular el recargo si hay un subtotal válido
+                                if (loadedState.subtotalAmount > 0) {
+                                    // Cálculo directo del monto de recargo
+                                    finalRecargoAmount = (loadedState.subtotalAmount * recargoRate) / 100;
 
-                                    if (methodIndex >= 0) {
-                                        final selectedMethod = selectedProvider.metodosPago![methodIndex];
-                                        recargoRate = selectedMethod.recargo;
-
-                                        // Cálculo directo del monto de recargo
-                                        final directRecargoAmount = (loadedState.subtotalAmount * recargoRate) / 100;
-
-                                        // Obtener el recargo del cubit para comparar
-                                        final calculatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
-
-                                        // Usar el recargo más alto entre ambos cálculos para asegurar que se muestre
-                                        final finalRecargoAmount = max(directRecargoAmount, calculatedRecargoAmount);
-
-                                        print('RECARGO DIRECTO: $directRecargoAmount | RECARGO CUBIT: $calculatedRecargoAmount | FINAL: $finalRecargoAmount');
-
-                                        // Solo actualizar si hay cambios o se fuerza la actualización
-                                        if (forceUpdate ||
-                                            (_recargoRate != recargoRate) ||
-                                            ((finalRecargoAmount - _recargoAmount).abs() > 0.001)) {
-
-                                            if (mounted) {
-                                                setState(() {
-                                                    _recargoAmount = finalRecargoAmount;
-                                                    _recargoRate = recargoRate;
-                                                });
-                                            }
-
-                                            print('🔄 ResumenTabla: Recargo actualizado a ${_recargoAmount.toStringAsFixed(2)} (${_recargoRate.toStringAsFixed(1)}%)');
-                                        }
-                                    } else {
-                                        print('⚠️ Método de pago no encontrado: ${loadedState.selectedMethodId}');
-                                    }
-                                } else {
-                                    print('⚠️ Proveedor no tiene métodos: ${loadedState.selectedProviderId}');
+                                    print('💰 CÁLCULO DIRECTO DEL RECARGO:');
+                                    print('   Subtotal: ${loadedState.subtotalAmount.toStringAsFixed(2)}');
+                                    print('   Tasa de recargo: ${recargoRate.toStringAsFixed(1)}%');
+                                    print('   Monto de recargo: ${finalRecargoAmount.toStringAsFixed(2)}');
                                 }
                             } else {
-                                print('⚠️ Proveedor no encontrado: ${loadedState.selectedProviderId}');
+                                print('⚠️ Método de pago no encontrado: ${loadedState.selectedMethodId}');
                             }
-                        } catch (e) {
-                            print('🔴 Error al buscar método de pago: $e');
-                            print('StackTrace: ${StackTrace.current}');
+                        } else {
+                            print('⚠️ Proveedor no tiene métodos: ${loadedState.selectedProviderId}');
                         }
                     } else {
-                        if (mounted && _recargoAmount > 0) {
-                            // Resetear el recargo si no hay método seleccionado
-                            setState(() {
-                                _recargoAmount = 0.0;
-                                _recargoRate = 0.0;
-                            });
-                            print('🔄 ResumenTabla: Recargo reseteado a 0 (sin método seleccionado)');
-                        }
+                        print('⚠️ Proveedor no encontrado: ${loadedState.selectedProviderId}');
                     }
+                } catch (e) {
+                    print('🔴 Error al buscar método de pago: $e');
+                    print('StackTrace: ${StackTrace.current}');
                 }
-            } catch (e) {
-                print('🔴 Error general en _updateRecargoFromPaymentMethod: $e');
             }
+
+            // Solo actualizar si hay cambios o se fuerza la actualización
+            if (forceUpdate ||
+                (_recargoRate != recargoRate) ||
+                ((finalRecargoAmount - _recargoAmount).abs() > 0.001)) {
+
+                if (mounted) {
+                    setState(() {
+                        _recargoAmount = finalRecargoAmount;
+                        _recargoRate = recargoRate;
+                    });
+                }
+
+                if (_recargoAmount > 0) {
+                    print('✅ ResumenTabla: Recargo actualizado a ${_recargoAmount.toStringAsFixed(2)} (${_recargoRate.toStringAsFixed(1)}%)');
+                } else if (_recargoRate > 0) {
+                    print('⚠️ ResumenTabla: Recargo en 0 a pesar de tener tasa ${_recargoRate.toStringAsFixed(1)}%');
+                } else {
+                    print('ℹ️ ResumenTabla: Sin recargo (0%)');
+                }
+            }
+        } catch (e) {
+            print('🔴 Error general en _updateRecargoFromPaymentMethod: $e');
         }
     }
 
@@ -186,8 +198,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
                                             descuentoPromos: descuentoPromos,
                                             descuentoGral: descuentoGral,
                                             totalIva: totalIva,
-                                            recargoRate: _recargoRate,
-                                            recargoAmount: _recargoAmount,
                                             totalFinal: totalFinal,
                                             productosState: productosState,
                                         );
@@ -201,8 +211,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
                                 descuentoPromos: descuentoPromos,
                                 descuentoGral: descuentoGral,
                                 totalIva: totalIva,
-                                recargoRate: _recargoRate,
-                                recargoAmount: _recargoAmount,
                                 totalFinal: totalFinal,
                                 productosState: productosState,
                             );
@@ -214,8 +222,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
                             descuentoPromos: descuentoPromos,
                             descuentoGral: descuentoGral,
                             totalIva: totalIva,
-                            recargoRate: 0.0,
-                            recargoAmount: 0.0,
                             totalFinal: subtotal - descuentoGral + totalIva,
                             productosState: productosState,
                         );
@@ -243,8 +249,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
         required double descuentoPromos,
         required double descuentoGral,
         required double totalIva,
-        required double recargoRate,
-        required double recargoAmount,
         required double totalFinal,
         required ProductosState productosState,
     }) {
@@ -283,37 +287,37 @@ class _ResumenTablaState extends State<ResumenTabla> {
                     ),
                     // Siempre mostrar la fila de recargo, incluso cuando es cero
                     TableRow(
-                        decoration: (_recargoAmount > 0 || recargoAmount > 0) ? BoxDecoration(
+                        decoration: _recargoAmount > 0 ? BoxDecoration(
                             color: Colors.red[50],
                             borderRadius: BorderRadius.circular(4),
                         ) : null,
                         children: [
                             Padding(
-                                padding: (_recargoAmount > 0 || recargoAmount > 0) ? EdgeInsets.all(4.0) : EdgeInsets.zero,
+                                padding: _recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
                                 child: Row(
                                     children: [
-                                        if (_recargoAmount > 0 || recargoAmount > 0)
+                                        if (_recargoAmount > 0)
                                             Icon(Icons.payment, size: 12, color: Colors.red[700]),
-                                        SizedBox(width: (_recargoAmount > 0 || recargoAmount > 0) ? 4.0 : 0),
+                                        SizedBox(width: _recargoAmount > 0 ? 4.0 : 0),
                                         RichText(
                                             text: TextSpan(
                                                 children: [
                                                     TextSpan(
                                                         text: '+ Recargo ',
                                                         style: TextStyle(
-                                                            fontSize: (_recargoAmount > 0 || recargoAmount > 0) ? 11 : 10,
-                                                            fontWeight: (_recargoAmount > 0 || recargoAmount > 0) ? FontWeight.bold : FontWeight.normal,
-                                                            color: (_recargoAmount > 0 || recargoAmount > 0) ? Colors.red[700] : Colors.grey
+                                                            fontSize: _recargoAmount > 0 ? 11 : 10,
+                                                            fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                            color: _recargoAmount > 0 ? Colors.red[700] : Colors.grey
                                                         ),
                                                     ),
                                                     TextSpan(
-                                                        // Usar el valor más actualizado: primero _recargoRate (state) luego recargoRate (parámetro)
-                                                        text: '(${_recargoRate > 0 ? _recargoRate.toStringAsFixed(1) : recargoRate.toStringAsFixed(1)}%)',
+                                                        // Usar siempre los valores del estado interno
+                                                        text: '(${_recargoRate.toStringAsFixed(1)}%)',
                                                         style: TextStyle(
-                                                            fontSize: (_recargoAmount > 0 || recargoAmount > 0) ? 11 : 10,
-                                                            fontWeight: (_recargoAmount > 0 || recargoAmount > 0) ? FontWeight.bold : FontWeight.normal,
-                                                            color: (_recargoAmount > 0 || recargoAmount > 0) ? Colors.red[900] : Colors.grey,
-                                                            backgroundColor: (_recargoAmount > 0 || recargoAmount > 0) ? Colors.yellow[100] : null,
+                                                            fontSize: _recargoAmount > 0 ? 11 : 10,
+                                                            fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                            color: _recargoAmount > 0 ? Colors.red[900] : Colors.grey,
+                                                            backgroundColor: _recargoAmount > 0 ? Colors.yellow[100] : null,
                                                         ),
                                                     ),
                                                 ],
@@ -327,15 +331,15 @@ class _ResumenTablaState extends State<ResumenTabla> {
                                 ),
                             ),
                             Padding(
-                                padding: (_recargoAmount > 0 || recargoAmount > 0) ? EdgeInsets.all(4.0) : EdgeInsets.zero,
+                                padding: _recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
                                 child: Text(
-                                    // Usar el valor más actualizado: primero _recargoAmount (state) luego recargoAmount (parámetro)
-                                    '+ \$${_recargoAmount > 0 ? _recargoAmount.toStringAsFixed(2) : recargoAmount.toStringAsFixed(2)}',
+                                    // Usar siempre los valores del estado interno
+                                    '+ \$${_recargoAmount.toStringAsFixed(2)}',
                                     textAlign: TextAlign.right,
                                     style: TextStyle(
-                                        fontWeight: (_recargoAmount > 0 || recargoAmount > 0) ? FontWeight.bold : FontWeight.normal,
-                                        color: (_recargoAmount > 0 || recargoAmount > 0) ? Colors.red[700] : Colors.grey,
-                                        fontSize: (_recargoAmount > 0 || recargoAmount > 0) ? 12 : 10
+                                        fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                        color: _recargoAmount > 0 ? Colors.red[700] : Colors.grey,
+                                        fontSize: _recargoAmount > 0 ? 12 : 10
                                     )
                                 ),
                             ),
