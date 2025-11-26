@@ -10,6 +10,7 @@ import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../bloc/cubit_resumen/resumen_cubit.dart';
+import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/datos_facturacion_model.dart';
 import '../widget/buildDropdowns.dart';
@@ -43,17 +44,20 @@ class _VentaMainPageState extends State<VentaMainPage> {
       ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Proceso de Venta'),
-      ),
-      body: Row(
-        children: [
-          Expanded(
-            child: pages[_currentPageIndex],
-          ),
-          _buildResumenDeVenta(context),
-        ],
+    return BlocProvider(
+      create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Proceso de Venta'),
+        ),
+        body: Row(
+          children: [
+            Expanded(
+              child: pages[_currentPageIndex],
+            ),
+            _buildResumenDeVenta(context),
+          ],
+        ),
       ),
     );
   }

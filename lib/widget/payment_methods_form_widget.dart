@@ -23,6 +23,10 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Verificación de identidad de instancia - diagnóstico
+      final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+      print('💳 PaymentMethodsFormWidget: PaymentMethodsCubit instance ID: ${paymentMethodsCubit.hashCode}');
+
       final productosState = context.read<ProductosCubit>().state;
       // Obtener el total de la venta desde el cubit de productos
       double subtotal = 0.0;

@@ -39,13 +39,12 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Create PaymentMethodsCubit and expose it through the widget tree
-    return BlocProvider(
-      create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance),
-      child: Builder(
-        builder: (context) {
-          // Get the provided PaymentMethodsCubit instance
-          final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+    // Use the PaymentMethodsCubit provided by the parent widget
+    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+
+    return Builder(
+      builder: (context) {
+        // Using the shared PaymentMethodsCubit instance from parent
 
           return Scaffold(
             appBar: AppBar(
@@ -163,8 +162,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
               ),
             ),
           );
-        }
-      ),
+      },
     );
   }
 

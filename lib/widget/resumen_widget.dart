@@ -30,6 +30,9 @@ class _ResumenTablaState extends State<ResumenTabla> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
             final PaymentMethodsCubit? paymentMethodsCubit = _getPaymentMethodsCubit(context);
             if (paymentMethodsCubit != null) {
+                // Verificación de identidad de instancia - diagnóstico
+                print('💰 ResumenTabla: PaymentMethodsCubit instance ID: ${paymentMethodsCubit.hashCode}');
+
                 // Suscribirse directamente al stream de estados del Cubit
                 _stateSubscription = paymentMethodsCubit.stream.listen((state) {
                     if (state is PaymentMethodsLoaded) {
