@@ -72,13 +72,15 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
       PaymentMethod? selectedMethod;
       for (final provider in currentState.providers) {
         if (provider.metodosPago != null) {
-          final method = provider.metodosPago!.firstWhere(
-                (m) => m.id == methodId,
-            orElse: () => null as PaymentMethod,
-          );
-          if (method != null) {
+          try {
+            final method = provider.metodosPago!.firstWhere(
+                  (m) => m.id == methodId,
+            );
             selectedMethod = method;
             break;
+          } catch (e) {
+            // No se encontró el método en este proveedor, continuar con el siguiente
+            continue;
           }
         }
       }
