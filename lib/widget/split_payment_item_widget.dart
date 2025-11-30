@@ -35,6 +35,18 @@ class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
     super.initState();
     _amountController = TextEditingController();
     _amountFocusNode = FocusNode();
+
+    // Manejar cuando el campo pierde el foco para formatear el valor
+    _amountFocusNode.addListener(() {
+      if (!_amountFocusNode.hasFocus) {
+        // Solo formatear cuando pierde el foco
+        final amount = double.tryParse(_amountController.text) ?? 0.0;
+        if (amount > 0) {
+          // Formatear con 2 decimales al perder el foco
+          _amountController.text = amount.toStringAsFixed(2);
+        }
+      }
+    });
   }
 
   @override
@@ -43,6 +55,17 @@ class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
     _amountController.dispose();
     _amountFocusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(SplitPaymentItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Si el ID del item cambió, podríamos necesitar actualizar nuestros controladores
+    if (oldWidget.itemId != widget.itemId) {
+      // Reset del controller ya que es un item diferente
+      _amountController.text = '';
+    }
   }
 
   @override
@@ -200,14 +223,11 @@ class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
 
   /// Construye el campo de entrada para el monto con manejo mejorado de foco
   Widget _buildAmountInput(BuildContext context, SplitPaymentItem item) {
-    // Actualiza el valor del controller si es diferente
-    if (_amountController.text != (item.amount > 0 ? item.amount.toStringAsFixed(2) : '')) {
-      // Sólo actualizar si el valor ha cambiado para evitar perder el foco
-      _amountController.text = item.amount > 0 ? item.amount.toStringAsFixed(2) : '';
-      // Mantener la posición del cursor al final del texto
-      _amountController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _amountController.text.length),
-      );
+    // Solo inicializar el controller si está vacío o si el valor del item cambió drásticamente
+    // Esto evita cambiar el valor mientras el usuario está escribiendo
+    if (_amountController.text.isEmpty && item.amount > 0) {
+      // Si está vacío y hay un valor en el item, usarlo como valor inicial
+      _amountController.text = item.amount.toString();
     }
 
     return SizedBox(
@@ -223,21 +243,21 @@ class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+          // Permitir solo números y un punto decimal con hasta 2 decimales
+          FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
         ],
         onChanged: (value) {
-          final amount = double.tryParse(value) ?? 0.0;
-          context.read<PaymentMethodsCubit>().updateSplitItemAmount(
-            widget.itemId,
-            amount
-          );
+          // Solo actualizar el valor en el estado si hay un cambio real
+          if (value.isNotEmpty) {
+            final amount = double.tryParse(value) ?? 0.0;
+            context.read<PaymentMethodsCubit>().updateSplitItemAmount(
+              widget.itemId,
+              amount
+            );
+          }
         },
-        // Mantener el cursor al final del texto al obtener el foco
-        onTap: () {
-          _amountController.selection = TextSelection.fromPosition(
-            TextPosition(offset: _amountController.text.length),
-          );
-        },
+        // Al tocar el campo, no modificar la selección para permitir edición en cualquier posición
+        onTap: null,
       ),
     );
   }
