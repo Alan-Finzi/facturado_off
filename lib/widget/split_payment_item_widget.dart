@@ -119,7 +119,7 @@ class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
       onChanged: (int? providerId) {
         if (providerId != null) {
           context.read<PaymentMethodsCubit>().updateSplitItemProvider(
-            itemId,
+            widget.itemId,
             providerId
           );
         }
@@ -175,7 +175,7 @@ class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
       onChanged: (int? methodId) {
         if (methodId != null) {
           context.read<PaymentMethodsCubit>().updateSplitItemMethod(
-            itemId,
+            widget.itemId,
             methodId
           );
         }
