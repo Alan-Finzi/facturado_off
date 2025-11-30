@@ -12,7 +12,7 @@ class SplitPaymentCollection {
   /// Monto subtotal de la venta (antes de recargos)
   final double subtotalAmount;
 
-  SplitPaymentCollection({
+  const SplitPaymentCollection({
     required this.items,
     this.subtotalAmount = 0.0,
   });
