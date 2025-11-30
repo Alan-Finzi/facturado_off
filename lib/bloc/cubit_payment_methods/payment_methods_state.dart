@@ -46,6 +46,9 @@ class PaymentMethodsLoaded extends PaymentMethodsState {
   /// Indicador si es pago parcial/dividido (true) o total (false)
   final bool isPartialPayment;
 
+  /// Colección de items para el pago dividido (solo se usa cuando isPartialPayment = true)
+  final SplitPaymentCollection splitPayments;
+
   const PaymentMethodsLoaded({
     required this.providers,
     this.selectedProviderId,
@@ -54,7 +57,8 @@ class PaymentMethodsLoaded extends PaymentMethodsState {
     this.totalAmount = 0.0,
     this.inputAmount = 0.0,
     this.isPartialPayment = false,
-  });
+    SplitPaymentCollection? splitPayments,
+  }) : this.splitPayments = splitPayments ?? const SplitPaymentCollection(items: []);
 
   /// Crear una copia con algunos campos modificados
   PaymentMethodsLoaded copyWith({
@@ -65,6 +69,7 @@ class PaymentMethodsLoaded extends PaymentMethodsState {
     double? totalAmount,
     double? inputAmount,
     bool? isPartialPayment,
+    SplitPaymentCollection? splitPayments,
   }) {
     return PaymentMethodsLoaded(
       providers: providers ?? this.providers,
@@ -74,6 +79,7 @@ class PaymentMethodsLoaded extends PaymentMethodsState {
       totalAmount: totalAmount ?? this.totalAmount,
       inputAmount: inputAmount ?? this.inputAmount,
       isPartialPayment: isPartialPayment ?? this.isPartialPayment,
+      splitPayments: splitPayments ?? this.splitPayments,
     );
   }
 
@@ -86,6 +92,7 @@ class PaymentMethodsLoaded extends PaymentMethodsState {
     totalAmount,
     inputAmount,
     isPartialPayment,
+    splitPayments,
   ];
 }
 

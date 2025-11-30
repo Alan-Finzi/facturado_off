@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../models/payment_provider.dart';
+import 'split_payment_container.dart';
 
 /// Widget que implementa la UI para seleccionar forma de pago
 /// y calcular recargos y vueltos
@@ -147,84 +148,86 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
               ),
               SizedBox(height: 16.0),
 
-              // Dos columnas: Métodos de pago y monto a pagar
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Columna izquierda: Selectores de método de pago
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Tipo de cobro (dropdown de providers)
-                        Text('Tipo de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
-                        DropdownButton<int>(
-                          value: state.selectedProviderId,
-                          isExpanded: true,
-                          hint: Text('Seleccione tipo de cobro'),
-                          onChanged: (int? providerId) {
-                            if (providerId != null) {
-                              context.read<PaymentMethodsCubit>().selectPaymentProvider(providerId);
-                            }
-                          },
-                          items: state.providers.map((provider) {
-                            return DropdownMenuItem<int>(
-                              value: provider.id,
-                              child: Text(provider.nombre),
-                            );
-                          }).toList(),
-                        ),
-                        SizedBox(height: 16.0),
+              // Contenido condicional basado en el modo de pago
+              state.isPartialPayment
+                ? SplitPaymentContainer() // Mostrar el contenedor de pagos divididos
+                : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Columna izquierda: Selectores de método de pago
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Tipo de cobro (dropdown de providers)
+                          Text('Tipo de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
+                          DropdownButton<int>(
+                            value: state.selectedProviderId,
+                            isExpanded: true,
+                            hint: Text('Seleccione tipo de cobro'),
+                            onChanged: (int? providerId) {
+                              if (providerId != null) {
+                                context.read<PaymentMethodsCubit>().selectPaymentProvider(providerId);
+                              }
+                            },
+                            items: state.providers.map((provider) {
+                              return DropdownMenuItem<int>(
+                                value: provider.id,
+                                child: Text(provider.nombre),
+                              );
+                            }).toList(),
+                          ),
+                          SizedBox(height: 16.0),
 
-                        // Forma de cobro (dropdown de métodos del provider seleccionado)
-                        Text('Forma de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
-                        _buildPaymentMethodsDropdown(context, state),
-                      ],
+                          // Forma de cobro (dropdown de métodos del provider seleccionado)
+                          Text('Forma de cobro:', style: TextStyle(fontWeight: FontWeight.w500)),
+                          _buildPaymentMethodsDropdown(context, state),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 16.0),
+                    SizedBox(width: 16.0),
 
-                  // Columna derecha: Monto a pagar
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Monto a pagar y botón en layout horizontal
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Campo de entrada para el monto
-                            Expanded(
-                              flex: 3,
-                              child: TextField(
-                                controller: _inputAmountController,
-                                focusNode: _inputAmountFocusNode,
-                                decoration: InputDecoration(
-                                  labelText: 'Ingresa el monto',
-                                  prefixText: '\$ ',
-                                  border: OutlineInputBorder(),
-                                  errorText: _inputError,
+                    // Columna derecha: Monto a pagar
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Monto a pagar y botón en layout horizontal
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Campo de entrada para el monto
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  controller: _inputAmountController,
+                                  focusNode: _inputAmountFocusNode,
+                                  decoration: InputDecoration(
+                                    labelText: 'Ingresa el monto',
+                                    prefixText: '\$ ',
+                                    border: OutlineInputBorder(),
+                                    errorText: _inputError,
+                                  ),
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                  ],
+                                  onChanged: (value) {
+                                    final amount = double.tryParse(value) ?? 0.0;
+                                    context.read<PaymentMethodsCubit>().updateInputAmount(amount);
+                                    _validateAmount();
+                                  },
                                 ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                                ],
-                                onChanged: (value) {
-                                  final amount = double.tryParse(value) ?? 0.0;
-                                  context.read<PaymentMethodsCubit>().updateInputAmount(amount);
-                                  _validateAmount();
-                                },
                               ),
-                            ),
 
-                            // Espacio entre el campo de texto y el botón
-                            SizedBox(width: 10.0),
+                              // Espacio entre el campo de texto y el botón
+                              SizedBox(width: 10.0),
 
-                            // Botón "Paga el total" con el nuevo estilo
-                            Expanded(
-                              flex: 2,
-                              child: ElevatedButton(
-                                onPressed: () {
+                              // Botón "Paga el total" con el nuevo estilo
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton(
+                                  onPressed: () {
                                   // Obtener la instancia actualizada del PaymentMethodsCubit
                                   final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
@@ -397,71 +400,73 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                         ),
                         SizedBox(height: 20.0),
 
-                        // Vuelto a entregar (si corresponde)
-                        if (state.inputAmount >= state.totalAmount)
-                          Container(
-                            padding: EdgeInsets.all(12.0),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              border: Border.all(color: Colors.green),
-                              borderRadius: BorderRadius.circular(8.0),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                )
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.payments, color: Colors.green),
-                                SizedBox(width: 8.0),
-                                Expanded(
-                                  child: Text(
-                                    'Vuelto a entregar: \$${(state.inputAmount - state.totalAmount).toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                      fontSize: 16,
+                        // Vuelto a entregar (si corresponde) - Solo se muestra en modo pago total
+                        if (!state.isPartialPayment) {
+                          if (state.inputAmount >= state.totalAmount)
+                            Container(
+                              padding: EdgeInsets.all(12.0),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                border: Border.all(color: Colors.green),
+                                borderRadius: BorderRadius.circular(8.0),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  )
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.payments, color: Colors.green),
+                                  SizedBox(width: 8.0),
+                                  Expanded(
+                                    child: Text(
+                                      'Vuelto a entregar: \$${(state.inputAmount - state.totalAmount).toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green[700],
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else if (state.inputAmount > 0)
-                          Container(
-                            padding: EdgeInsets.all(12.0),
-                            decoration: BoxDecoration(
-                              color: Colors.red[50],
-                              border: Border.all(color: Colors.red),
-                              borderRadius: BorderRadius.circular(8.0),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                )
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.warning_amber, color: Colors.red),
-                                SizedBox(width: 8.0),
-                                Expanded(
-                                  child: Text(
-                                    'Falta: \$${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red[700],
-                                      fontSize: 16,
+                                ],
+                              ),
+                            )
+                          else if (state.inputAmount > 0)
+                            Container(
+                              padding: EdgeInsets.all(12.0),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                border: Border.all(color: Colors.red),
+                                borderRadius: BorderRadius.circular(8.0),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  )
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning_amber, color: Colors.red),
+                                  SizedBox(width: 8.0),
+                                  Expanded(
+                                    child: Text(
+                                      'Falta: \$${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red[700],
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
+                        }
                       ],
                     ),
                   ),
