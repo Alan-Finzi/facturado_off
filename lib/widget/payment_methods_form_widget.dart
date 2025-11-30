@@ -401,72 +401,70 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                         SizedBox(height: 20.0),
 
                         // Vuelto a entregar (si corresponde) - Solo se muestra en modo pago total
-                        if (!state.isPartialPayment) {
-                          if (state.inputAmount >= state.totalAmount)
-                            Container(
-                              padding: EdgeInsets.all(12.0),
-                              decoration: BoxDecoration(
-                                color: Colors.green[50],
-                                border: Border.all(color: Colors.green),
-                                borderRadius: BorderRadius.circular(8.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  )
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.payments, color: Colors.green),
-                                  SizedBox(width: 8.0),
-                                  Expanded(
-                                    child: Text(
-                                      'Vuelto a entregar: \$${(state.inputAmount - state.totalAmount).toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green[700],
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else if (state.inputAmount > 0)
-                            Container(
-                              padding: EdgeInsets.all(12.0),
-                              decoration: BoxDecoration(
-                                color: Colors.red[50],
-                                border: Border.all(color: Colors.red),
-                                borderRadius: BorderRadius.circular(8.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  )
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.warning_amber, color: Colors.red),
-                                  SizedBox(width: 8.0),
-                                  Expanded(
-                                    child: Text(
-                                      'Falta: \$${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red[700],
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        if (!state.isPartialPayment && state.inputAmount >= state.totalAmount)
+                          Container(
+                            padding: EdgeInsets.all(12.0),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              border: Border.all(color: Colors.green),
+                              borderRadius: BorderRadius.circular(8.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
                             ),
-                        }
+                            child: Row(
+                              children: [
+                                Icon(Icons.payments, color: Colors.green),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: Text(
+                                    'Vuelto a entregar: \$${(state.inputAmount - state.totalAmount).toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[700],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (!state.isPartialPayment && state.inputAmount > 0 && state.inputAmount < state.totalAmount)
+                          Container(
+                            padding: EdgeInsets.all(12.0),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              border: Border.all(color: Colors.red),
+                              borderRadius: BorderRadius.circular(8.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning_amber, color: Colors.red),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: Text(
+                                    'Falta: \$${(state.totalAmount - state.inputAmount).toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red[700],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
