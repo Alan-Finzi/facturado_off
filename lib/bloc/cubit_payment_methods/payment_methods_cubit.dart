@@ -14,7 +14,30 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
 
   PaymentMethodsCubit({DatabaseHelper? databaseHelper})
       : _databaseHelper = databaseHelper ?? DatabaseHelper.instance,
-        super(PaymentMethodsInitial());
+        super(PaymentMethodsInitial()) {
+    // Precarga de proveedores y métodos de pago al inicializar
+    _preloadPaymentProviders();
+  }
+
+  /// Precarga los proveedores y métodos de pago en segundo plano
+  Future<void> _preloadPaymentProviders() async {
+    try {
+      final providers = await _databaseHelper.getPaymentProviders();
+      if (providers.isNotEmpty && state is PaymentMethodsInitial) {
+        emit(PaymentMethodsLoaded(
+          providers: providers,
+          selectedProviderId: providers.isNotEmpty ? providers.first.id : null,
+          selectedMethodId: _getFirstMethodId(providers),
+          totalAmount: 0.0,
+          inputAmount: 0.0,
+          isPartialPayment: false,
+        ));
+      }
+    } catch (e) {
+      print('Error en precarga de proveedores de pago: $e');
+      // No emitir error para evitar interrumpir el flujo
+    }
+  }
 
   /// Carga todos los proveedores de pago con sus métodos asociados
   Future<void> loadPaymentProviders() async {
@@ -135,22 +158,31 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
   }
 
   /// Actualiza el tipo de pago (total o parcial/dividido)
+  /// Limpia los datos relacionados al cambiar de modo
   void setPaymentType(bool isPartialPayment) {
     if (state is PaymentMethodsLoaded) {
       final currentState = state as PaymentMethodsLoaded;
 
-      // Si cambiamos a modo pago dividido y la colección está vacía, inicializarla
+      // Valores para resetear según el modo de pago
       SplitPaymentCollection? updatedSplitPayments;
-      if (isPartialPayment && currentState.splitPayments.isEmpty) {
+      double inputAmount = 0.0; // Resetear el monto ingresado al cambiar de modo
+
+      // Si cambiamos a modo pago dividido
+      if (isPartialPayment) {
+        // Inicializar la colección siempre al cambiar a modo dividido
         updatedSplitPayments = SplitPaymentCollection(
           items: [],
           subtotalAmount: currentState.subtotalAmount,
         );
+      } else {
+        // Si cambiamos a modo total, resetear el monto de entrada
+        inputAmount = 0.0;
       }
 
       emit(currentState.copyWith(
         isPartialPayment: isPartialPayment,
-        splitPayments: updatedSplitPayments,
+        inputAmount: inputAmount, // Resetear monto ingresado
+        splitPayments: updatedSplitPayments, // Nueva colección o null
       ));
     }
   }

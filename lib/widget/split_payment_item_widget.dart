@@ -6,7 +6,7 @@ import '../models/split_payment_item.dart';
 import '../models/payment_provider.dart';
 
 /// Widget que representa un item de pago individual en el modo pago dividido
-class SplitPaymentItemWidget extends StatelessWidget {
+class SplitPaymentItemWidget extends StatefulWidget {
   /// ID único del item de pago
   final String itemId;
 
@@ -21,6 +21,31 @@ class SplitPaymentItemWidget extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  _SplitPaymentItemWidgetState createState() => _SplitPaymentItemWidgetState();
+}
+
+class _SplitPaymentItemWidgetState extends State<SplitPaymentItemWidget> {
+  // Controller para el campo de texto del monto
+  late TextEditingController _amountController;
+  // Nodo de enfoque para el campo de texto del monto
+  late FocusNode _amountFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController();
+    _amountFocusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    // Liberar recursos cuando el widget es eliminado
+    _amountController.dispose();
+    _amountFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocBuilder<PaymentMethodsCubit, PaymentMethodsState>(
       builder: (context, state) {
@@ -32,7 +57,7 @@ class SplitPaymentItemWidget extends StatelessWidget {
 
         // Buscar el item actual en la colección
         final item = currentState.splitPayments.items.firstWhere(
-          (item) => item.id == itemId,
+          (item) => item.id == widget.itemId,
           orElse: () => throw Exception('Item no encontrado'),
         );
 
@@ -70,7 +95,7 @@ class SplitPaymentItemWidget extends StatelessWidget {
                 // Botón eliminar
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => onDelete(itemId),
+                  onPressed: () => widget.onDelete(widget.itemId),
                   tooltip: 'Eliminar método de pago',
                 ),
               ],
@@ -173,16 +198,23 @@ class SplitPaymentItemWidget extends StatelessWidget {
     );
   }
 
-  /// Construye el campo de entrada para el monto
+  /// Construye el campo de entrada para el monto con manejo mejorado de foco
   Widget _buildAmountInput(BuildContext context, SplitPaymentItem item) {
-    final controller = TextEditingController(
-      text: item.amount > 0 ? item.amount.toStringAsFixed(2) : '',
-    );
+    // Actualiza el valor del controller si es diferente
+    if (_amountController.text != (item.amount > 0 ? item.amount.toStringAsFixed(2) : '')) {
+      // Sólo actualizar si el valor ha cambiado para evitar perder el foco
+      _amountController.text = item.amount > 0 ? item.amount.toStringAsFixed(2) : '';
+      // Mantener la posición del cursor al final del texto
+      _amountController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _amountController.text.length),
+      );
+    }
 
     return SizedBox(
       width: 100,
       child: TextField(
-        controller: controller,
+        controller: _amountController,
+        focusNode: _amountFocusNode,
         decoration: const InputDecoration(
           labelText: 'Monto',
           prefixText: '\$ ',
@@ -196,8 +228,14 @@ class SplitPaymentItemWidget extends StatelessWidget {
         onChanged: (value) {
           final amount = double.tryParse(value) ?? 0.0;
           context.read<PaymentMethodsCubit>().updateSplitItemAmount(
-            itemId,
+            widget.itemId,
             amount
+          );
+        },
+        // Mantener el cursor al final del texto al obtener el foco
+        onTap: () {
+          _amountController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _amountController.text.length),
           );
         },
       ),
