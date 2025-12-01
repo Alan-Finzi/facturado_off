@@ -18,7 +18,7 @@ class SalesDatabaseHelper {
   /// Guardar una venta completa con sus detalles (transacción)
   Future<int> saveSale(Sale sale) async {
     final db = await database;
-    int ventaId;
+    late int ventaId;
 
     // Usar transacción para asegurar consistencia de datos
     await db.transaction((txn) async {

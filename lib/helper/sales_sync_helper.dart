@@ -30,15 +30,21 @@ class SalesSyncHelper {
     }
 
     final syncQueue = SyncQueue(
-      model: 'Sale',
-      modelId: ventaId.toString(),
-      action: 'create',
-      data: jsonEncode(venta.toMap()),
-      createdAt: DateTime.now(),
-      priority: 1, // Alta prioridad para ventas
+      resourceType: 'Sale',
+      resourceId: ventaId,
+      operation: 'upsert',
+      payload: jsonEncode(venta.toMap()),
+      status: 'pending',
+      createdAt: DateTime.now().toIso8601String(),
     );
 
-    await _databaseHelper.addToSyncQueue(syncQueue);
+    // Insertar directamente en la base de datos ya que no existe addToSyncQueue
+    final db = await _databaseHelper.database;
+    await db.insert(
+      'sync_queue',
+      syncQueue.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   /// Procesa las ventas pendientes de sincronización
@@ -199,14 +205,17 @@ class SalesSyncHelper {
       'total': unsynced.length,
     };
 
+    final successList = results['success'] as List<int>;
+    final failedList = results['failed'] as List<Map<String, dynamic>>;
+
     for (final venta in unsynced) {
       if (venta.id != null) {
         try {
           // Encolar para sincronización
           await enqueueSaleForSync(venta.id!);
-          results['success'].add(venta.id!);
+          successList.add(venta.id!);
         } catch (e) {
-          results['failed'].add({
+          failedList.add({
             'ventaId': venta.id,
             'error': e.toString(),
           });

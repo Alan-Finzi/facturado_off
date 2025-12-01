@@ -83,12 +83,30 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
   void _iniciarMonitorDeConexion() {
     // Verificar estado inicial
     Connectivity().checkConnectivity().then((result) {
-      _actualizarEstadoConexion(result);
+      // result puede ser una lista en versiones recientes de connectivity_plus
+      if (result is List<ConnectivityResult>) {
+        final hasConnection = result.any((r) => r != ConnectivityResult.none);
+        _actualizarEstadoConexion(
+          hasConnection ? ConnectivityResult.wifi : ConnectivityResult.none
+        );
+      } else {
+        _actualizarEstadoConexion(result as ConnectivityResult);
+      }
     });
 
     // Escuchar cambios en la conectividad
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
-      _actualizarEstadoConexion(result);
+      // result puede ser una lista en versiones recientes de connectivity_plus
+      // Si es una lista, verificamos si alguno de los resultados no es 'none'
+      if (result is List<ConnectivityResult>) {
+        final hasConnection = result.any((r) => r != ConnectivityResult.none);
+        _actualizarEstadoConexion(
+          hasConnection ? ConnectivityResult.wifi : ConnectivityResult.none
+        );
+      } else {
+        // Si es un solo resultado (versiones antiguas), usarlo directamente
+        _actualizarEstadoConexion(result as ConnectivityResult);
+      }
     });
 
     // Iniciar timer para verificar calidad de conexión
@@ -156,7 +174,8 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
         if (busqueda.isNotEmpty) {
           final idVenta = venta.id?.toString().toLowerCase() ?? '';
           final nroVenta = venta.nroVenta?.toLowerCase() ?? '';
-          final fecha = DateFormat('dd/MM/yyyy').format(venta.fecha).toLowerCase();
+          final dateFormat = new DateFormat('dd/MM/yyyy');
+          final fecha = dateFormat.format(venta.fecha).toLowerCase();
           final cliente = venta.clienteId?.toString().toLowerCase() ?? '';
 
           coincideTexto = idVenta.contains(busqueda) ||
@@ -542,7 +561,8 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
     final bool tieneError = venta.estado == 'error';
 
     // Formato para fecha
-    final fechaFormateada = DateFormat('dd/MM/yyyy HH:mm').format(venta.fecha);
+    final dateFormat = new DateFormat('dd/MM/yyyy HH:mm');
+    final fechaFormateada = dateFormat.format(venta.fecha);
 
     // Determinar icono y color según estado
     IconData iconoEstado;
@@ -708,7 +728,7 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
             shrinkWrap: true,
             children: [
               // Información general
-              _buildDetalleItem('Fecha', DateFormat('dd/MM/yyyy HH:mm').format(venta.fecha)),
+              _buildDetalleItem('Fecha', new DateFormat('dd/MM/yyyy HH:mm').format(venta.fecha)),
               _buildDetalleItem('Estado', venta.estado),
               _buildDetalleItem('Sincronizada', venta.sincronizado == 1 ? 'Sí' : 'No'),
               Divider(),
