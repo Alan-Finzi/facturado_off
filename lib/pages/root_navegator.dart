@@ -6,6 +6,7 @@ import 'package:facturador_offline/widget/widget_alta_clientes.dart';
 import 'package:facturador_offline/pages/page_home.dart';
 import 'package:facturador_offline/pages/page_nueva_venta.dart';
 import 'package:facturador_offline/pages/page_productos.dart';
+import 'package:facturador_offline/pages/page_ventas_sincronizacion.dart';
 import 'package:facturador_offline/pages/pege_connection.dart';
 import 'package:flutter/material.dart';
 import 'package:bottom_navy_bar/bottom_navy_bar.dart';
@@ -46,7 +47,7 @@ class _RootNavScreenState extends State<RootNavScreen> {
         VentaMainPage(),
         ClientesListPage(),
         ProductsPage(),
-
+        PageVentasSincronizacion(),
         ConnectionPage(),
       ],
     ),
@@ -94,6 +95,12 @@ class _RootNavScreenState extends State<RootNavScreen> {
       BottomNavyBarItem(
         icon: const Icon(Icons.pageview_rounded),
         title: const Text('Products'),
+        activeColor: Colors.blue,
+        textAlign: TextAlign.center,
+      ),
+      BottomNavyBarItem(
+        icon: const Icon(Icons.sync),
+        title: const Text('Sincronización'),
         activeColor: Colors.blue,
         textAlign: TextAlign.center,
       ),
