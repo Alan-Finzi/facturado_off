@@ -15,6 +15,7 @@ import '../models/productos_maestro.dart';
 import '../models/productos_stock_sucursales.dart';
 import '../models/sync_queue.dart';
 import '../models/user.dart';
+import '../models/sales/sales_queries.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
 
@@ -100,7 +101,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 29, // Incrementamos la versión para forzar la actualización de tablas
+        version: 30, // Incrementado para incluir tablas de ventas
         onCreate: (db, version) async {
           print('Creando base de datos desde cero - versión $version');
           try {
@@ -115,6 +116,22 @@ class DatabaseHelper {
           print('Actualizando base de datos: $oldVersion → $newVersion');
 
           // Manejo específico según la versión antigua
+          if (oldVersion < 30) {
+            // Actualizar a versión 30 con soporte para ventas
+            try {
+              // Crear tabla de ventas si no existe
+              await db.execute(SalesQueries.createVentasTable);
+              print('Tabla ventas creada exitosamente');
+
+              // Crear tabla de detalles de venta si no existe
+              await db.execute(SalesQueries.createVentasDetalleTable);
+              print('Tabla ventas_detalle creada exitosamente');
+            } catch (e) {
+              print('Error al crear tablas de ventas: $e');
+              // Continuar con otras actualizaciones, no lanzar error aquí
+            }
+          }
+
           if (oldVersion < 29) {
             try {
               // En lugar de recrear todas las tablas, verificamos si existen y creamos sólo las faltantes
@@ -562,6 +579,20 @@ class DatabaseHelper {
         porcentaje REAL
       )
     ''');
+
+    // Crear tablas de ventas
+    try {
+      // Tabla de ventas
+      await db.execute(SalesQueries.createVentasTable);
+      print('Tabla ventas creada con éxito');
+
+      // Tabla de detalles de venta
+      await db.execute(SalesQueries.createVentasDetalleTable);
+      print('Tabla ventas_detalle creada con éxito');
+    } catch (e) {
+      print('Error al crear tablas de ventas: $e');
+      // Continuamos a pesar del error para crear otras tablas
+    }
   }
   Future<void> insertProductoResponse(ProductoResponse productoResponse) async {
     try {
