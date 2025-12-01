@@ -34,7 +34,7 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
   String _filtroEstado = 'todos';
 
   // Controlador para verificar la conectividad
-  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+  late StreamSubscription<dynamic> _connectivitySubscription;
   Timer? _internetQualityTimer;
 
   @override
