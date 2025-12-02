@@ -17,8 +17,9 @@ import '../widget/resumen_widget.dart';
 
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
+  final VoidCallback? onGuardarPressed; // Callback para manejar el botón "Guardar" en el resumen
 
-  FormaCobroPage({required this.onBackPressed});
+  FormaCobroPage({required this.onBackPressed, this.onGuardarPressed});
 
   @override
   _FormaCobroPageState createState() => _FormaCobroPageState();
@@ -48,6 +49,12 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
   Widget build(BuildContext context) {
     // Use the PaymentMethodsCubit provided by the parent widget
     final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+
+    // Si existe un callback para guardar, usamos el método interno _guardarVentaConEnvio
+    // Esto nos permite acceder a este método desde el botón en el resumen
+    if (widget.onGuardarPressed != null) {
+      context.findRootAncestorStateOfType<_VentaMainPageState>()?.guardarVentaCallback = _guardarVentaConEnvio;
+    }
 
     return Builder(
       builder: (context) {
@@ -150,22 +157,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                     if (_selectedTipoEnvio == 2) _buildOtroDomicilioInfo(),
                     SizedBox(height: 20),
 
-                    // Botones Anterior y Guardar
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton(
-                          onPressed: widget.onBackPressed, // Usamos el callback aquí
-                          child: Text('Anterior'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            _guardarVentaConEnvio();
-                          },
-                          child: Text('Guardar'),
-                        ),
-                      ],
-                    ),
+                    // Ya no necesitamos estos botones aquí, la funcionalidad estará en el resumen de venta
                   ],
                 ),
               ),

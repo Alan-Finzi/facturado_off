@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
+import '../pages/page_forma_cobro.dart';
 
 
 class ResumenTabla extends StatefulWidget {
@@ -358,6 +359,46 @@ class _ResumenTablaState extends State<ResumenTabla> {
                         children: [
                             const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
                             Text('\$${totalFinal.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                    ),
+                    // Agregar el botón Guardar
+                    TableRow(
+                        children: [
+                            SizedBox(height: 20), // Espacio para separar
+                            SizedBox(height: 20),
+                        ],
+                    ),
+                    TableRow(
+                        children: [
+                            Container(), // Celda vacía a la izquierda
+                            Container(
+                                alignment: Alignment.centerRight,
+                                child: ElevatedButton(
+                                    onPressed: () {
+                                        // Buscamos la instancia del estado de FormaCobroPage
+                                        final formaCobroState = context.findAncestorStateOfType<_FormaCobroPageState>();
+                                        if (formaCobroState != null) {
+                                            // Llamamos directamente al método _guardarVentaConEnvio
+                                            formaCobroState._guardarVentaConEnvio();
+                                        } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('No se pudo guardar la venta. Intente nuevamente.'))
+                                            );
+                                        }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        minimumSize: Size(150, 50),
+                                    ),
+                                    child: const Text(
+                                        'GUARDAR',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                        ),
+                                    ),
+                                ),
+                            ),
                         ],
                     ),
                 ],

@@ -41,6 +41,12 @@ class _VentaMainPageState extends State<VentaMainPage> {
           // Volver a la página anterior al presionar el botón
           _navigateToPage(0);
         },
+        onGuardarPressed: () {
+          // Lógica que se ejecutará cuando se presione el botón guardar en el resumen
+          // Este método estará implementado en la clase FormaCobroPage
+          // y ejecutará el método _guardarVentaConEnvio()
+          // No necesitamos implementar nada aquí
+        },
       ),
     ];
 
