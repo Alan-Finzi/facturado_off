@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../bloc/cubit_cliente_mostrador/cliente_mostrador_state.dart';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
+import '../bloc/cubit_login/login_cubit.dart';
+import '../helper/sales_database_helper.dart';
+import '../models/clientes_mostrador.dart';
+import '../models/sales/sale.dart';
+import '../models/sales/sale_detail.dart';
+import '../models/payment_method.dart';
+import '../pages/page_ventas_sincronizacion.dart';
 import '../widget/buscar_cliente.dart';
 import '../widget/payment_methods_form_widget.dart';
 

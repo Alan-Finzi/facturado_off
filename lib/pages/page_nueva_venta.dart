@@ -50,27 +50,26 @@ class _VentaMainPageState extends State<VentaMainPage> {
       ),
     ];
 
-    return BlocProvider(
+    return BlocProvider<PaymentMethodsCubit>(
       create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance),
       child: Stack(
         children: [
           Scaffold(
             appBar: AppBar(
-          title: const Text('Proceso de Venta'),
-        ),
-        body: Row(
-          children: [
-            Expanded(
-              child: pages[_currentPageIndex],
+              title: const Text('Proceso de Venta'),
             ),
-            _buildResumenDeVenta(context),
-          ],
-        ),
-      ),
+            body: Row(
+              children: [
+                Expanded(
+                  child: pages[_currentPageIndex],
+                ),
+                _buildResumenDeVenta(context),
+              ],
+            ),
           ),
           // Indicador de carga que se muestra cuando está procesando
-          if (_isLoading)
-            Container(
+          _isLoading
+            ? Container(
               color: Colors.black.withOpacity(0.3),
               child: Center(
                 child: Container(
@@ -101,7 +100,8 @@ class _VentaMainPageState extends State<VentaMainPage> {
                   ),
                 ),
               ),
-            ),
+            )
+            : Container(), // Widget vacío cuando no está cargando
         ],
       ),
     );
@@ -729,8 +729,8 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
         ),
       ),
       // Indicador de carga que se muestra sobre el contenido
-      if (_isLoading)
-        Container(
+      _isLoading
+        ? Container(
           color: Colors.black.withOpacity(0.3),
           child: Center(
             child: Container(
@@ -761,10 +761,11 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
               ),
             ),
           ),
-        ),
-          ],
-        ),
-      );
+        )
+        : Container(), // Widget vacío cuando no está cargando
+      ],
+    ),
+  );
   }
 
   Widget _buildNotasYObservaciones() {
