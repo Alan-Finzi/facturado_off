@@ -1,19 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
-import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
-import '../helper/database_helper.dart';
-import '../helper/sales_database_helper.dart';
-import '../models/clientes_mostrador.dart';
-import '../models/payment_method.dart';
-import '../models/sales/sale.dart';
-import '../models/sales/sale_detail.dart';
-import '../pages/page_ventas_sincronizacion.dart';
 import '../widget/buscar_cliente.dart';
 import '../widget/payment_methods_form_widget.dart';
-import '../widget/resumen_widget.dart';
 
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
@@ -675,9 +666,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     );
   }
 
-  // Guarda la venta con la información de envío
-  // Método público para que pueda ser accedido desde widgets externos
-  void guardarVentaConEnvio() {
+  // Este método ya no es necesario y se puede eliminar completamente
+  void _mostrarDatosFormulario() {
     // Obtener el estado de los productos (para validaciones)
     final productosCubit = context.read<ProductosCubit>();
     final clienteCubit = context.read<ClientesMostradorCubit>();
