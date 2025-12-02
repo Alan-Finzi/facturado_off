@@ -10,10 +10,7 @@ import '../pages/page_forma_cobro.dart';
 
 
 class ResumenTabla extends StatefulWidget {
-    // Añadimos un callback para guardar
-    final VoidCallback? onGuardarPressed;
-
-    const ResumenTabla({super.key, this.onGuardarPressed});
+    const ResumenTabla({super.key});
 
     @override
     _ResumenTablaState createState() => _ResumenTablaState();
@@ -362,40 +359,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
                         children: [
                             const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
                             Text('\$${totalFinal.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                    ),
-                    // Agregar el botón Guardar
-                    TableRow(
-                        children: [
-                            SizedBox(height: 20), // Espacio para separar
-                            SizedBox(height: 20),
-                        ],
-                    ),
-                    TableRow(
-                        children: [
-                            Container(), // Celda vacía a la izquierda
-                            Container(
-                                alignment: Alignment.centerRight,
-                                child: ElevatedButton(
-                                    onPressed: widget.onGuardarPressed ?? () {
-                                        // Si no hay callback, mostramos un mensaje
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Función de guardado no disponible'))
-                                        );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        minimumSize: Size(150, 50),
-                                    ),
-                                    child: const Text(
-                                        'GUARDAR',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                        ),
-                                    ),
-                                ),
-                            ),
                         ],
                     ),
                 ],

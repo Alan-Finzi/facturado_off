@@ -105,14 +105,6 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Mostrar el resumen con el botón de guardar
-                    Text('Resumen de venta', style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8.0),
-                    ResumenTabla(
-                      onGuardarPressed: guardarVentaConEnvio,
-                    ),
-                    SizedBox(height: 16.0),
-
                     // Sección Tipo de Envío
                     Text(
                       'Tipo de envío',
