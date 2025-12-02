@@ -710,7 +710,13 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     }
 
     // 3. Validar método de pago
-    if (paymentMethodsCubit.state.selectedMethod == null) {
+    bool tieneMetodoPago = false;
+    if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+      final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+      tieneMetodoPago = state.selectedMethodId != null;
+    }
+
+    if (!tieneMetodoPago) {
       camposFaltantes.add("Método de pago");
     }
 
@@ -825,7 +831,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(producto.producto.name ?? 'Producto sin nombre'),
+                      child: Text(producto.producto?.name ?? 'Producto sin nombre'),
                     ),
                     Text('\$${producto.precioLista?.toStringAsFixed(2) ?? '0.00'}'),
                   ],
@@ -867,7 +873,28 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
               // Método de pago
               SizedBox(height: 16),
               Text('Método de pago:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(paymentMethodsCubit.state.selectedMethod?.nombre ?? 'No seleccionado'),
+              Builder(
+                builder: (context) {
+                  String methodName = 'No seleccionado';
+                  if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+                    final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+                    if (state.selectedMethodId != null && state.selectedProviderId != null) {
+                      // Buscar el método en los proveedores
+                      for (final provider in state.providers) {
+                        if (provider.id == state.selectedProviderId && provider.metodosPago != null) {
+                          for (final method in provider.metodosPago!) {
+                            if (method.id == state.selectedMethodId) {
+                              methodName = method.nombre;
+                              break;
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  return Text(methodName);
+                },
+              ),
 
               // Tipo de envío
               SizedBox(height: 16),
@@ -945,8 +972,28 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       final cliente = clienteCubit.state.clienteSeleccionado;
 
       // Método de pago
-      final metodoPago = paymentMethodsCubit.state.selectedMethod;
-      final metodoPagoNombre = metodoPago?.nombre ?? 'Efectivo';
+      PaymentMethod? metodoPago;
+      String metodoPagoNombre = 'Efectivo';
+
+      // Obtener el método de pago seleccionado
+      if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+        final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+        if (state.selectedMethodId != null && state.selectedProviderId != null) {
+          // Buscar el método en los proveedores
+          for (final provider in state.providers) {
+            if (provider.id == state.selectedProviderId && provider.metodosPago != null) {
+              for (final method in provider.metodosPago!) {
+                if (method.id == state.selectedMethodId) {
+                  metodoPago = method;
+                  metodoPagoNombre = method.nombre;
+                  break;
+                }
+              }
+              if (metodoPago != null) break;
+            }
+          }
+        }
+      }
       // Aquí podríamos guardar detalles adicionales del método de pago como un JSON
 
       // Datos de facturación
@@ -968,7 +1015,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       final sale = Sale(
         fecha: DateTime.now(),
         comercioId: comercioId,
-        clienteId: cliente?.id,
+        clienteId: cliente?.idCliente != null ? int.tryParse(cliente!.idCliente!) : null,
         domicilioEntrega: domicilioEntrega,
         tipoComprobante: productosCubit.state.tipoFactura ?? 'Ticket',
         datosFacturacionId: datosFacturacion?.id,
@@ -997,16 +1044,16 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
         return SaleDetail.calculate(
           ventaId: 0, // Se actualizará después de insertar la venta
-          productoId: producto.producto.id ?? 0,
-          codigoProducto: producto.producto.barcode,
-          nombreProducto: producto.producto.name ?? 'Producto sin nombre',
+          productoId: producto.producto?.id ?? 0,
+          codigoProducto: producto.producto?.barcode,
+          nombreProducto: producto.producto?.name ?? 'Producto sin nombre',
           descripcion: null,
           cantidad: 1.0, // Por defecto 1, pero debería ser configurable
           precioUnitario: producto.precioLista ?? 0.0,
           porcentajeIva: porcentajeIva,
           descuento: 0.0, // No manejamos descuentos individuales por ahora
-          categoriaId: producto.producto.tipoProducto != null
-              ? int.tryParse(producto.producto.tipoProducto!)
+          categoriaId: producto.producto?.tipoProducto != null
+              ? int.tryParse(producto.producto!.tipoProducto!)
               : null,
           categoriaNombre: producto.categoria,
         );
