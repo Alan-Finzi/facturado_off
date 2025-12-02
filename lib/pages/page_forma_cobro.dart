@@ -7,6 +7,7 @@ import '../bloc/cubit_productos/productos_cubit.dart';
 import '../helper/database_helper.dart';
 import '../helper/sales_database_helper.dart';
 import '../models/clientes_mostrador.dart';
+import '../models/payment_method.dart';
 import '../models/sales/sale.dart';
 import '../models/sales/sale_detail.dart';
 import '../pages/page_ventas_sincronizacion.dart';
