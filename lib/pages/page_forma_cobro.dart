@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../bloc/cubit_productos/productos_cubit.dart';
 import '../helper/database_helper.dart';
+import '../helper/sales_database_helper.dart';
 import '../models/clientes_mostrador.dart';
+import '../models/sales/sale.dart';
+import '../models/sales/sale_detail.dart';
+import '../pages/page_ventas_sincronizacion.dart';
 import '../widget/buscar_cliente.dart';
 import '../widget/payment_methods_form_widget.dart';
 import '../widget/resumen_widget.dart';
@@ -20,6 +25,7 @@ class FormaCobroPage extends StatefulWidget {
 
 class _FormaCobroPageState extends State<FormaCobroPage> {
   bool isPagoParcial = false;
+  bool _isLoading = false; // Para mostrar indicador de carga durante operaciones
 
   // Tipo de envío seleccionado (0: retiro por sucursal, 1: envío a domicilio, 2: otro domicilio)
   int _selectedTipoEnvio = 0;
@@ -50,9 +56,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
             appBar: AppBar(
               title: Text('Forma de Cobro'),
             ),
-            body: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
+            body: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -160,7 +168,43 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                   ],
                 ),
               ),
-            ),
+              ),
+              // Indicador de carga que se muestra sobre todo cuando está cargando
+              if (_isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.3),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10.0,
+                            spreadRadius: 2.0,
+                          )
+                        ]
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 20.0),
+                          Text(
+                            'Guardando venta...',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 10.0),
+                          Text('Procesando información'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           );
       },
     );
@@ -647,27 +691,371 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
   // Guarda la venta con la información de envío
   void _guardarVentaConEnvio() {
-    // Validar que hay tipo de envío
+    // Obtener el estado de los productos (para validaciones)
+    final productosCubit = context.read<ProductosCubit>();
+    final clienteCubit = context.read<ClientesMostradorCubit>();
+    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+
+    // Lista para almacenar campos faltantes
+    List<String> camposFaltantes = [];
+
+    // 1. Validar cliente seleccionado
+    if (clienteCubit.state.clienteSeleccionado == null) {
+      camposFaltantes.add("Cliente");
+    }
+
+    // 2. Validar productos seleccionados
+    if (productosCubit.state.productosSeleccionados.isEmpty) {
+      camposFaltantes.add("Productos en la venta");
+    }
+
+    // 3. Validar método de pago
+    if (paymentMethodsCubit.state.selectedMethod == null) {
+      camposFaltantes.add("Método de pago");
+    }
+
+    // 4. Validar datos de facturación
+    if (productosCubit.state.datosFacturacionModel == null ||
+        productosCubit.state.datosFacturacionModel!.isEmpty) {
+      camposFaltantes.add("Datos de facturación");
+    }
+
+    // 5. Validar tipo de envío
     if (_selectedTipoEnvio == 1 && (_datosEnvio.isEmpty || _datosEnvio['tipo_envio'] != 'domicilio_cliente')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor complete la información del domicilio del cliente')),
-      );
-      return;
+      camposFaltantes.add("Domicilio de envío del cliente");
     }
 
     if (_selectedTipoEnvio == 2 && (_datosEnvio.isEmpty || _datosEnvio['tipo_envio'] != 'otro_domicilio')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor ingrese un domicilio de envío')),
-      );
+      camposFaltantes.add("Domicilio de envío alternativo");
+    }
+
+    // Si hay campos faltantes, mostrar error
+    if (camposFaltantes.isNotEmpty) {
+      _mostrarErrorCamposFaltantes(camposFaltantes);
       return;
     }
 
-    // Aquí irá la lógica para guardar la venta con los datos de envío
-    // Por ahora, solo mostramos los datos que se guardarían
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Venta guardada con datos de envío: ${_datosEnvio['tipo_envio'] ?? "retiro_sucursal"}')),
-    );
+    // Si todas las validaciones pasan, mostrar el popup de confirmación
+    _mostrarPopupConfirmacionVenta();
+  }
 
-    print('Datos de envío: $_datosEnvio');
+  // Muestra un popup con los campos faltantes
+  void _mostrarErrorCamposFaltantes(List<String> campos) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Información incompleta'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Por favor complete la siguiente información antes de guardar:'),
+            SizedBox(height: 12),
+            ...campos.map((campo) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 16),
+                  SizedBox(width: 8),
+                  Text(campo),
+                ],
+              ),
+            )),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Muestra un popup de confirmación de la venta con los detalles
+  void _mostrarPopupConfirmacionVenta() {
+    final productosCubit = context.read<ProductosCubit>();
+    final clienteCubit = context.read<ClientesMostradorCubit>();
+    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+
+    // Obtener datos para mostrar
+    final cliente = clienteCubit.state.clienteSeleccionado;
+    final productos = productosCubit.state.productosSeleccionados;
+    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0));
+    final descuento = productosCubit.state.descuentoGeneral;
+    final montoDescuento = subtotal * (descuento / 100);
+    final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0));
+    final total = subtotal - montoDescuento + iva;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Confirmar venta'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Por favor confirme los detalles de la venta:'),
+              SizedBox(height: 16),
+
+              // Cliente
+              Text('Cliente:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(cliente?.nombre ?? 'Consumidor final'),
+              SizedBox(height: 8),
+
+              // Productos
+              Text('Productos:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...productos.map((producto) => Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(producto.producto.name ?? 'Producto sin nombre'),
+                    ),
+                    Text('\$${producto.precioLista?.toStringAsFixed(2) ?? '0.00'}'),
+                  ],
+                ),
+              )),
+              Divider(),
+
+              // Totales
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Subtotal:'),
+                  Text('\$${subtotal.toStringAsFixed(2)}'),
+                ],
+              ),
+              if (descuento > 0) Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Descuento (${descuento.toStringAsFixed(2)}%):'),
+                  Text('-\$${montoDescuento.toStringAsFixed(2)}'),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('IVA:'),
+                  Text('\$${iva.toStringAsFixed(2)}'),
+                ],
+              ),
+              Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('TOTAL:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('\$${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+
+              // Método de pago
+              SizedBox(height: 16),
+              Text('Método de pago:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(paymentMethodsCubit.state.selectedMethod?.nombre ?? 'No seleccionado'),
+
+              // Tipo de envío
+              SizedBox(height: 16),
+              Text('Tipo de envío:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(_selectedTipoEnvio == 0
+                ? 'Retiro en sucursal'
+                : _selectedTipoEnvio == 1
+                  ? 'Envío a domicilio del cliente'
+                  : 'Envío a otro domicilio'
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Cerrar el diálogo
+              Navigator.of(context).pop();
+              // Guardar la venta
+              _guardarVentaEnBaseDeDatos();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: Text('Guardar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Implementar guardar e imprimir
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Función guardar e imprimir no implementada aún')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: Text('Guardar e imprimir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Guarda la venta en la base de datos
+  Future<void> _guardarVentaEnBaseDeDatos() async {
+    try {
+      setState(() {
+        _isLoading = true; // Mostrar indicador de carga
+      });
+
+      // Obtener los datos necesarios de los diferentes cubits
+      final productosCubit = context.read<ProductosCubit>();
+      final clienteCubit = context.read<ClientesMostradorCubit>();
+      final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+      final loginCubit = context.read<LoginCubit>();
+
+      // Datos del usuario actual
+      final userId = loginCubit.state.user?.id;
+      final comercioId = loginCubit.state.user?.comercioId != null
+          ? int.tryParse(loginCubit.state.user!.comercioId!) ?? 0
+          : 0;
+
+      // Productos seleccionados
+      final productos = productosCubit.state.productosSeleccionados;
+
+      // Calcular totales
+      final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0));
+      final descuentoGeneral = productosCubit.state.descuentoGeneral;
+      final montoDescuento = subtotal * (descuentoGeneral / 100);
+      final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0));
+      final total = subtotal - montoDescuento + iva;
+
+      // Cliente
+      final cliente = clienteCubit.state.clienteSeleccionado;
+
+      // Método de pago
+      final metodoPago = paymentMethodsCubit.state.selectedMethod;
+      final metodoPagoNombre = metodoPago?.nombre ?? 'Efectivo';
+      // Aquí podríamos guardar detalles adicionales del método de pago como un JSON
+
+      // Datos de facturación
+      final datosFacturacion = productosCubit.state.datosFacturacionModel?.isNotEmpty == true
+          ? productosCubit.state.datosFacturacionModel!.first
+          : null;
+
+      // Canal de venta y caja
+      final canalVenta = productosCubit.state.canalVenta ?? 'Mostrador';
+      final cajaId = 1; // Valor por defecto, idealmente sería configurable
+
+      // Domicilio de entrega en formato JSON
+      String? domicilioEntrega;
+      if (_selectedTipoEnvio > 0 && _datosEnvio.isNotEmpty) {
+        domicilioEntrega = _datosEnvio.toString();
+      }
+
+      // Crear el objeto de venta
+      final sale = Sale(
+        fecha: DateTime.now(),
+        comercioId: comercioId,
+        clienteId: cliente?.id,
+        domicilioEntrega: domicilioEntrega,
+        tipoComprobante: productosCubit.state.tipoFactura ?? 'Ticket',
+        datosFacturacionId: datosFacturacion?.id,
+        subtotal: subtotal,
+        iva: iva,
+        total: total,
+        descuento: montoDescuento,
+        recargo: 0.0, // No estamos manejando recargos por ahora
+        metodoPago: metodoPagoNombre,
+        metodoPagoDetalles: metodoPago?.descripcion,
+        sincronizado: 0, // No sincronizado inicialmente
+        eliminado: 0,
+        estado: 'completada', // Estado inicial
+        userId: userId,
+        canalVenta: canalVenta,
+        cajaId: cajaId,
+        notaInterna: null, // Aquí podríamos agregar una nota interna si la UI lo permite
+        observaciones: null, // Aquí podríamos agregar observaciones si la UI lo permite
+      );
+
+      // Crear detalles de venta para cada producto
+      final detalles = productos.map((producto) {
+        final porcentajeIva = (producto.iva ?? 0.0) > 0
+            ? ((producto.iva ?? 0.0) / (producto.precioLista ?? 1.0)) * 100
+            : 0.0;
+
+        return SaleDetail.calculate(
+          ventaId: 0, // Se actualizará después de insertar la venta
+          productoId: producto.producto.id ?? 0,
+          codigoProducto: producto.producto.barcode,
+          nombreProducto: producto.producto.name ?? 'Producto sin nombre',
+          descripcion: null,
+          cantidad: 1.0, // Por defecto 1, pero debería ser configurable
+          precioUnitario: producto.precioLista ?? 0.0,
+          porcentajeIva: porcentajeIva,
+          descuento: 0.0, // No manejamos descuentos individuales por ahora
+          categoriaId: producto.producto.tipoProducto != null
+              ? int.tryParse(producto.producto.tipoProducto!)
+              : null,
+          categoriaNombre: producto.categoria,
+        );
+      }).toList();
+
+      // Asignar los detalles a la venta
+      final ventaConDetalles = sale.copyWith(detalles: detalles);
+
+      // Guardar la venta en la base de datos utilizando SalesDatabaseHelper
+      final salesDatabaseHelper = SalesDatabaseHelper();
+      final ventaId = await salesDatabaseHelper.saveSale(ventaConDetalles);
+
+      // Mostrar mensaje de éxito
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Venta #$ventaId guardada exitosamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Navegar de vuelta a la página principal o a la página de ventas
+        // Navigator.of(context).popUntil((route) => route.isFirst);
+
+        // Alternativamente, navegar a la página de sincronización de ventas
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PageVentasSincronizacion(),
+          ),
+        );
+      }
+    } catch (e) {
+      // Mostrar mensaje de error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar la venta: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      print('Error al guardar venta: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Ocultar indicador de carga
+        });
+      }
+    }
   }
 }
