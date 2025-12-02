@@ -107,7 +107,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
         ElevatedButton(
           onPressed: () => _navigateToPage(1), // Siguiente
           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-          child: const Text('SIGUIENTE'),
+          child: Text(_currentPageIndex == 0 ? 'SIGUIENTE' : 'GUARDAR'),
         ),
       ],
     );
