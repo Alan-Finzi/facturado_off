@@ -10,7 +10,10 @@ import '../pages/page_forma_cobro.dart';
 
 
 class ResumenTabla extends StatefulWidget {
-    const ResumenTabla({super.key});
+    // Añadimos un callback para guardar
+    final VoidCallback? onGuardarPressed;
+
+    const ResumenTabla({super.key, this.onGuardarPressed});
 
     @override
     _ResumenTablaState createState() => _ResumenTablaState();
@@ -374,17 +377,11 @@ class _ResumenTablaState extends State<ResumenTabla> {
                             Container(
                                 alignment: Alignment.centerRight,
                                 child: ElevatedButton(
-                                    onPressed: () {
-                                        // Buscamos la instancia del estado de FormaCobroPage
-                                        final formaCobroState = context.findAncestorStateOfType<_FormaCobroPageState>();
-                                        if (formaCobroState != null) {
-                                            // Llamamos directamente al método _guardarVentaConEnvio
-                                            formaCobroState._guardarVentaConEnvio();
-                                        } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('No se pudo guardar la venta. Intente nuevamente.'))
-                                            );
-                                        }
+                                    onPressed: widget.onGuardarPressed ?? () {
+                                        // Si no hay callback, mostramos un mensaje
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Función de guardado no disponible'))
+                                        );
                                     },
                                     style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.green,

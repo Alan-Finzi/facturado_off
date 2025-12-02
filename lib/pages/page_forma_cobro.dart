@@ -17,9 +17,8 @@ import '../widget/resumen_widget.dart';
 
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
-  final VoidCallback? onGuardarPressed; // Callback para manejar el botón "Guardar" en el resumen
 
-  FormaCobroPage({required this.onBackPressed, this.onGuardarPressed});
+  FormaCobroPage({required this.onBackPressed});
 
   @override
   _FormaCobroPageState createState() => _FormaCobroPageState();
@@ -50,11 +49,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
     // Use the PaymentMethodsCubit provided by the parent widget
     final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
-    // Si existe un callback para guardar, usamos el método interno _guardarVentaConEnvio
-    // Esto nos permite acceder a este método desde el botón en el resumen
-    if (widget.onGuardarPressed != null) {
-      context.findRootAncestorStateOfType<_VentaMainPageState>()?.guardarVentaCallback = _guardarVentaConEnvio;
-    }
+    // Usamos directamente el callback proporcionado en widget.onGuardarPressed
+    // para no depender de una clase privada de otro archivo
 
     return Builder(
       builder: (context) {
@@ -109,7 +105,12 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Eliminado ResumenTabla duplicado - ya se muestra en page_nueva_venta.dart
+                    // Mostrar el resumen con el botón de guardar
+                    Text('Resumen de venta', style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8.0),
+                    ResumenTabla(
+                      onGuardarPressed: guardarVentaConEnvio,
+                    ),
                     SizedBox(height: 16.0),
 
                     // Sección Tipo de Envío
@@ -683,7 +684,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
   }
 
   // Guarda la venta con la información de envío
-  void _guardarVentaConEnvio() {
+  // Método público para que pueda ser accedido desde widgets externos
+  void guardarVentaConEnvio() {
     // Obtener el estado de los productos (para validaciones)
     final productosCubit = context.read<ProductosCubit>();
     final clienteCubit = context.read<ClientesMostradorCubit>();

@@ -41,12 +41,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
           // Volver a la página anterior al presionar el botón
           _navigateToPage(0);
         },
-        onGuardarPressed: () {
-          // Lógica que se ejecutará cuando se presione el botón guardar en el resumen
-          // Este método estará implementado en la clase FormaCobroPage
-          // y ejecutará el método _guardarVentaConEnvio()
-          // No necesitamos implementar nada aquí
-        },
       ),
     ];
 
@@ -92,6 +86,8 @@ class _VentaMainPageState extends State<VentaMainPage> {
             VentaDropdownsWidget(comercioId: userIdOrComercioId!),
           const SizedBox(height: 16.0),
             const Text('Resumen de venta'),
+            // Si estamos en la página de forma de cobro, mostraremos el ResumenTabla
+            // con el botón de guardar en esa página, no aquí
             const ResumenTabla(),
             const SizedBox(height: 16.0),
             _buildBotonesAccion(context),
