@@ -417,7 +417,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(producto.producto?.name ?? 'Producto sin nombre'),
+                      child: Text(producto.datum?.nombre ?? producto.producto?.name ?? 'Producto sin nombre'),
                     ),
                     Text('\$${producto.precioLista?.toStringAsFixed(2) ?? '0.00'}'),
                   ],
@@ -526,7 +526,14 @@ class _VentaMainPageState extends State<VentaMainPage> {
       final descuentoGeneral = productosCubit.state.descuentoGeneral;
       final montoDescuento = subtotal * (descuentoGeneral / 100);
       final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0));
-      final total = subtotal - montoDescuento + iva;
+
+      // Calcular recargo si hay un método de pago seleccionado
+      double recargo = 0.0;
+      if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+        recargo = paymentMethodsCubit.getRecargoAmount();
+      }
+
+      final total = subtotal - montoDescuento + iva + recargo;
 
       // Cliente
       final cliente = clienteCubit.state.clienteSeleccionado;
@@ -583,7 +590,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
         iva: iva,
         total: total,
         descuento: montoDescuento,
-        recargo: 0.0, // No estamos manejando recargos por ahora
+        recargo: recargo, // Valor del recargo calculado desde el método de pago
         metodoPago: metodoPagoNombre,
         metodoPagoDetalles: metodoPago?.descripcion,
         sincronizado: 0, // No sincronizado inicialmente
@@ -606,7 +613,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
           ventaId: 0, // Se actualizará después de insertar la venta
           productoId: producto.producto?.id ?? 0,
           codigoProducto: producto.producto?.barcode,
-          nombreProducto: producto.producto?.name ?? 'Producto sin nombre',
+          nombreProducto: producto.datum?.nombre ?? producto.producto?.name ?? 'Producto sin nombre',
           descripcion: null,
           cantidad: 1.0, // Por defecto 1, pero debería ser configurable
           precioUnitario: producto.precioLista ?? 0.0,
