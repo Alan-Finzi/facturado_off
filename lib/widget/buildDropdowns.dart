@@ -77,154 +77,152 @@ class VentaDropdownsWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
                 // ▼ Dropdown de Datos de Facturación
-                        const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                                'Seleccione un dato de facturación:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                        ),
-                        DropButtonDatosFact(datosFacturacion: datosFacturacion),
-
-                        const SizedBox(height: 16.0),
-
-                        // ▼ Categoría IVA
-                        const Text("Categoría IVA:"),
-                        DropdownButton<String>(
-                            value: state.categoriaIvaUser ?? 'Seleccionar',
-                            onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                    productosCubit.updateCategoriaIvaUser(newValue);
-                                }
-                            },
-                            items: ['Monotributo', 'Responsable Inscripto', 'Consumidor Final']
-                                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                                .toList(),
-                        ),
-
-                        const SizedBox(height: 16.0),
-
-                        // ▼ Tipo de Factura
-                        const Text("Tipo de factura:"),
-                        DropdownButton<String>(
-                            value: state.tipoFactura ?? 'Factura C',
-                            onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                    productosCubit.updateTipoFactura(newValue);
-                                }
-                            },
-                            items: ['Factura A', 'Factura B', 'Factura C']
-                                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                                .toList(),
-                        ),
-
-                        const SizedBox(height: 16.0),
-
-                        // ▼ Caja seleccionada
-                        const Text("Caja:"),
-                        DropdownButton<String>(
-                            value: state.cajaSeleccionada ?? 'Caja seleccionada: # 1',
-                            onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                    productosCubit.updateCajaSeleccionada(newValue);
-                                }
-                            },
-                            items: [
-                                'Caja seleccionada: # 1',
-                                'Caja seleccionada: # 2',
-                                'Caja seleccionada: # 3',
-                            ].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
-                        ),
-
-                        const SizedBox(height: 16.0),
-
-                        // ▼ Estado del pedido (puede ser interactivo en el futuro)
-                        const Text('Estado del pedido:'),
-                        ElevatedButton(
-                            onPressed: () {}, // Lógica futura
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                            child: const Text('Entregado'),
-                        ),
-
-                        const SizedBox(height: 16.0),
-
-                        // ▼ Canal de venta
-                        const Text("Canal de venta:"),
-                        DropdownButton<String>(
-                            value: state.canalVenta ?? 'Mostrador',
-                            onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                    productosCubit.updateCanalVenta(newValue);
-                                }
-                            },
-                            items: ['Mostrador', 'Online', 'Teléfono']
-                                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
-                                .toList(),
-                        ),
-
-                        const SizedBox(height: 16.0),
-
-                        // ▼ Descuento con botón aplicar
-                        const Text("Descuento:"),
-                        Builder(builder: (context) {
-                            // Convertir a entero y luego a string para que no muestre decimales
-                            final controller = TextEditingController(text: state.descuentoGeneral.round().toString());
-                            // Asegurar que el cursor siempre quede al final
-                            controller.selection = TextSelection.fromPosition(
-                                TextPosition(offset: controller.text.length)
-                            );
-                            
-                            // Variable para almacenar temporalmente el valor del descuento
-                            TextEditingController valueController = controller;
-                            
-                            return Row(
-                                children: [
-                                    // TextField para ingresar el porcentaje
-                                    Expanded(
-                                        child: TextField(
-                                            decoration: const InputDecoration(
-                                                suffixText: '%',
-                                                prefixIcon: Icon(Icons.discount),
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            controller: controller,
-                                            // Utilizar inputFormatters para garantizar que solo se ingresen números enteros
-                                            inputFormatters: [
-                                                FilteringTextInputFormatter.digitsOnly,
-                                            ],
-                                        ),
-                                    ),
-                                    
-                                    // Botón Aplicar
-                                    Padding(
-                                        padding: const EdgeInsets.only(left: 8.0),
-                                        child: ElevatedButton(
-                                            onPressed: () {
-                                                // Convertir a entero
-                                                int? descuento = int.tryParse(controller.text);
-                                                if (descuento != null) {
-                                                    // Asegurarse de que el descuento no sea mayor a 100%
-                                                    if (descuento > 100) {
-                                                        descuento = 100;
-                                                        // Actualizar el controller para reflejar el valor máximo
-                                                        controller.text = '100';
-                                                    }
-                                                    // Actualizar el estado con el nuevo valor
-                                                    productosCubit.updateDescuentoGeneral(descuento.toDouble());
-                                                }
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                                backgroundColor: Theme.of(context).primaryColor,
-                                                foregroundColor: Colors.white,
-                                            ),
-                                            child: const Text('Aplicar'),
-                                        ),
-                                    ),
-                                ],
-                            );
-                        }),
-                    ],
+                const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                        'Seleccione un dato de facturación:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                 ),
+                DropButtonDatosFact(datosFacturacion: datosFacturacion),
+
+                const SizedBox(height: 16.0),
+
+                // ▼ Categoría IVA
+                const Text("Categoría IVA:"),
+                DropdownButton<String>(
+                    value: state.categoriaIvaUser ?? 'Seleccionar',
+                    onChanged: (String? newValue) {
+                        if (newValue != null) {
+                            productosCubit.updateCategoriaIvaUser(newValue);
+                        }
+                    },
+                    items: ['Monotributo', 'Responsable Inscripto', 'Consumidor Final']
+                        .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                        .toList(),
+                ),
+
+                const SizedBox(height: 16.0),
+
+                // ▼ Tipo de Factura
+                const Text("Tipo de factura:"),
+                DropdownButton<String>(
+                    value: state.tipoFactura ?? 'Factura C',
+                    onChanged: (String? newValue) {
+                        if (newValue != null) {
+                            productosCubit.updateTipoFactura(newValue);
+                        }
+                    },
+                    items: ['Factura A', 'Factura B', 'Factura C']
+                        .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                        .toList(),
+                ),
+
+                const SizedBox(height: 16.0),
+
+                // ▼ Caja seleccionada
+                const Text("Caja:"),
+                DropdownButton<String>(
+                    value: state.cajaSeleccionada ?? 'Caja seleccionada: # 1',
+                    onChanged: (String? newValue) {
+                        if (newValue != null) {
+                            productosCubit.updateCajaSeleccionada(newValue);
+                        }
+                    },
+                    items: [
+                        'Caja seleccionada: # 1',
+                        'Caja seleccionada: # 2',
+                        'Caja seleccionada: # 3',
+                    ].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                ),
+
+                const SizedBox(height: 16.0),
+
+                // ▼ Estado del pedido (puede ser interactivo en el futuro)
+                const Text('Estado del pedido:'),
+                ElevatedButton(
+                    onPressed: () {}, // Lógica futura
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text('Entregado'),
+                ),
+
+                const SizedBox(height: 16.0),
+
+                // ▼ Canal de venta
+                const Text("Canal de venta:"),
+                DropdownButton<String>(
+                    value: state.canalVenta ?? 'Mostrador',
+                    onChanged: (String? newValue) {
+                        if (newValue != null) {
+                            productosCubit.updateCanalVenta(newValue);
+                        }
+                    },
+                    items: ['Mostrador', 'Online', 'Teléfono']
+                        .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                        .toList(),
+                ),
+
+                const SizedBox(height: 16.0),
+
+                // ▼ Descuento con botón aplicar
+                const Text("Descuento:"),
+                Builder(builder: (context) {
+                    // Convertir a entero y luego a string para que no muestre decimales
+                    final controller = TextEditingController(text: state.descuentoGeneral.round().toString());
+                    // Asegurar que el cursor siempre quede al final
+                    controller.selection = TextSelection.fromPosition(
+                        TextPosition(offset: controller.text.length)
+                    );
+
+                    // Variable para almacenar temporalmente el valor del descuento
+                    TextEditingController valueController = controller;
+
+                    return Row(
+                        children: [
+                            // TextField para ingresar el porcentaje
+                            Expanded(
+                                child: TextField(
+                                    decoration: const InputDecoration(
+                                        suffixText: '%',
+                                        prefixIcon: Icon(Icons.discount),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    controller: controller,
+                                    // Utilizar inputFormatters para garantizar que solo se ingresen números enteros
+                                    inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                ),
+                            ),
+
+                            // Botón Aplicar
+                            Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: ElevatedButton(
+                                    onPressed: () {
+                                        // Convertir a entero
+                                        int? descuento = int.tryParse(controller.text);
+                                        if (descuento != null) {
+                                            // Asegurarse de que el descuento no sea mayor a 100%
+                                            if (descuento > 100) {
+                                                descuento = 100;
+                                                // Actualizar el controller para reflejar el valor máximo
+                                                controller.text = '100';
+                                            }
+                                            // Actualizar el estado con el nuevo valor
+                                            productosCubit.updateDescuentoGeneral(descuento.toDouble());
+                                        }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Theme.of(context).primaryColor,
+                                        foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Aplicar'),
+                                ),
+                            ),
+                        ],
+                    );
+                }),
             ],
         );
     }
