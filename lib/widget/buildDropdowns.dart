@@ -13,11 +13,22 @@ import '../models/datos_facturacion_model.dart';
 
 class VentaDropdownsWidget extends StatelessWidget {
     final String comercioId;
+    final List<DatosFacturacionModel>? datosFacturacionPrecargados;
 
-    const VentaDropdownsWidget({super.key, required this.comercioId});
+    const VentaDropdownsWidget({
+        super.key,
+        required this.comercioId,
+        this.datosFacturacionPrecargados,
+    });
 
     @override
     Widget build(BuildContext context) {
+        // Si tenemos datos precargados, los usamos directamente sin hacer una llamada a la base de datos
+        if (datosFacturacionPrecargados != null && datosFacturacionPrecargados!.isNotEmpty) {
+            return _buildDropdowns(context, datosFacturacionPrecargados!);
+        }
+
+        // De lo contrario, usamos FutureBuilder como antes
         return FutureBuilder<List<DatosFacturacionModel>>(
             future: DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId)),
             builder: (context, snapshot) {
@@ -37,26 +48,35 @@ class VentaDropdownsWidget extends StatelessWidget {
 
                 final datosFacturacion = snapshot.data!;
                 
-                // Accedemos al cubit
-                final productosCubit = context.watch<ProductosCubit>();
-                final state = productosCubit.state;
+                // Los datos ya están procesados en el método _buildDropdowns
 
-                // Obtener datos del estado si están disponibles, sino usar el primero por defecto
-                if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
-                    // Actualizamos datosFacturacionCurrent desde el estado guardado
-                    DatosFacturacionModel.datosFacturacionCurrent.clear();
-                    DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
-                } else if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
-                    // Si no hay datos en el estado ni en la variable estática, usar el primero
-                    DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
-                    // Y guardarlo también en el estado
-                    productosCubit.updateDatosFacturacion([datosFacturacion.first]);
-                }
+                return _buildDropdowns(context, datosFacturacion);
+            }
+        });
+    }
 
-                return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                        // ▼ Dropdown de Datos de Facturación
+    // Método para construir los dropdowns con datos precargados
+    Widget _buildDropdowns(BuildContext context, List<DatosFacturacionModel> datosFacturacion) {
+        // Accedemos al cubit
+        final productosCubit = context.watch<ProductosCubit>();
+        final state = productosCubit.state;
+
+        // Obtener datos del estado si están disponibles, sino usar el primero por defecto
+        if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
+            // Actualizamos datosFacturacionCurrent desde el estado guardado
+            DatosFacturacionModel.datosFacturacionCurrent.clear();
+            DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
+        } else if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+            // Si no hay datos en el estado ni en la variable estática, usar el primero
+            DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
+            // Y guardarlo también en el estado
+            productosCubit.updateDatosFacturacion([datosFacturacion.first]);
+        }
+
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                // ▼ Dropdown de Datos de Facturación
                         const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
                             child: Text(

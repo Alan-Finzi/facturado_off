@@ -35,11 +35,41 @@ class _VentaMainPageState extends State<VentaMainPage> {
   List<DatosFacturacionModel> datosFacturacion = [];
   bool datosCargados = false; // Variable para evitar que se recarguen los datos
   bool _isLoading = false; // Variable para mostrar indicador de carga durante operaciones
+  bool _datosFacturacionCargados = false; // Flag para saber si ya se cargaron los datos de facturación
 
   // Datos de envío que se obtendrán del FormaCobroPage
   Map<String, dynamic>? _datosEnvio;
 
   // Las páginas se crearán en el método build para poder pasar el callback actualizado
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatosFacturacion();
+  }
+
+  // Método para cargar los datos de facturación una sola vez
+  Future<void> _cargarDatosFacturacion() async {
+    if (!_datosFacturacionCargados) {
+      try {
+        final loginCubit = context.read<LoginCubit>();
+        String comercioId = (loginCubit.state.user!.comercioId == "1")
+            ? loginCubit.state.user!.id.toString()
+            : loginCubit.state.user!.comercioId!;
+
+        final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId));
+
+        if (mounted) {
+          setState(() {
+            datosFacturacion = datos;
+            _datosFacturacionCargados = true;
+          });
+        }
+      } catch (e) {
+        print('Error al cargar datos de facturación: $e');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +167,12 @@ class _VentaMainPageState extends State<VentaMainPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            VentaDropdownsWidget(comercioId: userIdOrComercioId!),
+            _datosFacturacionCargados
+              ? VentaDropdownsWidget(
+                  comercioId: userIdOrComercioId!,
+                  datosFacturacionPrecargados: datosFacturacion,
+                )
+              : const Center(child: CircularProgressIndicator()),
           const SizedBox(height: 16.0),
             const Text('Resumen de venta'),
             // Si estamos en la página de forma de cobro, mostraremos el ResumenTabla
