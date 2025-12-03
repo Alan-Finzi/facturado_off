@@ -35,6 +35,10 @@ class _VentaMainPageState extends State<VentaMainPage> {
   List<DatosFacturacionModel> datosFacturacion = [];
   bool datosCargados = false; // Variable para evitar que se recarguen los datos
   bool _isLoading = false; // Variable para mostrar indicador de carga durante operaciones
+
+  // Datos de envío que se obtendrán del FormaCobroPage
+  Map<String, dynamic>? _datosEnvio;
+
   // Las páginas se crearán en el método build para poder pasar el callback actualizado
 
   @override
@@ -46,6 +50,11 @@ class _VentaMainPageState extends State<VentaMainPage> {
         onBackPressed: () {
           // Volver a la página anterior al presionar el botón
           _navigateToPage(0);
+        },
+        onGetDatosEnvio: (datos) {
+          setState(() {
+            _datosEnvio = datos;
+          });
         },
       ),
     ];
@@ -205,9 +214,28 @@ class _VentaMainPageState extends State<VentaMainPage> {
       camposFaltantes.add("Datos de facturación");
     }
 
-    // 5. Validar tipo de envío (esto debe hacerse en la página forma_cobro)
-    // Aquí necesitaríamos la información del FormaCobroPage, que no tenemos directamente
-    // Para este caso, podemos hacer que la página FormaCobroPage valide esto antes
+    // 5. Validar tipo de envío
+    if (_currentPageIndex == 1) {
+      // Verificamos si hay datos de envío configurados
+      if (_datosEnvio == null || _datosEnvio!.isEmpty) {
+        camposFaltantes.add("Tipo de envío");
+      } else {
+        // Validar datos de envío según el tipo
+        String? tipoEnvio = _datosEnvio!['tipo_envio'] as String?;
+
+        if (tipoEnvio == 'domicilio_cliente') {
+          // Validar que tenga información completa para envío a domicilio del cliente
+          if (_datosEnvio!['calle'] == null || _datosEnvio!['localidad'] == null || _datosEnvio!['provincia'] == null) {
+            camposFaltantes.add("Información completa de domicilio del cliente");
+          }
+        } else if (tipoEnvio == 'otro_domicilio') {
+          // Validar que tenga información completa para envío a otro domicilio
+          if (_datosEnvio!['calle'] == null || _datosEnvio!['localidad'] == null || _datosEnvio!['provincia'] == null) {
+            camposFaltantes.add("Información completa de domicilio de envío");
+          }
+        }
+      }
+    }
 
     // Si hay campos faltantes, mostrar error
     if (camposFaltantes.isNotEmpty) {
@@ -257,6 +285,34 @@ class _VentaMainPageState extends State<VentaMainPage> {
         ],
       ),
     );
+  }
+
+  // Obtiene una descripción legible del tipo de envío
+  String _obtenerDescripcionEnvio() {
+    if (_datosEnvio == null || _datosEnvio!.isEmpty) {
+      return "No especificado";
+    }
+
+    String tipoEnvio = _datosEnvio!['tipo_envio'] as String? ?? "";
+
+    switch (tipoEnvio) {
+      case 'retiro_sucursal':
+        return "Retiro por sucursal";
+      case 'domicilio_cliente':
+        final calle = _datosEnvio!['calle'] ?? "";
+        final altura = _datosEnvio!['altura'] ?? "";
+        final localidad = _datosEnvio!['localidad'] ?? "";
+        final provincia = _datosEnvio!['provincia'] ?? "";
+        return "Envío a domicilio: $calle $altura, $localidad, $provincia";
+      case 'otro_domicilio':
+        final calle = _datosEnvio!['calle'] ?? "";
+        final altura = _datosEnvio!['altura'] ?? "";
+        final localidad = _datosEnvio!['localidad'] ?? "";
+        final provincia = _datosEnvio!['provincia'] ?? "";
+        return "Envío a otro domicilio: $calle $altura, $localidad, $provincia";
+      default:
+        return "No especificado";
+    }
   }
 
   // Muestra un popup de confirmación de la venta con los detalles
@@ -370,6 +426,10 @@ class _VentaMainPageState extends State<VentaMainPage> {
               Text('Método de pago:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(metodoPagoNombre),
 
+              // Tipo de envío
+              SizedBox(height: 16),
+              Text('Tipo de envío:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(_obtenerDescripcionEnvio()),
             ],
           ),
         ),
@@ -470,9 +530,11 @@ class _VentaMainPageState extends State<VentaMainPage> {
       final cajaId = 1; // Valor por defecto, idealmente sería configurable
 
       // Domicilio de entrega
-      // Nota: Como estamos en la página principal, no tenemos acceso a _datosEnvio
-      // que está en FormaCobroPage. En este caso, dejaremos este valor como null.
+      // Obtenemos los datos de envío actualizados
       String? domicilioEntrega = null;
+      if (_datosEnvio != null && _datosEnvio!.isNotEmpty) {
+        domicilioEntrega = _datosEnvio.toString();
+      }
 
       // Crear el objeto de venta
       final sale = Sale(

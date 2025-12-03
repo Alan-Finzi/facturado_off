@@ -17,7 +17,13 @@ import '../widget/payment_methods_form_widget.dart';
 class FormaCobroPage extends StatefulWidget {
   final VoidCallback onBackPressed; // Callback para manejar el botón "Anterior"
 
-  FormaCobroPage({required this.onBackPressed});
+  // Añadimos una función para obtener los datos de envío
+  final Function(Map<String, dynamic>?)? onGetDatosEnvio;
+
+  FormaCobroPage({
+    required this.onBackPressed,
+    this.onGetDatosEnvio,
+  });
 
   @override
   _FormaCobroPageState createState() => _FormaCobroPageState();
@@ -47,6 +53,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
   Widget build(BuildContext context) {
     // Use the PaymentMethodsCubit provided by the parent widget
     final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+
+    // Llamamos a la función para obtener los datos de envío si está definida
+    if (widget.onGetDatosEnvio != null) {
+      widget.onGetDatosEnvio!(_datosEnvio.isEmpty ? null : _datosEnvio);
+    }
 
     // Usamos directamente el callback proporcionado en widget.onGuardarPressed
     // para no depender de una clase privada de otro archivo
@@ -117,6 +128,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                         setState(() {
                           _selectedTipoEnvio = value ?? 0;
                           _datosEnvio = {'tipo_envio': 'retiro_sucursal'};
+
+                          // Notificar cambio en datos de envío
+                          if (widget.onGetDatosEnvio != null) {
+                            widget.onGetDatosEnvio!(_datosEnvio);
+                          }
                         });
                       },
                       title: Text('Retiro por sucursal'),
@@ -129,6 +145,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                           _selectedTipoEnvio = value ?? 1;
                         });
                         _validarDomicilioCliente();
+
+                        // Notificar cambio en datos de envío (se actualizará en _validarDomicilioCliente)
                       },
                       title: Text('Envío a domicilio del cliente'),
                     ),
@@ -140,6 +158,8 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                           _selectedTipoEnvio = value ?? 2;
                         });
                         _mostrarFormularioDomicilio();
+
+                        // Notificar cambio en datos de envío (se actualizará en _mostrarFormularioDomicilio)
                       },
                       title: Text('Envío a otro domicilio'),
                     ),
@@ -352,6 +372,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       };
 
       setState(() {});
+
+      // Notificar cambio en datos de envío
+      if (widget.onGetDatosEnvio != null) {
+        widget.onGetDatosEnvio!(_datosEnvio);
+      }
     }
   }
 
@@ -511,6 +536,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                   'barrio': _barrioController.text.isNotEmpty ? _barrioController.text : null,
                 };
 
+                // Notificar cambio en datos de envío
+                if (widget.onGetDatosEnvio != null) {
+                  widget.onGetDatosEnvio!(_datosEnvio);
+                }
+
                 // Actualizar UI
                 setState(() {});
 
@@ -659,6 +689,11 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                 'codigo_postal': _cpController.text.isNotEmpty ? _cpController.text : null,
                 'barrio': _barrioController.text.isNotEmpty ? _barrioController.text : null,
               };
+
+              // Notificar cambio en datos de envío
+              if (widget.onGetDatosEnvio != null) {
+                widget.onGetDatosEnvio!(_datosEnvio);
+              }
 
               // Actualizar UI
               setState(() {});
