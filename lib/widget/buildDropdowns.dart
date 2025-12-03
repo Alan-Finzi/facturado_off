@@ -224,8 +224,8 @@ class VentaDropdownsWidget extends StatelessWidget {
                             );
                         }),
                     ],
-                );
-            },
+                ),
+            ],
         );
     }
 }
