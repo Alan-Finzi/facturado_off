@@ -47,12 +47,12 @@ class VentaDropdownsWidget extends StatelessWidget {
                 }
 
                 final datosFacturacion = snapshot.data!;
-                
+
                 // Los datos ya están procesados en el método _buildDropdowns
 
                 return _buildDropdowns(context, datosFacturacion);
-            }
-        });
+            },
+        );
     }
 
     // Método para construir los dropdowns con datos precargados
