@@ -468,28 +468,32 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
 
               // Actualizar cliente con la nueva dirección
               final clienteCubit = context.read<ClientesMostradorCubit>();
-              final clienteActualizado = ClientesMostrador(
-                idCliente: cliente.idCliente,
-                nombre: cliente.nombre,
-                direccion: _calleController.text,
-                altura: _alturaController.text,
-                piso: _pisoController.text.isNotEmpty ? _pisoController.text : null,
-                depto: _deptoController.text.isNotEmpty ? _deptoController.text : null,
-                localidad: _localidadController.text,
-                provincia: _provinciaController.text,
-                codigoPostal: _cpController.text.isNotEmpty ? _cpController.text : null,
-                barrio: _barrioController.text.isNotEmpty ? _barrioController.text : null,
-                // Mantener otros datos del cliente
-                creadorId: cliente.creadorId,
-                sucursalId: cliente.sucursalId,
-                listaPrecio: cliente.listaPrecio,
-                comercioId: cliente.comercioId,
-                email: cliente.email,
-                telefono: cliente.telefono,
-                dni: cliente.dni,
-                activo: cliente.activo,
-                modificado: 1, // Marcar como modificado para sincronización
-              );
+
+              // Crear una nueva instancia de ClientesMostrador
+              var clienteActualizado = ClientesMostrador();
+
+              // Copiar los valores del cliente original
+              clienteActualizado.idCliente = cliente.idCliente;
+              clienteActualizado.nombre = cliente.nombre;
+              clienteActualizado.creadorId = cliente.creadorId;
+              clienteActualizado.sucursalId = cliente.sucursalId;
+              clienteActualizado.listaPrecio = cliente.listaPrecio;
+              clienteActualizado.comercioId = cliente.comercioId;
+              clienteActualizado.email = cliente.email;
+              clienteActualizado.telefono = cliente.telefono;
+              clienteActualizado.dni = cliente.dni;
+              clienteActualizado.activo = cliente.activo;
+
+              // Actualizar los campos de dirección
+              clienteActualizado.direccion = _calleController.text;
+              clienteActualizado.altura = _alturaController.text;
+              clienteActualizado.piso = _pisoController.text.isNotEmpty ? _pisoController.text : null;
+              clienteActualizado.depto = _deptoController.text.isNotEmpty ? _deptoController.text : null;
+              clienteActualizado.localidad = _localidadController.text;
+              clienteActualizado.provincia = _provinciaController.text;
+              clienteActualizado.codigoPostal = _cpController.text.isNotEmpty ? _cpController.text : null;
+              clienteActualizado.barrio = _barrioController.text.isNotEmpty ? _barrioController.text : null;
+              clienteActualizado.modificado = 1; // Marcar como modificado para sincronización
 
               // Actualizar el cliente en la base de datos
               clienteCubit.updateCliente(clienteActualizado).then((_) {
@@ -997,7 +1001,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
       }
 
       // Crear el objeto de venta
-      final sale = Sale(
+      var sale = Sale(
         fecha: DateTime.now(),
         comercioId: comercioId,
         clienteId: cliente?.idCliente != null ? int.tryParse(cliente!.idCliente!) : null,
