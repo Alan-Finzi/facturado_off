@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:facturador_offline/bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
+import 'package:facturador_offline/bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_resumen/resumen_cubit.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/material.dart';
@@ -62,6 +63,7 @@ class BlocProviders extends StatelessWidget {
             }
         ),
         BlocProvider(create: (context) => ProductosCubit(UserRepository(), currentListProductCubit: [])),
+        BlocProvider(create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance)),
       ],
       child: const Myapp(),
     );
