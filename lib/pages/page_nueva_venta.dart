@@ -360,29 +360,54 @@ class _VentaMainPageState extends State<VentaMainPage> {
     final cliente = clienteCubit.state.clienteSeleccionado;
     final productos = productosCubit.state.productosSeleccionados;
 
-    // Calcular subtotal
-    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0));
+    // === LÓGICA EXACTA DEL RESUMENTABLA ===
+
+    // Calcular subtotal e IVA exactamente como lo hace ResumenTabla
+    double subtotal = 0;
+    double totalIva = 0;
+    double subtotalConIva = 0;
+
+    for (var producto in productos) {
+      final precioLista = producto.precioLista ?? 0;
+      final cantidad = producto.cantidad ?? 1;
+      final precioFinal = producto.precioFinal ?? 0;
+
+      subtotal += precioLista * cantidad;
+      subtotalConIva += precioFinal;
+      totalIva += (precioFinal - (precioLista * cantidad));
+    }
 
     // Descuentos
-    final descuentoPromos = 0.0; // Por ahora no hay descuentos promocionales
+    const descuentoPromos = 0.0;
     final descuentoGeneral = productosCubit.state.descuentoGeneral;
-    final montoDescuento = subtotal * (descuentoGeneral / 100);
+    final montoDescuento = (descuentoGeneral / 100) * subtotal;
 
-    // IVA
-    final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0));
+    // Calcular subtotal para recargo exactamente como lo hace ResumenTabla
+    final subtotalParaRecargo = subtotal - montoDescuento + totalIva;
 
-    // Recargo del método de pago
+    // Obtener recargo del método de pago
     double recargo = 0.0;
     double recargoRate = 0.0;
-    if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
-      recargo = paymentMethodsCubit.getRecargoAmount();
-      final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
-      if (state.selectedMethodId != null && state.selectedProviderId != null) {
-        for (final provider in state.providers) {
-          if (provider.id == state.selectedProviderId && provider.metodosPago != null) {
-            for (final method in provider.metodosPago!) {
-              if (method.id == state.selectedMethodId) {
-                recargoRate = method.recargo;
+
+    // Solo actualizar subtotal para recargo si subtotal es mayor que cero
+    if (subtotal > 0) {
+      paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+
+      if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+        // Obtener recargo desde el cubit
+        recargo = paymentMethodsCubit.getRecargoAmount();
+
+        // Obtener tasa de recargo
+        final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+        if (state.selectedMethodId != null && state.selectedProviderId != null) {
+          for (final provider in state.providers) {
+            if (provider.id == state.selectedProviderId && provider.metodosPago != null) {
+              final methodIndex = provider.metodosPago!.indexWhere(
+                (m) => m.id == state.selectedMethodId
+              );
+
+              if (methodIndex >= 0) {
+                recargoRate = provider.metodosPago![methodIndex].recargo;
                 break;
               }
             }
@@ -391,8 +416,8 @@ class _VentaMainPageState extends State<VentaMainPage> {
       }
     }
 
-    // Total final con todos los componentes
-    final total = subtotal - montoDescuento + iva + recargo;
+    // Calcular total final con todos los componentes
+    final total = subtotal - montoDescuento + totalIva + recargo;
 
     // Obtener método de pago seleccionado
     PaymentMethod? metodoPago;
@@ -454,7 +479,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
               )),
               Divider(),
 
-              // Totales
+              // Totales - usando la misma estructura y valores que el ResumenTabla
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -462,17 +487,17 @@ class _VentaMainPageState extends State<VentaMainPage> {
                   Text('\$${subtotal.toStringAsFixed(2)}'),
                 ],
               ),
-              if (descuentoPromos > 0) Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Descuento promociones:'),
+                  Text('Descuento promociones:', style: TextStyle(fontSize: 12)),
                   Text('-\$${descuentoPromos.toStringAsFixed(2)}'),
                 ],
               ),
-              if (descuentoGeneral > 0) Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Descuento Gral (${descuentoGeneral.toStringAsFixed(2)}%):'),
+                  Text('Descuento Gral (${descuentoGeneral.round()}%):', style: TextStyle(fontSize: 12)),
                   Text('-\$${montoDescuento.toStringAsFixed(2)}'),
                 ],
               ),
@@ -480,14 +505,30 @@ class _VentaMainPageState extends State<VentaMainPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('IVA:'),
-                  Text('\$${iva.toStringAsFixed(2)}'),
+                  Text('\$${totalIva.toStringAsFixed(2)}'),
                 ],
               ),
-              if (recargo > 0) Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Recargo (${recargoRate.toStringAsFixed(1)}%):'),
-                  Text('\$${recargo.toStringAsFixed(2)}'),
+                  recargo > 0
+                      ? Row(
+                          children: [
+                            Icon(Icons.payment, size: 12, color: recargo > 0 ? Colors.red[700] : Colors.grey),
+                            SizedBox(width: 4),
+                            Text('Recargo (${recargoRate.toStringAsFixed(1)}%):',
+                                style: TextStyle(
+                                    fontWeight: recargo > 0 ? FontWeight.bold : FontWeight.normal,
+                                    color: recargo > 0 ? Colors.red[700] : Colors.grey)),
+                          ],
+                        )
+                      : Text('Recargo (0.0%):'),
+                  Text(recargo > 0
+                      ? '\$${recargo.toStringAsFixed(2)}'
+                      : '\$0.00',
+                      style: TextStyle(
+                          fontWeight: recargo > 0 ? FontWeight.bold : FontWeight.normal,
+                          color: recargo > 0 ? Colors.red[700] : Colors.grey)),
                 ],
               ),
               Divider(),
@@ -564,19 +605,46 @@ class _VentaMainPageState extends State<VentaMainPage> {
       // Productos seleccionados
       final productos = productosCubit.state.productosSeleccionados;
 
-      // Calcular totales
-      final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0));
-      final descuentoGeneral = productosCubit.state.descuentoGeneral;
-      final montoDescuento = subtotal * (descuentoGeneral / 100);
-      final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0));
+      // === LÓGICA EXACTA DEL RESUMENTABLA ===
 
-      // Calcular recargo si hay un método de pago seleccionado
-      double recargo = 0.0;
-      if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
-        recargo = paymentMethodsCubit.getRecargoAmount();
+      // Calcular subtotal e IVA exactamente como lo hace ResumenTabla
+      double subtotal = 0;
+      double totalIva = 0;
+      double subtotalConIva = 0;
+
+      for (var producto in productos) {
+        final precioLista = producto.precioLista ?? 0;
+        final cantidad = producto.cantidad ?? 1;
+        final precioFinal = producto.precioFinal ?? 0;
+
+        subtotal += precioLista * cantidad;
+        subtotalConIva += precioFinal;
+        totalIva += (precioFinal - (precioLista * cantidad));
       }
 
-      final total = subtotal - montoDescuento + iva + recargo;
+      // Descuentos
+      const descuentoPromos = 0.0;
+      final descuentoGeneral = productosCubit.state.descuentoGeneral;
+      final montoDescuento = (descuentoGeneral / 100) * subtotal;
+
+      // Calcular subtotal para recargo exactamente como lo hace ResumenTabla
+      final subtotalParaRecargo = subtotal - montoDescuento + totalIva;
+
+      // Obtener recargo del método de pago
+      double recargo = 0.0;
+
+      // Solo actualizar subtotal para recargo si subtotal es mayor que cero
+      if (subtotal > 0) {
+        paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
+
+        if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+          // Obtener recargo desde el cubit
+          recargo = paymentMethodsCubit.getRecargoAmount();
+        }
+      }
+
+      // Calcular total final con todos los componentes
+      final total = subtotal - montoDescuento + totalIva + recargo;
 
       // Cliente
       final cliente = clienteCubit.state.clienteSeleccionado;
@@ -630,7 +698,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
         tipoComprobante: productosCubit.state.tipoFactura ?? 'Ticket',
         datosFacturacionId: datosFacturacion?.id,
         subtotal: subtotal,
-        iva: iva,
+        iva: totalIva,
         total: total,
         descuento: montoDescuento,
         recargo: recargo, // Valor del recargo calculado desde el método de pago
