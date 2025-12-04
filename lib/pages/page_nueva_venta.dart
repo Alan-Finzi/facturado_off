@@ -359,11 +359,40 @@ class _VentaMainPageState extends State<VentaMainPage> {
     // Obtener datos para mostrar
     final cliente = clienteCubit.state.clienteSeleccionado;
     final productos = productosCubit.state.productosSeleccionados;
-    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0));
-    final descuento = productosCubit.state.descuentoGeneral;
-    final montoDescuento = subtotal * (descuento / 100);
+
+    // Calcular subtotal
+    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0));
+
+    // Descuentos
+    final descuentoPromos = 0.0; // Por ahora no hay descuentos promocionales
+    final descuentoGeneral = productosCubit.state.descuentoGeneral;
+    final montoDescuento = subtotal * (descuentoGeneral / 100);
+
+    // IVA
     final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0));
-    final total = subtotal - montoDescuento + iva;
+
+    // Recargo del método de pago
+    double recargo = 0.0;
+    double recargoRate = 0.0;
+    if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+      recargo = paymentMethodsCubit.getRecargoAmount();
+      final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+      if (state.selectedMethodId != null && state.selectedProviderId != null) {
+        for (final provider in state.providers) {
+          if (provider.id == state.selectedProviderId && provider.metodosPago != null) {
+            for (final method in provider.metodosPago!) {
+              if (method.id == state.selectedMethodId) {
+                recargoRate = method.recargo;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Total final con todos los componentes
+    final total = subtotal - montoDescuento + iva + recargo;
 
     // Obtener método de pago seleccionado
     PaymentMethod? metodoPago;
@@ -433,10 +462,17 @@ class _VentaMainPageState extends State<VentaMainPage> {
                   Text('\$${subtotal.toStringAsFixed(2)}'),
                 ],
               ),
-              if (descuento > 0) Row(
+              if (descuentoPromos > 0) Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Descuento (${descuento.toStringAsFixed(2)}%):'),
+                  Text('Descuento promociones:'),
+                  Text('-\$${descuentoPromos.toStringAsFixed(2)}'),
+                ],
+              ),
+              if (descuentoGeneral > 0) Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Descuento Gral (${descuentoGeneral.toStringAsFixed(2)}%):'),
                   Text('-\$${montoDescuento.toStringAsFixed(2)}'),
                 ],
               ),
@@ -445,6 +481,13 @@ class _VentaMainPageState extends State<VentaMainPage> {
                 children: [
                   Text('IVA:'),
                   Text('\$${iva.toStringAsFixed(2)}'),
+                ],
+              ),
+              if (recargo > 0) Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Recargo (${recargoRate.toStringAsFixed(1)}%):'),
+                  Text('\$${recargo.toStringAsFixed(2)}'),
                 ],
               ),
               Divider(),
