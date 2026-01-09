@@ -23,8 +23,8 @@ import '../models/user.dart';
 
 class ApiServices{
 
-  final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users?comercio_id=362';
-  final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/clientes?casa_central_id=362&comercio_id=362';
+  final String apiUrlUser = 'https://api.flamincoapp.com.ar/api/users';
+  final String apiUrlClienteMostrador = 'https://api.flamincoapp.com.ar/api/clientes';
   final String apiUrlLogin = 'https://api.flamincoapp.com.ar/api/login';
   final String apiUrlProductosVer = 'https://api.flamincoapp.com.ar/api/productos-ver'; // Principal API para productos
   final String apiUrlProductoIva = 'https://api.flamincoapp.com.ar/api/producto-ivas';
@@ -82,8 +82,23 @@ class ApiServices{
 
   Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
+      // Intentar obtener el ID de comercio del usuario actual si está disponible
+      final String? comercioId = User.currencyUser?.comercioId;
+      final String? sucursalId = User.currencyUser?.id.toString();
+
+      // Determinar cuál ID usar (con fallback a 362 si no hay usuario actual)
+      final String idBusqueda;
+      if (comercioId != null) {
+        idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+      } else {
+        idBusqueda = "362"; // Valor por defecto para compatibilidad
+      }
+
+      // Construir la URL con el parámetro de comercio_id
+      final Uri apiUrl = Uri.parse('${apiUrlUser}?comercio_id=$idBusqueda');
+
       final response = await http.get(
-        Uri.parse(apiUrlUser),
+        apiUrl,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -202,8 +217,23 @@ class ApiServices{
   // Función para obtener clientes de la API y guardarlos en la base de datos
   Future<void> fetchClientesMostrador(String token) async {
     try {
+      // Intentar obtener el ID de comercio del usuario actual si está disponible
+      final String? comercioId = User.currencyUser?.comercioId;
+      final String? sucursalId = User.currencyUser?.id.toString();
+
+      // Determinar cuál ID usar (con fallback a 362 si no hay usuario actual)
+      final String idBusqueda;
+      if (comercioId != null) {
+        idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+      } else {
+        idBusqueda = "362"; // Valor por defecto para compatibilidad
+      }
+
+      // Construir la URL con ambos parámetros de comercio_id y casa_central_id
+      final Uri apiUrl = Uri.parse('${apiUrlClienteMostrador}?comercio_id=$idBusqueda&casa_central_id=$idBusqueda');
+
       final response = await http.get(
-        Uri.parse(apiUrlClienteMostrador),
+        apiUrl,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -316,10 +346,32 @@ class ApiServices{
   /// Esta función recupera todos los métodos de pago desde la API, los convierte
   /// a modelos y los guarda en la base de datos local. También agrega cada método
   /// a la cola de sincronización para garantizar consistencia con el servidor.
-  Future<void> fetchMetodosPago(String token, {int comercioId = 362}) async {
+  Future<void> fetchMetodosPago(String token, {int? comercioIdParam}) async {
     try {
+      // Determinar el ID a usar (parámetro proporcionado o del usuario actual)
+      int idBusqueda;
+
+      if (comercioIdParam != null) {
+        // Usar el parámetro proporcionado si está disponible
+        idBusqueda = comercioIdParam;
+      } else {
+        // Intentar obtener el ID de comercio del usuario actual
+        final String? comercioIdStr = User.currencyUser?.comercioId;
+        final String? sucursalId = User.currencyUser?.id.toString();
+
+        // Determinar cuál ID usar con fallback a 362
+        final String idBusquedaStr;
+        if (comercioIdStr != null) {
+          idBusquedaStr = (comercioIdStr == "1") ? (sucursalId ?? comercioIdStr) : comercioIdStr;
+        } else {
+          idBusquedaStr = "362"; // Valor por defecto para compatibilidad
+        }
+
+        idBusqueda = int.parse(idBusquedaStr);
+      }
+
       // Construir la URL con el parámetro comercio_id
-      final Uri url = Uri.parse('$apiUrlMetodosPago?comercio_id=$comercioId');
+      final Uri url = Uri.parse('$apiUrlMetodosPago?comercio_id=$idBusqueda');
 
       // Mostrar mensaje de progreso
       print('Obteniendo métodos de pago desde: $url');
