@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS ventas(
   caja_id INTEGER,
   nota_interna TEXT,
   observaciones TEXT,
+  saldo_pendiente REAL DEFAULT 0.0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

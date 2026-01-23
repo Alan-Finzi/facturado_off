@@ -1079,6 +1079,32 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         domicilioEntrega = _datosEnvio.toString();
       }
 
+      // Calcular saldo pendiente para pagos divididos
+      double saldoPendiente = 0.0;
+
+      // Verificar si es pago dividido con saldo pendiente
+      if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+        final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+
+        if (state.isPartialPayment) {
+          // Calcular total pagado
+          final totalPagado = state.splitPayments.items.fold(
+            0.0,
+            (sum, item) => sum + item.amount
+          );
+
+          // Calcular total con recargos
+          final totalConRecargos = state.subtotalAmount +
+            state.splitPayments.items.fold(0.0, (sum, item) => sum + item.recargoAmount);
+
+          // Si el monto pagado es menor que el total, hay saldo pendiente
+          if (totalPagado < totalConRecargos - 0.01) {
+            saldoPendiente = totalConRecargos - totalPagado;
+            print('Saldo pendiente calculado: \$${saldoPendiente.toStringAsFixed(2)}');
+          }
+        }
+      }
+
       // Crear el objeto de venta
       var sale = Sale(
         fecha: DateTime.now(),
@@ -1102,6 +1128,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
         cajaId: cajaId,
         notaInterna: null, // Aquí podríamos agregar una nota interna si la UI lo permite
         observaciones: null, // Aquí podríamos agregar observaciones si la UI lo permite
+        saldoPendiente: saldoPendiente, // Agregamos el saldo pendiente
       );
 
       // Crear detalles de venta para cada producto

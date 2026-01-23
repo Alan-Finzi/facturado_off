@@ -76,6 +76,9 @@ class Sale extends Equatable {
   /// Observaciones generales (pueden ser visibles para el cliente)
   final String? observaciones;
 
+  /// Saldo pendiente que queda registrado para el cliente
+  final double? saldoPendiente;
+
   /// Fecha y hora de creación del registro
   final DateTime createdAt;
 
@@ -111,6 +114,7 @@ class Sale extends Equatable {
     this.cajaId,
     this.notaInterna,
     this.observaciones,
+    this.saldoPendiente = 0.0,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.detalles,
@@ -143,6 +147,7 @@ class Sale extends Equatable {
     int? cajaId,
     String? notaInterna,
     String? observaciones,
+    double? saldoPendiente,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<SaleDetail>? detalles,
@@ -172,6 +177,7 @@ class Sale extends Equatable {
       cajaId: cajaId ?? this.cajaId,
       notaInterna: notaInterna ?? this.notaInterna,
       observaciones: observaciones ?? this.observaciones,
+      saldoPendiente: saldoPendiente ?? this.saldoPendiente,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       detalles: detalles ?? this.detalles,
@@ -207,6 +213,7 @@ class Sale extends Equatable {
       cajaId: map['caja_id'],
       notaInterna: map['nota_interna'],
       observaciones: map['observaciones'],
+      saldoPendiente: map['saldo_pendiente']?.toDouble() ?? 0.0,
       createdAt: map['created_at'] is DateTime
           ? map['created_at']
           : DateTime.parse(
@@ -252,6 +259,7 @@ class Sale extends Equatable {
       'caja_id': cajaId,
       'nota_interna': notaInterna,
       'observaciones': observaciones,
+      'saldo_pendiente': saldoPendiente,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -287,6 +295,7 @@ class Sale extends Equatable {
         cajaId,
         notaInterna,
         observaciones,
+        saldoPendiente,
         createdAt,
         updatedAt,
       ];

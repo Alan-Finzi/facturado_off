@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../helper/database_helper.dart';
+import '../../models/clientes_mostrador.dart';
 import '../../models/payment_method.dart';
 import '../../models/payment_provider.dart';
 import '../../models/split_payment_item.dart';

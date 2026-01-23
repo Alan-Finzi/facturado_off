@@ -101,7 +101,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 30, // Incrementado para incluir tablas de ventas
+        version: 31, // Incrementado para incluir campo saldo_pendiente en tabla ventas
         onCreate: (db, version) async {
           print('Creando base de datos desde cero - versión $version');
           try {
@@ -116,18 +116,24 @@ class DatabaseHelper {
           print('Actualizando base de datos: $oldVersion → $newVersion');
 
           // Manejo específico según la versión antigua
-          if (oldVersion < 30) {
-            // Actualizar a versión 30 con soporte para ventas
+          if (oldVersion < 31) {
+            // Actualizar a versión 31 con soporte para saldo_pendiente en ventas
             try {
-              // Crear tabla de ventas si no existe
-              await db.execute(SalesQueries.createVentasTable);
-              print('Tabla ventas creada exitosamente');
+              // Verificar si necesitamos agregar la columna saldo_pendiente
+              if (oldVersion == 30) {
+                await db.execute('ALTER TABLE ventas ADD COLUMN saldo_pendiente REAL DEFAULT 0.0');
+                print('Columna saldo_pendiente agregada exitosamente a la tabla ventas');
+              } else {
+                // Crear tabla de ventas si no existe (incluye saldo_pendiente)
+                await db.execute(SalesQueries.createVentasTable);
+                print('Tabla ventas creada exitosamente');
 
-              // Crear tabla de detalles de venta si no existe
-              await db.execute(SalesQueries.createVentasDetalleTable);
-              print('Tabla ventas_detalle creada exitosamente');
+                // Crear tabla de detalles de venta si no existe
+                await db.execute(SalesQueries.createVentasDetalleTable);
+                print('Tabla ventas_detalle creada exitosamente');
+              }
             } catch (e) {
-              print('Error al crear tablas de ventas: $e');
+              print('Error al actualizar tablas de ventas: $e');
               // Continuar con otras actualizaciones, no lanzar error aquí
             }
           }
