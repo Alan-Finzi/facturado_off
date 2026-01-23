@@ -954,6 +954,35 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
           ),
           ElevatedButton(
             onPressed: () {
+              // Verificar si es pago dividido con saldo pendiente
+              final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
+              final paymentState = paymentMethodsCubit.state;
+
+              if (paymentState is PaymentMethodsLoaded && paymentState.isPartialPayment) {
+                // Calcular si hay saldo pendiente
+                final totalPaid = paymentState.splitPayments.items.fold(
+                  0.0,
+                  (sum, item) => sum + item.amount
+                );
+                final targetTotal = paymentState.subtotalAmount +
+                  paymentState.splitPayments.items.fold(0.0, (sum, item) => sum + item.recargoAmount);
+
+                // Si hay saldo pendiente, verificar que haya cliente seleccionado
+                if (totalPaid < targetTotal - 0.01) {
+                  final clienteState = context.read<ClientesMostradorCubit>().state;
+                  if (clienteState.clienteSeleccionado == null) {
+                    // Mostrar mensaje y no continuar
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Debe seleccionar un cliente para registrar el saldo pendiente'),
+                        backgroundColor: Colors.red,
+                      )
+                    );
+                    return; // No continuar con el guardado
+                  }
+                }
+              }
+
               // Cerrar el diálogo
               Navigator.of(context).pop();
               // Guardar la venta

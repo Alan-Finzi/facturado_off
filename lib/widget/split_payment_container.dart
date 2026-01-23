@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import '../widget/split_payment_item_widget.dart';
 
@@ -48,9 +49,15 @@ class _SplitPaymentContainerState extends State<SplitPaymentContainer> {
             context.read<PaymentMethodsCubit>().addSplitPaymentItem();
           }
 
-          // Validar los pagos
+          // Obtener el cliente seleccionado
+          final clienteState = context.read<ClientesMostradorCubit>().state;
+          final clienteSeleccionado = clienteState.clienteSeleccionado;
+
+          // Validar los pagos pasando el cliente seleccionado
           setState(() {
-            _errorMessage = context.read<PaymentMethodsCubit>().validateSplitPayments();
+            _errorMessage = context.read<PaymentMethodsCubit>().validateSplitPayments(
+              clienteSeleccionado: clienteSeleccionado
+            );
           });
         }
       },

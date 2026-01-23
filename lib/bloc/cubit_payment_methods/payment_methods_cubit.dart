@@ -529,7 +529,9 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
   }
 
   /// Valida si los montos de los items de pago dividido son válidos
-  String? validateSplitPayments() {
+  /// Si hay un saldo pendiente (totalPaid < targetTotal), verifica que haya un cliente seleccionado
+  /// @param clienteSeleccionado Cliente seleccionado actualmente (null si no hay cliente)
+  String? validateSplitPayments({ClientesMostrador? clienteSeleccionado}) {
     if (state is PaymentMethodsLoaded) {
       final currentState = state as PaymentMethodsLoaded;
 
@@ -557,8 +559,19 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
       final double targetTotal = currentState.subtotalAmount +
         currentState.splitPayments.items.fold(0.0, (sum, item) => sum + item.recargoAmount);
 
-      if ((totalPaid - targetTotal).abs() > 0.01) {
-        return 'La suma de los pagos (${totalPaid.toStringAsFixed(2)}) debe ser igual al total a pagar (${targetTotal.toStringAsFixed(2)})';
+      // Verificar si hay saldo pendiente (la suma de pagos es menor al total)
+      final bool hasPendingBalance = totalPaid < targetTotal - 0.01;
+
+      // Si hay saldo pendiente, verificar que haya un cliente seleccionado
+      if (hasPendingBalance) {
+        if (clienteSeleccionado == null) {
+          return 'Debe seleccionar un cliente para registrar el saldo pendiente';
+        }
+      }
+
+      // Verificar que no se exceda el monto (con margen de tolerancia)
+      if (totalPaid > targetTotal + 0.01) {
+        return 'La suma de los pagos (${totalPaid.toStringAsFixed(2)}) no puede ser mayor al total a pagar (${targetTotal.toStringAsFixed(2)})';
       }
     }
 
