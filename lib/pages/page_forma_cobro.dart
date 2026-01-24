@@ -878,6 +878,63 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
               )),
               Divider(),
 
+              // Información del monto restante (para pagos divididos)
+              Builder(
+                builder: (context) {
+                  // Verificar si es pago dividido
+                  if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+                    final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+
+                    if (state.isPartialPayment) {
+                      // Calcular total pagado
+                      final totalPagado = state.splitPayments.items.fold(
+                        0.0,
+                        (sum, item) => sum + item.amount
+                      );
+
+                      // Calcular total con recargos
+                      final totalConRecargos = state.subtotalAmount +
+                        state.splitPayments.items.fold(0.0, (sum, item) => sum + item.recargoAmount);
+
+                      // Mostrar información de montos pagados/pendientes
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total a pagar:', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('\$${totalConRecargos.toStringAsFixed(2)}',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Monto pagado:', style: TextStyle(color: Colors.green.shade800)),
+                              Text('\$${totalPagado.toStringAsFixed(2)}',
+                                  style: TextStyle(color: Colors.green.shade800)),
+                            ],
+                          ),
+                          if (totalPagado < totalConRecargos - 0.01)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Monto restante:',
+                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                Text('\$${(totalConRecargos - totalPagado).toStringAsFixed(2)}',
+                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          Divider(),
+                        ],
+                      );
+                    }
+                  }
+                  return SizedBox.shrink(); // No mostrar nada si no es pago dividido
+                },
+              ),
+
               // Totales
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
