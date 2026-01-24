@@ -349,6 +349,58 @@ class _ResumenTablaState extends State<ResumenTabla> {
                             ),
                         ],
                     ),
+                    // Obtener el monto restante de la colección de pagos divididos si está disponible
+                    BlocBuilder<PaymentMethodsCubit, PaymentMethodsState>(
+                        builder: (context, state) {
+                            if (state is PaymentMethodsLoaded &&
+                                state.isPartialPayment &&
+                                state.splitPayments.remainingAmount > 0.01) {
+                                return TableRow(
+                                    decoration: BoxDecoration(
+                                        color: Colors.blue[50],
+                                        borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    children: [
+                                        Padding(
+                                            padding: const EdgeInsets.all(4.0),
+                                            child: Row(
+                                                children: [
+                                                    Icon(Icons.account_balance_wallet, size: 12, color: Colors.blue[700]),
+                                                    const SizedBox(width: 4.0),
+                                                    Text(
+                                                        '- Monto para cuenta corriente',
+                                                        style: TextStyle(
+                                                            fontSize: 11,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Colors.blue[700],
+                                                        ),
+                                                    ),
+                                                ],
+                                            ),
+                                        ),
+                                        Padding(
+                                            padding: const EdgeInsets.all(4.0),
+                                            child: Text(
+                                                '\$${state.splitPayments.remainingAmount.toStringAsFixed(2)}',
+                                                textAlign: TextAlign.right,
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.blue[700],
+                                                ),
+                                            ),
+                                        ),
+                                    ],
+                                );
+                            }
+                            return const TableRow(
+                                children: [
+                                    SizedBox(height: 0),
+                                    SizedBox(height: 0),
+                                ],
+                            );
+                        }
+                    ),
                     const TableRow(
                         children: [
                             SizedBox(height: 8.0),
