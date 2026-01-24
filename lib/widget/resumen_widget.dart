@@ -256,6 +256,166 @@ class _ResumenTablaState extends State<ResumenTabla> {
         required double totalFinal,
         required ProductosState productosState,
     }) {
+        // Crear una lista mutable para las filas de la tabla
+        List<TableRow> tableRows = [
+            TableRow(
+                children: [
+                    const Text('SUBTOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('\$${subtotal.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                ],
+            ),
+            TableRow(
+                children: [
+                    const Text('- Descuento promociones', style: TextStyle(fontSize: 10)),
+                    Text('- \$${descuentoPromos.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                ],
+            ),
+            TableRow(
+                children: [
+                    Text('- Descuento Gral (${productosState.descuentoGeneral.round()}%)', style: const TextStyle(fontSize: 10)),
+                    Text('- \$${descuentoGral.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                ],
+            ),
+            TableRow(
+                children: [
+                    const Text('+ IVA'),
+                    Text('+ \$${totalIva.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                ],
+            ),
+            // Siempre mostrar la fila de recargo, incluso cuando es cero
+            TableRow(
+                decoration: _recargoAmount > 0 ? BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(4),
+                ) : null,
+                children: [
+                    Padding(
+                        padding: _recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
+                        child: Row(
+                            children: [
+                                if (_recargoAmount > 0)
+                                    Icon(Icons.payment, size: 12, color: Colors.red[700]),
+                                SizedBox(width: _recargoAmount > 0 ? 4.0 : 0),
+                                RichText(
+                                    text: TextSpan(
+                                        children: [
+                                            TextSpan(
+                                                text: '+ Recargo ',
+                                                style: TextStyle(
+                                                    fontSize: _recargoAmount > 0 ? 11 : 10,
+                                                    fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                    color: _recargoAmount > 0 ? Colors.red[700] : Colors.grey
+                                                ),
+                                            ),
+                                            TextSpan(
+                                                // Usar siempre los valores del estado interno
+                                                text: '(${_recargoRate.toStringAsFixed(1)}%)',
+                                                style: TextStyle(
+                                                    fontSize: _recargoAmount > 0 ? 11 : 10,
+                                                    fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                                    color: _recargoAmount > 0 ? Colors.red[900] : Colors.grey,
+                                                    backgroundColor: _recargoAmount > 0 ? Colors.yellow[100] : null,
+                                                ),
+                                            ),
+                                        ],
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.black,
+                                        ),
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                    Padding(
+                        padding: _recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
+                        child: Text(
+                            // Usar siempre los valores del estado interno
+                            '+ \$${_recargoAmount.toStringAsFixed(2)}',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                                fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                color: _recargoAmount > 0 ? Colors.red[700] : Colors.grey,
+                                fontSize: _recargoAmount > 0 ? 12 : 10
+                            )
+                        ),
+                    ),
+                ],
+            ),
+        ];
+
+        // Obtener el monto restante de la colección de pagos divididos si está disponible
+        // Usar try-catch para manejar posibles errores
+        try {
+            final paymentMethodsCubit = _getPaymentMethodsCubit(context);
+            if (paymentMethodsCubit != null) {
+                final state = paymentMethodsCubit.state;
+                if (state is PaymentMethodsLoaded &&
+                    state.isPartialPayment &&
+                    state.splitPayments.remainingAmount > 0.01) {
+                    // Agregar la fila de monto para cuenta corriente
+                    tableRows.add(
+                        TableRow(
+                            decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(4),
+                            ),
+                            children: [
+                                Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Row(
+                                        children: [
+                                            Icon(Icons.account_balance_wallet, size: 12, color: Colors.blue[700]),
+                                            const SizedBox(width: 4.0),
+                                            Text(
+                                                '- Monto para cuenta corriente',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.blue[700],
+                                                ),
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                                Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Text(
+                                        '\$${state.splitPayments.remainingAmount.toStringAsFixed(2)}',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue[700],
+                                        ),
+                                    ),
+                                ),
+                            ],
+                        )
+                    );
+                }
+            }
+        } catch (e) {
+            print('Error al obtener monto para cuenta corriente: $e');
+        }
+
+        // Agregar espaciador y fila de total
+        tableRows.addAll([
+            const TableRow(
+                children: [
+                    SizedBox(height: 8.0),
+                    SizedBox(height: 8.0),
+                ],
+            ),
+            TableRow(
+                children: [
+                    const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('\$${totalFinal.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+            ),
+        ]);
+
+        // Construir la tabla con las filas
         return Padding(
             padding: const EdgeInsets.all(8.0),
             child: Table(
@@ -264,156 +424,7 @@ class _ResumenTablaState extends State<ResumenTabla> {
                     0: FlexColumnWidth(2),
                     1: FlexColumnWidth(1),
                 },
-                children: [
-                    TableRow(
-                        children: [
-                            const Text('SUBTOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('\$${subtotal.toStringAsFixed(2)}', textAlign: TextAlign.right),
-                        ],
-                    ),
-                    TableRow(
-                        children: [
-                            const Text('- Descuento promociones', style: TextStyle(fontSize: 10)),
-                            Text('- \$${descuentoPromos.toStringAsFixed(2)}', textAlign: TextAlign.right),
-                        ],
-                    ),
-                    TableRow(
-                        children: [
-                            Text('- Descuento Gral (${productosState.descuentoGeneral.round()}%)', style: const TextStyle(fontSize: 10)),
-                            Text('- \$${descuentoGral.toStringAsFixed(2)}', textAlign: TextAlign.right),
-                        ],
-                    ),
-                    TableRow(
-                        children: [
-                            const Text('+ IVA'),
-                            Text('+ \$${totalIva.toStringAsFixed(2)}', textAlign: TextAlign.right),
-                        ],
-                    ),
-                    // Siempre mostrar la fila de recargo, incluso cuando es cero
-                    TableRow(
-                        decoration: _recargoAmount > 0 ? BoxDecoration(
-                            color: Colors.red[50],
-                            borderRadius: BorderRadius.circular(4),
-                        ) : null,
-                        children: [
-                            Padding(
-                                padding: _recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
-                                child: Row(
-                                    children: [
-                                        if (_recargoAmount > 0)
-                                            Icon(Icons.payment, size: 12, color: Colors.red[700]),
-                                        SizedBox(width: _recargoAmount > 0 ? 4.0 : 0),
-                                        RichText(
-                                            text: TextSpan(
-                                                children: [
-                                                    TextSpan(
-                                                        text: '+ Recargo ',
-                                                        style: TextStyle(
-                                                            fontSize: _recargoAmount > 0 ? 11 : 10,
-                                                            fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
-                                                            color: _recargoAmount > 0 ? Colors.red[700] : Colors.grey
-                                                        ),
-                                                    ),
-                                                    TextSpan(
-                                                        // Usar siempre los valores del estado interno
-                                                        text: '(${_recargoRate.toStringAsFixed(1)}%)',
-                                                        style: TextStyle(
-                                                            fontSize: _recargoAmount > 0 ? 11 : 10,
-                                                            fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
-                                                            color: _recargoAmount > 0 ? Colors.red[900] : Colors.grey,
-                                                            backgroundColor: _recargoAmount > 0 ? Colors.yellow[100] : null,
-                                                        ),
-                                                    ),
-                                                ],
-                                                style: TextStyle(
-                                                    fontSize: 10,
-                                                    color: Colors.black,
-                                                ),
-                                            ),
-                                        ),
-                                    ],
-                                ),
-                            ),
-                            Padding(
-                                padding: _recargoAmount > 0 ? EdgeInsets.all(4.0) : EdgeInsets.zero,
-                                child: Text(
-                                    // Usar siempre los valores del estado interno
-                                    '+ \$${_recargoAmount.toStringAsFixed(2)}',
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                        fontWeight: _recargoAmount > 0 ? FontWeight.bold : FontWeight.normal,
-                                        color: _recargoAmount > 0 ? Colors.red[700] : Colors.grey,
-                                        fontSize: _recargoAmount > 0 ? 12 : 10
-                                    )
-                                ),
-                            ),
-                        ],
-                    ),
-                    // Obtener el monto restante de la colección de pagos divididos si está disponible
-                    BlocBuilder<PaymentMethodsCubit, PaymentMethodsState>(
-                        builder: (context, state) {
-                            if (state is PaymentMethodsLoaded &&
-                                state.isPartialPayment &&
-                                state.splitPayments.remainingAmount > 0.01) {
-                                return TableRow(
-                                    decoration: BoxDecoration(
-                                        color: Colors.blue[50],
-                                        borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    children: [
-                                        Padding(
-                                            padding: const EdgeInsets.all(4.0),
-                                            child: Row(
-                                                children: [
-                                                    Icon(Icons.account_balance_wallet, size: 12, color: Colors.blue[700]),
-                                                    const SizedBox(width: 4.0),
-                                                    Text(
-                                                        '- Monto para cuenta corriente',
-                                                        style: TextStyle(
-                                                            fontSize: 11,
-                                                            fontWeight: FontWeight.bold,
-                                                            color: Colors.blue[700],
-                                                        ),
-                                                    ),
-                                                ],
-                                            ),
-                                        ),
-                                        Padding(
-                                            padding: const EdgeInsets.all(4.0),
-                                            child: Text(
-                                                '\$${state.splitPayments.remainingAmount.toStringAsFixed(2)}',
-                                                textAlign: TextAlign.right,
-                                                style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.blue[700],
-                                                ),
-                                            ),
-                                        ),
-                                    ],
-                                );
-                            }
-                            return const TableRow(
-                                children: [
-                                    SizedBox(height: 0),
-                                    SizedBox(height: 0),
-                                ],
-                            );
-                        }
-                    ),
-                    const TableRow(
-                        children: [
-                            SizedBox(height: 8.0),
-                            SizedBox(height: 8.0),
-                        ],
-                    ),
-                    TableRow(
-                        children: [
-                            const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('\$${totalFinal.toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                    ),
-                ],
+                children: tableRows,
             ),
         );
     }
