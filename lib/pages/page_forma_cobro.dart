@@ -916,7 +916,7 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                                   style: TextStyle(color: Colors.green.shade800)),
                             ],
                           ),
-                          if (totalPagado < totalConRecargos - 0.01)
+                          if (totalPagado < totalConRecargos - 0.01) ...[
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -926,6 +926,22 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                                     style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                               ],
                             ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.account_balance_wallet, size: 16, color: Colors.blue[700]),
+                                    SizedBox(width: 4),
+                                    Text('Monto para cuenta corriente:',
+                                        style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                Text('\$${(totalConRecargos - totalPagado).toStringAsFixed(2)}',
+                                    style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
                           Divider(),
                         ],
                       );

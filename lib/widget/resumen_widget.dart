@@ -367,12 +367,15 @@ class _ResumenTablaState extends State<ResumenTabla> {
                                         children: [
                                             Icon(Icons.account_balance_wallet, size: 12, color: Colors.blue[700]),
                                             const SizedBox(width: 4.0),
-                                            Text(
-                                                '- Monto para cuenta corriente',
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.blue[700],
+                                            Flexible(
+                                                child: Text(
+                                                    '- Monto para cuenta corriente',
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.blue[700],
+                                                    ),
                                                 ),
                                             ),
                                         ],
@@ -421,7 +424,7 @@ class _ResumenTablaState extends State<ResumenTabla> {
             child: Table(
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 columnWidths: const {
-                    0: FlexColumnWidth(2),
+                    0: FlexColumnWidth(3),
                     1: FlexColumnWidth(1),
                 },
                 children: tableRows,
