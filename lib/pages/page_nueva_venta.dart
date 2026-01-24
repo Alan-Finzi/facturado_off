@@ -545,6 +545,53 @@ class _VentaMainPageState extends State<VentaMainPage> {
               Text('Método de pago:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(metodoPagoNombre),
 
+              // Saldo pendiente (mostrar solo si hay pago dividido con saldo pendiente)
+              Builder(
+                builder: (context) {
+                  // Verificar si es pago dividido con saldo pendiente
+                  if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+                    final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
+
+                    if (state.isPartialPayment) {
+                      // Calcular total pagado
+                      final totalPagado = state.splitPayments.items.fold(
+                        0.0,
+                        (sum, item) => sum + item.amount
+                      );
+
+                      // Calcular total con recargos
+                      final totalConRecargos = state.subtotalAmount +
+                        state.splitPayments.items.fold(0.0, (sum, item) => sum + item.recargoAmount);
+
+                      // Si hay saldo pendiente, mostrarlo
+                      if (totalPagado < totalConRecargos - 0.01) {
+                        final saldoPendiente = totalConRecargos - totalPagado;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 16),
+                            Text('Saldo pendiente:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                            Row(
+                              children: [
+                                Icon(Icons.warning, color: Colors.red, size: 16),
+                                SizedBox(width: 4),
+                                Text('\$${saldoPendiente.toStringAsFixed(2)}',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                              ],
+                            ),
+                            if (cliente != null)
+                              Text('Cliente con saldo: ${cliente.nombre}',
+                                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                          ],
+                        );
+                      }
+                    }
+                  }
+                  return SizedBox.shrink(); // No mostrar nada si no hay saldo pendiente
+                },
+              ),
+
               // Tipo de envío
               SizedBox(height: 16),
               Text('Tipo de envío:', style: TextStyle(fontWeight: FontWeight.bold)),
