@@ -17,13 +17,25 @@ import 'bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
 import 'data/database_seeder.dart';
 import 'helper/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'util/platform_service.dart';
+import 'widget/platform_adaptive_widget.dart';
 
 
 void main() async {
-  sqfliteFfiInit();
+  // Inicializar el entorno Flutter y la base de datos
   WidgetsFlutterBinding.ensureInitialized();
-  databaseFactory = databaseFactoryFfi;
 
+  // Inicializar plataforma específica
+  final platformService = PlatformService();
+  await platformService.initPlatformSettings();
+
+  // Configurar SQLite
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+  // Inicializar preferencias compartidas
   final prefs = await SharedPreferences.getInstance();
   final isFirstSyncDone = prefs.getBool('isFirstSyncDone') ?? false;
 
@@ -35,10 +47,12 @@ void main() async {
 
   await DatabaseHelper.instance.database; // Siempre inicializa la base
 
+  // Configurar manejo de foco
   WidgetsBinding.instance.addPostFrameCallback((_) {
     FocusManager.instance.primaryFocus?.unfocus();
   });
 
+  // Ejecutar la aplicación
   runApp(BlocProviders());
 }
 
@@ -79,36 +93,114 @@ class Myapp extends StatefulWidget {
 }
 
 class _MyappState extends State<Myapp> {
+  final PlatformService _platformService = PlatformService();
+
   @override
   Widget build(BuildContext context) {
-
     final themeCubit = context.watch<ThemaCubit>();
-    return MaterialApp(
-      title: 'Facturador Offline',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 24),
-          displayMedium: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 22),
-          displaySmall: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 20),
-          headlineLarge: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 18),
-          headlineMedium: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 16),
-          headlineSmall: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 14),
-          titleLarge: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 20),
-          titleMedium: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 18),
-          titleSmall: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 16),
-          bodyLarge: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 16),
-          bodyMedium: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 14),
-          bodySmall: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 12),
-          labelLarge: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 14),
-          labelMedium: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 12),
-          labelSmall: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 10),
+
+    // Definir colores principales
+    const primaryColor = Color(0xFFD11C83);
+    const secondaryColor = Color(0xFF3F51B5);
+
+    // Crear tema para aplicación
+    final ThemeData lightTheme = ThemeData(
+      primaryColor: primaryColor,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
+        secondary: secondaryColor,
+        onPrimary: Colors.white,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primaryColor,
+        elevation: 2.0,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontFamily: 'ubuntuBold',
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
         ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.all<Color>(primaryColor),
+          foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+        ),
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 24),
+        displayMedium: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 22),
+        displaySmall: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 20),
+        headlineLarge: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 18),
+        headlineMedium: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 16),
+        headlineSmall: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 14),
+        titleLarge: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 20),
+        titleMedium: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 18),
+        titleSmall: TextStyle(fontFamily: 'ubuntuBold', fontWeight: FontWeight.bold, fontSize: 16),
+        bodyLarge: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 16),
+        bodyMedium: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 14),
+        bodySmall: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 12),
+        labelLarge: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 14),
+        labelMedium: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 12),
+        labelSmall: TextStyle(fontFamily: 'ubuntuRegular', fontWeight: FontWeight.normal, fontSize: 10),
+      ),
+    );
+
+    // Crear tema oscuro
+    final ThemeData darkTheme = ThemeData.dark().copyWith(
+      primaryColor: primaryColor,
+      colorScheme: ColorScheme.dark(
+        primary: primaryColor,
+        secondary: secondaryColor,
+        onPrimary: Colors.white,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primaryColor,
+        elevation: 2.0,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontFamily: 'ubuntuBold',
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.all<Color>(primaryColor),
+          foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+        ),
+      ),
+    );
+
+    // Ajustar tamaños de fuente para móvil/desktop
+    double fontSizeAdjustment = _platformService.isMobile ? 0.0 : 2.0;
+
+    return MaterialApp(
+      title: 'Facturador Offline',
+      theme: lightTheme,
+      darkTheme: themeCubit.state.isDark ? darkTheme : lightTheme,
+      themeMode: themeCubit.state.isDark ? ThemeMode.dark : ThemeMode.light,
+      debugShowCheckedModeBanner: false,
+
+      // Definir el widget inicial adaptado a la plataforma
       home: const LoginScreen(),
-      debugShowCheckedModeBanner: false, // Quita el banner de depuración
-      darkTheme: themeCubit.state.isDark? ThemeData.dark() :ThemeData.light() , // Tema oscuro
-      themeMode:themeCubit.state.isDark?   ThemeMode.dark : ThemeMode.light, // Establece el modo de tema a oscuro
+
+      // Configuraciones de plataforma adicionales
+      builder: (context, child) {
+        final mediaQueryData = MediaQuery.of(context);
+
+        // Ajuste de escala para diferentes tamaños de pantalla
+        final textScaleFactor = _platformService.isDesktop
+            ? 1.0
+            : (mediaQueryData.size.width < 360 ? 0.9 : 1.0);
+
+        return MediaQuery(
+          data: mediaQueryData.copyWith(
+            textScaleFactor: textScaleFactor,
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
