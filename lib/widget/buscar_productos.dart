@@ -108,12 +108,50 @@ class _BuscarProductoScannerState extends State<BuscarProductoScanner> {
                         onPressed: () async {
                           try {
                             String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-                              '#ff6666', 
-                              'Cancelar', 
-                              true, 
+                              '#ff6666',
+                              'Cancelar',
+                              true,
                               ScanMode.BARCODE
                             );
-                            
+
+                            // Nota: Nuestra implementación local devuelve un código fijo "12345678901234"
+                            // Podemos mostrar un diálogo para ingresar el código manualmente también
+
+                            // Si el código retornado es nuestro código fijo, mostrar diálogo para ingreso manual
+                            if (barcodeScanRes == "12345678901234") {
+                              // Mostrar un diálogo para ingresar el código de barras manualmente
+                              final TextEditingController manualCodeController = TextEditingController();
+                              final manualCode = await showDialog<String>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text("Ingreso manual de código"),
+                                  content: TextField(
+                                    controller: manualCodeController,
+                                    decoration: InputDecoration(labelText: "Código de barras"),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      child: Text("Cancelar"),
+                                      onPressed: () => Navigator.pop(context, null),
+                                    ),
+                                    TextButton(
+                                      child: Text("Aceptar"),
+                                      onPressed: () => Navigator.pop(context, manualCodeController.text),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              // Actualizar barcodeScanRes con el código ingresado manualmente
+                              if (manualCode != null && manualCode.isNotEmpty) {
+                                barcodeScanRes = manualCode;
+                              } else {
+                                // Si cancelaron el diálogo, tratarlo como si cancelaran el escaneo
+                                barcodeScanRes = '-1';
+                              }
+                            }
+
                             // Si el usuario cancela el escaneo, se devuelve -1
                             if (barcodeScanRes != '-1') {
                               // Buscar el producto por código de barras
@@ -121,7 +159,7 @@ class _BuscarProductoScannerState extends State<BuscarProductoScanner> {
                                 (producto) => producto['codigo'] == barcodeScanRes,
                                 orElse: () => {},
                               );
-                              
+
                               if (matchedProduct.isNotEmpty) {
                                 // Agregar el producto si se encuentra
                                 context.read<ProductosCubit>().agregarProducto(matchedProduct);
