@@ -19,7 +19,7 @@ def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "
 android {
     namespace "com.ultrix.facturador_offline"
     ndkVersion flutter.ndkVersion
-    compileSdk 34
+    compileSdk 35
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -35,8 +35,35 @@ android {
     }
 
     buildTypes {
+        debug {
+            // No obfuscation for debugging
+            minifyEnabled false
+            shrinkResources false
+        }
         release {
-            signingConfig signingConfigs.debug
+            // Enable ProGuard for release builds
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug // En producción, usar signingConfigs.release
+
+            // Habilitar multi-dex para apps grandes si es necesario
+            multiDexEnabled true
+
+            // Configuraciones adicionales para release
+            ndk {
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            }
+        }
+    }
+
+    // Configurar empaquetado split por ABI para optimizar tamaño de APK
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            universalApk true
         }
     }
 }
