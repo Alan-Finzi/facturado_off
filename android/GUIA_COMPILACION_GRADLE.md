@@ -19,7 +19,15 @@ Esta guía proporciona instrucciones detalladas para compilar el proyecto utiliz
 
 ## Pasos para compilar el proyecto
 
-1. **Preparar el entorno**:
+1. **Verificar entorno Java**:
+   ```bash
+   cd android
+   # Ejecutar este script para verificar la configuración de Java
+   .\check_java.bat
+   cd ..
+   ```
+
+2. **Preparar el plugin barcode scanner**:
    ```bash
    cd android
    # Ejecutar este script para encontrar y parchar el plugin barcode scanner
@@ -27,20 +35,25 @@ Esta guía proporciona instrucciones detalladas para compilar el proyecto utiliz
    cd ..
    ```
 
-2. **Limpiar el proyecto**:
+3. **Limpiar el proyecto**:
    ```bash
    flutter clean
    ```
 
-3. **Actualizar dependencias**:
+4. **Actualizar dependencias**:
    ```bash
    flutter pub get
    ```
 
-4. **Compilar en modo release**:
+5. **Compilar en modo release**:
    ```bash
    flutter build apk --release
    ```
+
+Si encuentras problemas de compilación con el modo release, puedes intentar:
+```bash
+flutter build apk --release --no-shrink
+```
 
 ## Solución de problemas comunes
 
@@ -97,25 +110,49 @@ Build file 'C:\...\android\settings.gradle' line: xxx
   # Ya se debería estar usando settings.gradle.kts
   ```
 
-### 4. Errores de compatibilidad con Java
+### 4. Errores de compatibilidad JVM entre Java y Kotlin
 
 **Problema**:
 ```
-Compilation error related to Java compatibility
+Execution failed for task ':app:compileReleaseKotlin'.
+> Inconsistent JVM-target compatibility detected for tasks 'compileReleaseJavaWithJavac' (1.8) and 'compileReleaseKotlin' (17).
 ```
 
 **Solución**:
-- Verificar que estás usando Java 17:
-  ```bash
-  java -version
-  ```
-- La configuración en build.gradle debería usar:
-  ```gradle
-  compileOptions {
-      sourceCompatibility JavaVersion.VERSION_17
-      targetCompatibility JavaVersion.VERSION_17
-  }
-  ```
+Hay dos partes a resolver:
+
+1. **Alinear todas las versiones JVM target**:
+   - Modificar `android/app/build.gradle`:
+   ```gradle
+   compileOptions {
+       sourceCompatibility JavaVersion.VERSION_17
+       targetCompatibility JavaVersion.VERSION_17
+   }
+
+   kotlinOptions {
+       jvmTarget = "17"
+   }
+   ```
+
+   - También modificar `local_plugins/flutter_barcode_scanner/android/build.gradle` con la misma configuración
+
+2. **Añadir flag para ignorar validación JVM target**:
+   - Añadir al archivo `android/gradle.properties`:
+   ```
+   kotlin.jvm.target.validation.mode=IGNORE
+   ```
+
+3. **Verificar instalación de Java 17**:
+   ```bash
+   java -version
+   ```
+   - Si no tienes Java 17, descárgalo de [Eclipse Temurin JDK 17](https://adoptium.net/)
+
+4. **Ejecutar script de verificación**:
+   ```bash
+   cd android
+   .\check_java.bat
+   ```
 
 ## Verificación de entorno
 
