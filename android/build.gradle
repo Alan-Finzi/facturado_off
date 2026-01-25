@@ -3,6 +3,16 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    // Apply barcode scanner patch for namespace issue
+    if (project.name != 'android') {
+        rootProject.project(":app").afterEvaluate {
+            def patchFile = new File(rootProject.projectDir, "barcode_scanner_patch.gradle")
+            if (patchFile.exists()) {
+                apply from: patchFile
+            }
+        }
+    }
 }
 
 rootProject.buildDir = "../build"

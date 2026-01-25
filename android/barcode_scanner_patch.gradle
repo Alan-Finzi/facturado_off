@@ -1,0 +1,74 @@
+// Flutter Barcode Scanner Plugin Patch
+// This patch adds namespace configuration to the flutter_barcode_scanner plugin
+
+def barcodeProjectPath = new File(project.buildDir.parent, '../../../.pub-cache/')
+def barcodeGradleFile = new File(rootProject.projectDir, "../.pub-cache/hosted/pub.dev/flutter_barcode_scanner-2.0.0/android/build.gradle")
+
+// Search recursively for the plugin's build.gradle file
+if (!barcodeGradleFile.exists()) {
+    println "Searching for flutter_barcode_scanner build.gradle file..."
+    def potentialPaths = []
+
+    project.rootProject.buildscript.configurations.classpath.resolvedConfiguration.firstLevelModuleDependencies.each { dep ->
+        dep.moduleArtifacts.each { artifact ->
+            String artifactPath = artifact.file.absolutePath
+            if (artifactPath.contains("flutter_barcode_scanner")) {
+                potentialPaths.add(new File(artifactPath).parentFile)
+            }
+        }
+    }
+
+    // Find all .pub-cache directories
+    def pubCacheDirs = []
+    def homeDir = System.getProperty("user.home")
+    def pubCacheDir = new File(homeDir, ".pub-cache")
+    if (pubCacheDir.exists()) {
+        pubCacheDirs.add(pubCacheDir)
+    }
+
+    // Check in Flutter SDK location
+    def flutterSdkPath = project.findProperty("flutter.sdk") ?: System.getenv("FLUTTER_ROOT")
+    if (flutterSdkPath) {
+        def flutterPubCache = new File(flutterSdkPath, ".pub-cache")
+        if (flutterPubCache.exists()) {
+            pubCacheDirs.add(flutterPubCache)
+        }
+    }
+
+    // Search in pub cache directories
+    pubCacheDirs.each { cacheDir ->
+        def results = new File(cacheDir, "hosted/pub.dev").listFiles().findAll {
+            it.name.startsWith("flutter_barcode_scanner")
+        }
+        results.each { dir ->
+            def buildFile = new File(dir, "android/build.gradle")
+            if (buildFile.exists()) {
+                barcodeGradleFile = buildFile
+                println "Found flutter_barcode_scanner at: ${buildFile.absolutePath}"
+            }
+        }
+    }
+}
+
+if (barcodeGradleFile.exists()) {
+    println "Patching flutter_barcode_scanner build.gradle to add namespace"
+
+    def text = barcodeGradleFile.text
+
+    // Only add namespace if not already present
+    if (!text.contains("namespace")) {
+        // Add namespace to android block
+        def modified = text.replace(
+            "android {",
+            "android {\n    namespace \"com.amolg.flutterbarcodescanner\""
+        )
+
+        // Write the updated content back to the file
+        barcodeGradleFile.write(modified)
+        println "Patched flutter_barcode_scanner with namespace successfully"
+    } else {
+        println "Namespace already present in flutter_barcode_scanner build.gradle"
+    }
+} else {
+    println "WARNING: Could not find flutter_barcode_scanner build.gradle file to patch"
+}

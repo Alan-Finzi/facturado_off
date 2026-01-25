@@ -5,6 +5,19 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Run the plugin patch script before building
+task applyPluginPatches(type: Exec) {
+    workingDir '../'
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        commandLine 'cmd', '/c', 'bash', 'apply_plugin_patches.sh'
+    } else {
+        commandLine './apply_plugin_patches.sh'
+    }
+    ignoreExitValue true
+}
+
+preBuild.dependsOn applyPluginPatches
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
