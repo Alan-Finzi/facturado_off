@@ -121,23 +121,23 @@ class _LoginScreenState extends State<LoginScreen> {
       // No usamos appBar para seguir el diseño de la imagen de referencia
       body: SafeArea(
         child: SingleChildScrollView(
-          // Añadir padding adicional cuando el teclado está abierto
+          // Padding reducido para hacer la pantalla más compacta
           padding: EdgeInsets.only(
             left: 24.0,
-            top: 24.0,
+            top: 12.0,
             right: 24.0,
             bottom: 24.0 + (isKeyboardOpen ? 200 : 0), // Padding adicional para evitar el error de overflow
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo centrado
+              // Logo centrado (con padding reducido)
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 40.0, bottom: 40.0),
+                  padding: const EdgeInsets.only(top: 20.0, bottom: 20.0),
                   child: Container(
                     width: 150,
-                    height: 80,
+                    height: 60,
                     alignment: Alignment.center,
                     child: Text(
                       "flaminco",
@@ -173,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // Campo de email
               const Text(
@@ -205,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // Campo de contraseña
               const Text(
@@ -271,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Botón de inicio de sesión
               SizedBox(
@@ -296,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // Link para registrarse
               Center(
