@@ -1,0 +1,14 @@
+# Este archivo debe copiarse a local.properties y ajustarse según tu entorno
+# Ruta al SDK de Flutter
+flutter.sdk=C:\\src\\flutter
+
+# Propiedades del proyecto
+flutter.buildMode=debug
+flutter.versionName=1.0.4
+flutter.versionCode=1
+
+# Configuración de NDK (IMPORTANTE)
+# Si tienes problemas con el NDK, añade esta línea con la ruta a tu NDK instalado
+android.ndkVersion=25.1.8937393
+# Ruta al NDK (ajustar según tu instalación)
+#ndk.dir=C:\\Users\\Usuario\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393

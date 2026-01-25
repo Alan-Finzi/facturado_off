@@ -9,7 +9,7 @@ plugins {
 task applyPluginPatches(type: Exec) {
     workingDir '../'
     if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
-        commandLine 'cmd', '/c', 'bash', 'apply_plugin_patches.sh'
+        commandLine 'cmd', '/c', 'apply_plugin_patches.bat'
     } else {
         commandLine './apply_plugin_patches.sh'
     }
@@ -31,7 +31,7 @@ def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "
 
 android {
     namespace "com.ultrix.facturador_offline"
-    ndkVersion flutter.ndkVersion
+    ndkVersion "25.1.8937393" // Actualizado para compatibilidad con plugins
     compileSdk 34
 
     compileOptions {

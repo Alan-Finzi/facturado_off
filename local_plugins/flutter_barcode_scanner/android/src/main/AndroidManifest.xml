@@ -6,9 +6,7 @@
     <uses-feature android:name="android.hardware.camera" />
 
     <application>
-        <activity
-            android:name=".BarcodeCaptureActivity"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <!-- Eliminada referencia a BarcodeCaptureActivity ya que no usamos la captura real -->
     </application>
 
 </manifest>

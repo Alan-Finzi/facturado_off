@@ -2,6 +2,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://jitpack.io' }  // Repositorio para me.dm7.barcodescanner:zxing:1.9.13
     }
 
     // Apply barcode scanner patch for namespace issue
