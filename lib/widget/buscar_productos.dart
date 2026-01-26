@@ -15,6 +15,28 @@ import '../models/Producto_precio_stock.dart';
 import '../models/productos_maestro.dart';
 import '../models/user.dart';
 import '../pages/page_catalogo.dart';
+
+/// Widget contenedor que agrupa la funcionalidad de búsqueda de productos
+/// Combina la búsqueda con scanner y la búsqueda por texto en un solo componente
+class BuscarProductos extends StatelessWidget {
+  const BuscarProductos({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Scanner de código de barras
+        BuscarProductoScanner(),
+
+        SizedBox(height: 16),
+
+        // Búsqueda por texto
+        BuscarProductoWidget(),
+      ],
+    );
+  }
+}
 class BuscarProductoScanner extends StatefulWidget {
   @override
   _BuscarProductoScannerState createState() => _BuscarProductoScannerState();
@@ -226,7 +248,6 @@ class _BuscarProductoScannerState extends State<BuscarProductoScanner> {
                               );
                             }
                           }
-                        }
                         },
                       ),
                     ),
@@ -317,26 +338,26 @@ class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
     }
 
     final keywords = query.toLowerCase().split(' ');
-    
+
     // Limitar la cantidad de resultados para mejor rendimiento
     const int maxResults = 50;
-    
+
     // Implementar búsqueda optimizada
     int count = 0;
     productoSugerencias = productos.data!
         .where((dato) {
-      // Si ya encontramos suficientes resultados, dejar de buscar
-      if (count >= maxResults) return false;
-          
-      final textoProducto = '${dato.nombre ?? ''} ${dato.barcode ?? ''}'.toLowerCase();
-      final match = keywords.every((keyword) => textoProducto.contains(keyword));
-      if (match) count++;
-      return match;
-    })
+          // Si ya encontramos suficientes resultados, dejar de buscar
+          if (count >= maxResults) return false;
+
+          final textoProducto = '${dato.nombre ?? ''} ${dato.barcode ?? ''}'.toLowerCase();
+          final match = keywords.every((keyword) => textoProducto.contains(keyword));
+          if (match) count++;
+          return match;
+        })
         .map((dato) => SearchFieldListItem<String>(
-      dato.nombre ?? 'Sin nombre',
-      item: dato.barcode ?? 'Sin código',
-    ))
+          dato.nombre ?? 'Sin nombre',
+          item: dato.barcode ?? 'Sin código',
+        ))
         .toList();
 
     setState(() {});
@@ -376,6 +397,7 @@ class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
             onSearchTextChanged: (query) {
               final productosState = context.read<ProductosMaestroCubit>().state;
               cargarSugerencias(query, productosState.productoResponse);
+              return null;
             },
             onSuggestionTap: (producto) {
               final productosState = context.read<ProductosMaestroCubit>().state;

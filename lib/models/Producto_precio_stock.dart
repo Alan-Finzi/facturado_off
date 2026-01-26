@@ -16,6 +16,7 @@ class ProductoConPrecioYStock {
   late  double? precioFinal;
   late  String? detalleCalculoIva;
   final String? promo;
+  late  double? descuento;
 
 
   ProductoConPrecioYStock( {
@@ -28,10 +29,10 @@ class ProductoConPrecioYStock {
     this.stock,
     this.iva,
     this.categoria,
-      this.cantidad,
-      this.precioFinal,
+    this.cantidad,
+    this.precioFinal,
     this.promo,
-
+    this.descuento,
   });
 
   factory ProductoConPrecioYStock.fromMap(Map<String, dynamic> map) {
@@ -39,6 +40,7 @@ class ProductoConPrecioYStock {
         cantidad:map["cantidad"],
         precioFinal: map["precioFinal"],
       promo: map["promo"],
+      descuento: map["descuento"] as double?,
       producto: ProductoModel(
         id: map['id'],
         idProducto: map['producto_id'] as int,
@@ -93,7 +95,7 @@ class ProductoConPrecioYStock {
         "detalleCalculoIva":detalleCalculoIva,
         "cantidad":cantidad,
         "porcentajeIva":porcentajeIva,
-
+        "descuento":descuento,
       };
   }
 
