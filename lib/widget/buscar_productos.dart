@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:searchfield/searchfield.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_login/login_cubit.dart';
@@ -106,77 +106,127 @@ class _BuscarProductoScannerState extends State<BuscarProductoScanner> {
                       suffixIcon: IconButton(
                         icon: Icon(Icons.qr_code_scanner),
                         onPressed: () async {
-                          try {
-                            String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-                              '#ff6666',
-                              'Cancelar',
-                              true,
-                              ScanMode.BARCODE
-                            );
+                          // Crear controlador para el scanner móvil
+                          MobileScannerController scannerController = MobileScannerController(
+                            formats: [BarcodeFormat.all],  // Acepta todos los formatos
+                            facing: CameraFacing.back,     // Usar cámara trasera
+                            torchEnabled: false,           // Flash apagado inicialmente
+                          );
 
-                            // Nota: Nuestra implementación local devuelve un código fijo "12345678901234"
-                            // Podemos mostrar un diálogo para ingresar el código manualmente también
+                          // Almacenar resultado del escaneo
+                          String? barcodeScanRes;
 
-                            // Si el código retornado es nuestro código fijo, mostrar diálogo para ingreso manual
-                            if (barcodeScanRes == "12345678901234") {
-                              // Mostrar un diálogo para ingresar el código de barras manualmente
-                              final TextEditingController manualCodeController = TextEditingController();
-                              final manualCode = await showDialog<String>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text("Ingreso manual de código"),
-                                  content: TextField(
-                                    controller: manualCodeController,
-                                    decoration: InputDecoration(labelText: "Código de barras"),
-                                    keyboardType: TextInputType.number,
+                          // Mostrar la pantalla de escaneo
+                          barcodeScanRes = await showModalBottomSheet<String>(
+                            context: context,
+                            isScrollControlled: true,
+                            isDismissible: true,
+                            builder: (context) {
+                              return Container(
+                                height: MediaQuery.of(context).size.height * 0.8,
+                                child: Scaffold(
+                                  appBar: AppBar(
+                                    title: Text('Escanear código de barras'),
+                                    backgroundColor: Colors.orange,
+                                    actions: [
+                                      // Botón para alternar flash
+                                      IconButton(
+                                        icon: ValueListenableBuilder(
+                                          valueListenable: scannerController.torchState,
+                                          builder: (context, state, child) {
+                                            if (state == TorchState.off) {
+                                              return Icon(Icons.flash_off);
+                                            } else {
+                                              return Icon(Icons.flash_on);
+                                            }
+                                          },
+                                        ),
+                                        onPressed: () => scannerController.toggleTorch(),
+                                      ),
+                                      // Botón para escaneo manual
+                                      IconButton(
+                                        icon: Icon(Icons.keyboard),
+                                        onPressed: () async {
+                                          // Mostrar diálogo para ingreso manual
+                                          final TextEditingController manualCodeController = TextEditingController();
+                                          final manualCode = await showDialog<String>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text("Ingreso manual de código"),
+                                              content: TextField(
+                                                controller: manualCodeController,
+                                                decoration: InputDecoration(labelText: "Código de barras"),
+                                                keyboardType: TextInputType.number,
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  child: Text("Cancelar"),
+                                                  onPressed: () => Navigator.pop(context, null),
+                                                ),
+                                                TextButton(
+                                                  child: Text("Aceptar"),
+                                                  onPressed: () => Navigator.pop(context, manualCodeController.text),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+
+                                          if (manualCode != null && manualCode.isNotEmpty) {
+                                            Navigator.pop(context, manualCode);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                    leading: IconButton(
+                                      icon: Icon(Icons.close),
+                                      onPressed: () => Navigator.pop(context, '-1'),
+                                    ),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      child: Text("Cancelar"),
-                                      onPressed: () => Navigator.pop(context, null),
-                                    ),
-                                    TextButton(
-                                      child: Text("Aceptar"),
-                                      onPressed: () => Navigator.pop(context, manualCodeController.text),
-                                    ),
-                                  ],
+                                  body: MobileScanner(
+                                    controller: scannerController,
+                                    onDetect: (BarcodeCapture capture) {
+                                      final barcodes = capture.barcodes;
+                                      if (barcodes.isNotEmpty) {
+                                        String? code = barcodes.first.rawValue;
+                                        if (code != null && code.isNotEmpty) {
+                                          Navigator.pop(context, code);
+                                        }
+                                      }
+                                    },
+                                  ),
                                 ),
                               );
+                            },
+                          );
 
-                              // Actualizar barcodeScanRes con el código ingresado manualmente
-                              if (manualCode != null && manualCode.isNotEmpty) {
-                                barcodeScanRes = manualCode;
-                              } else {
-                                // Si cancelaron el diálogo, tratarlo como si cancelaran el escaneo
-                                barcodeScanRes = '-1';
-                              }
-                            }
+                          // Limpiar recursos
+                          scannerController.dispose();
 
-                            // Si el usuario cancela el escaneo, se devuelve -1
-                            if (barcodeScanRes != '-1') {
-                              // Buscar el producto por código de barras
-                              final matchedProduct = todosLosProductos.firstWhere(
-                                (producto) => producto['codigo'] == barcodeScanRes,
-                                orElse: () => {},
-                              );
-
-                              if (matchedProduct.isNotEmpty) {
-                                // Agregar el producto si se encuentra
-                                context.read<ProductosCubit>().agregarProducto(matchedProduct);
-                                context.read<ProductosCubit>().actualizarPrecioTotalProducto(matchedProduct);
-                              } else {
-                                // Mostrar mensaje si no se encuentra
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Producto con código $barcodeScanRes no encontrado')),
-                                );
-                              }
-                            }
-                          } on PlatformException {
-                            // Manejar errores de escaneo
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error al escanear código de barras')),
-                            );
+                          // Si no se obtuvo un resultado, o fue cancelado
+                          if (barcodeScanRes == null) {
+                            barcodeScanRes = '-1';
                           }
+
+                          // Si el usuario no cancela el escaneo
+                          if (barcodeScanRes != '-1') {
+                            // Buscar el producto por código de barras
+                            final matchedProduct = todosLosProductos.firstWhere(
+                              (producto) => producto['codigo'] == barcodeScanRes,
+                              orElse: () => {},
+                            );
+
+                            if (matchedProduct.isNotEmpty) {
+                              // Agregar el producto si se encuentra
+                              context.read<ProductosCubit>().agregarProducto(matchedProduct);
+                              context.read<ProductosCubit>().actualizarPrecioTotalProducto(matchedProduct);
+                            } else {
+                              // Mostrar mensaje si no se encuentra
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Producto con código $barcodeScanRes no encontrado')),
+                              );
+                            }
+                          }
+                        }
                         },
                       ),
                     ),
