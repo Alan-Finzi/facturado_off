@@ -141,6 +141,7 @@ class ProductoModel {
       'wc_canal': wcCanal,
       'descripcion': descripcion,
       'receta_id': recetaId,
+      'porcentaje_iva': porcentaje_iva,
     };
   }
 }

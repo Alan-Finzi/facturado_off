@@ -37,6 +37,7 @@ class BuscarProductos extends StatelessWidget {
     );
   }
 }
+
 class BuscarProductoScanner extends StatefulWidget {
   @override
   _BuscarProductoScannerState createState() => _BuscarProductoScannerState();
