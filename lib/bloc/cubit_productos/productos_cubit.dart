@@ -246,9 +246,27 @@ class ProductosCubit extends Cubit<ProductosState> {
     return (precioProducto * cantidad) * (1 + iva);
   }
 
-  void eliminarProducto(int index) {
+  /// Elimina un producto por índice o por objeto ProductoConPrecioYStock
+  /// @param indexOrProducto Índice o producto a eliminar
+  /// Soporta tanto eliminar por índice como por objeto ProductoConPrecioYStock
+  void eliminarProducto(dynamic indexOrProducto) {
     final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
-    updatedList.removeAt(index);
+
+    if (indexOrProducto is int) {
+      // Si se proporciona un índice, eliminar por índice
+      updatedList.removeAt(indexOrProducto);
+    } else if (indexOrProducto is ProductoConPrecioYStock) {
+      // Si se proporciona un objeto ProductoConPrecioYStock, buscar y eliminar por coincidencia
+      final index = updatedList.indexWhere((producto) =>
+        (producto.producto?.id == indexOrProducto.producto?.id) ||
+        (producto.producto?.barcode == indexOrProducto.producto?.barcode)
+      );
+
+      if (index != -1) {
+        updatedList.removeAt(index);
+      }
+    }
+
     emit(state.copyWith(productosSeleccionados: updatedList));
   }
 
@@ -362,4 +380,67 @@ class ProductosCubit extends Cubit<ProductosState> {
     }
   }
 
+  /// Calcula el subtotal de los productos seleccionados
+  /// @return El subtotal calculado como la suma de precios sin IVA
+  double calcularSubtotal() {
+    double subtotal = 0.0;
+    for (var producto in state.productosSeleccionados) {
+      subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 0.0);
+    }
+    return subtotal;
+  }
+
+  /// Calcula el IVA total de los productos seleccionados
+  /// @return El IVA calculado como la suma del IVA de cada producto
+  double calcularIva() {
+    double ivaTotal = 0.0;
+    for (var producto in state.productosSeleccionados) {
+      double precioSinIva = (producto.precioLista ?? 0.0) * (producto.cantidad ?? 0.0);
+      double ivaProducto = precioSinIva * (producto.porcentajeIva ?? 0.0);
+      ivaTotal += ivaProducto;
+    }
+    return ivaTotal;
+  }
+
+  /// Incrementa la cantidad de un producto específico
+  /// @param producto El producto a incrementar
+  void incrementarProducto(ProductoConPrecioYStock producto) {
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    final index = updatedList.indexWhere((p) =>
+      (p.producto?.id == producto.producto?.id) ||
+      (p.producto?.barcode == producto.producto?.barcode)
+    );
+
+    if (index != -1) {
+      double? cantidadActual = updatedList[index].cantidad;
+      updatedList[index].cantidad = (updatedList[index].cantidad ?? 0) + 1;
+      double precioUnitario = updatedList[index].precioFinal! / cantidadActual!;
+      updatedList[index].precioFinal = precioUnitario * updatedList[index].cantidad!;
+      emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+    }
+  }
+
+  /// Decrementa la cantidad de un producto específico
+  /// @param producto El producto a decrementar
+  void decrementarProducto(ProductoConPrecioYStock producto) {
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    final index = updatedList.indexWhere((p) =>
+      (p.producto?.id == producto.producto?.id) ||
+      (p.producto?.barcode == producto.producto?.barcode)
+    );
+
+    if (index != -1 && updatedList[index].cantidad! > 1) {
+      double? cantidadActual = updatedList[index].cantidad;
+      updatedList[index].cantidad = (updatedList[index].cantidad ?? 0) - 1;
+      double precioUnitario = updatedList[index].precioFinal! / cantidadActual!;
+      updatedList[index].precioFinal = precioUnitario * updatedList[index].cantidad!;
+      emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+    }
+  }
+
+  /// Limpia todos los productos seleccionados
+  /// Utilizado al finalizar una venta o cancelarla
+  void limpiarProductos() {
+    emit(state.copyWith(productosSeleccionados: []));
+  }
 }

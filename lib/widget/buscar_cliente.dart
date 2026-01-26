@@ -11,6 +11,33 @@ import '../models/clientes_mostrador.dart';
 import '../models/productos_maestro.dart';
 import 'widget_alta_clientes.dart';
 import 'package:searchfield/searchfield.dart';
+
+/// Widget para buscar y seleccionar clientes con un callback de selección
+/// @param onClienteSeleccionado Callback que se llama cuando se selecciona un cliente
+class BuscarCliente extends StatelessWidget {
+  final Function(ClientesMostrador) onClienteSeleccionado;
+
+  const BuscarCliente({
+    Key? key,
+    required this.onClienteSeleccionado,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClientesMostradorCubit, ClientesMostradorState>(
+      listener: (context, state) {
+        // Cuando se selecciona un cliente, llamar al callback
+        if (state.clienteSeleccionado != null) {
+          onClienteSeleccionado(state.clienteSeleccionado!);
+        }
+      },
+      child: BuscarClienteWidget(
+        clearProductsOnSelection: true,
+        showSelectedClient: true,
+      ),
+    );
+  }
+}
 /// Widget para la búsqueda y selección de clientes
 /// Permite buscar clientes por nombre o DNI y seleccionarlos
 /// Cuando se selecciona un cliente, actualiza la lista de precios y limpia los productos

@@ -25,6 +25,7 @@ class ProductoModel {
   final int? wcCanal;
   final String? descripcion;
   final int? recetaId;
+  final double? porcentaje_iva;
 
   ProductoModel({
     this.idProducto,
@@ -53,6 +54,7 @@ class ProductoModel {
     this.wcCanal,
     this.descripcion,
     this.recetaId,
+    this.porcentaje_iva,
   });
 
   factory ProductoModel.fromMap(Map<String, dynamic> map) {
@@ -103,6 +105,11 @@ class ProductoModel {
       wcCanal: map['wc_canal'],
       descripcion: map['descripcion'],
       recetaId: map['receta_id'],
+      porcentaje_iva: map['porcentaje_iva'] == null
+          ? 0.0
+          : (map['porcentaje_iva'] is int
+          ? (map['porcentaje_iva'] as int).toDouble()
+          : map['porcentaje_iva'] as double),
     );
   }
 
@@ -134,6 +141,7 @@ class ProductoModel {
       'wc_canal': wcCanal,
       'descripcion': descripcion,
       'receta_id': recetaId,
+      'porcentaje_iva': porcentaje_iva,
     };
   }
 }

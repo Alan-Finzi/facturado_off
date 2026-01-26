@@ -146,6 +146,14 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
       }).toList();
 
       emit(state.copyWith(filteredClientes: filteredClientes));
+  }
 
+  /// Limpia el cliente seleccionado y restablece el estado de búsqueda
+  /// Este método es útil para cuando se cancela una venta o se quiere volver al consumidor final
+  void limpiarClienteSeleccionado() {
+    emit(state.copyWith(
+      clienteSeleccionado: null,
+      buscarCliente: false,
+    ));
   }
 }
