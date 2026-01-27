@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:searchfield/searchfield.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_login/login_cubit.dart';
@@ -107,12 +107,7 @@ class _BuscarProductoScannerState extends State<BuscarProductoScanner> {
                         icon: Icon(Icons.qr_code_scanner),
                         onPressed: () async {
                           try {
-                            String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-                              '#ff6666', 
-                              'Cancelar', 
-                              true, 
-                              ScanMode.BARCODE
-                            );
+                            String barcodeScanRes = "-1"; //await FlutterBarcodeScanner.scanBarcode('#ff6666', 'Cancelar', true, ScanMode.BARCODE);
                             
                             // Si el usuario cancela el escaneo, se devuelve -1
                             if (barcodeScanRes != '-1') {
