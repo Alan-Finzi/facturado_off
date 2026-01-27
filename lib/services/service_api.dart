@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
@@ -46,11 +47,16 @@ class ApiServices{
       // Crear la URL para el endpoint de login
       final Uri url = Uri.parse(apiUrlLogin);
 
+      print('Intentando login en: $url');
+      print('Email: $email');
+
       // Crear el cuerpo de la solicitud (JSON)
       final Map<String, String> body = {
         'email': email,
         'password': password,
       };
+
+      print('Enviando solicitud de login...');
 
       // Realizar la solicitud POST con el cuerpo en formato JSON
       final response = await http.post(
@@ -61,21 +67,28 @@ class ApiServices{
         body: jsonEncode(body),
       );
 
+      print('Respuesta recibida. Código: ${response.statusCode}');
+
       if (response.statusCode == 200) {
+        print('Login exitoso. Procesando respuesta...');
         // Parsear la respuesta JSON
         Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-        tokenUser= jsonResponse['token'];
+        tokenUser = jsonResponse['token'];
+        print('Token obtenido correctamente');
         // Retornar el token de la respuesta
         return jsonResponse['token'];
       } else {
         // Manejar errores de respuesta
         print('Error al hacer login: ${response.statusCode}');
+        print('Cuerpo de respuesta: ${response.body}');
         return null;
       }
-    } catch (e) {
-      // Manejar errores de la solicitud
-      print('Error de solicitud HTTP: $e');
+    } catch (e, stackTrace) {
+      // Manejar errores de la solicitud con más detalles
+      print('Error de solicitud HTTP en login: $e');
+      print('Stack trace: $stackTrace');
+      print('Plataforma: ${Platform.operatingSystem}');
       return null;
     }
   }

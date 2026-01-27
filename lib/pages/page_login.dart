@@ -322,6 +322,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Método compartido para manejar el proceso de login
   void _handleLogin(BuildContext context) async {
+    // Mostrar indicador de carga mientras se procesa el login
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Iniciando sesión...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
     final username = emailController.text.isNotEmpty ? emailController.text : null;
     final password = passwordController.text.isNotEmpty ? passwordController.text : null;
 
@@ -332,31 +340,73 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await loginCubit.login(username, password);
-
-    if (loginCubit.state.isLogin) {
-      await _saveOrRemoveCredentials(username, password);
-
-      if (loginCubit.state.isPreference) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => RootNavScreen()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SynchronizationPage(
-              token: loginCubit.state.userToken!,
-              email: username,
+    try {
+      // Mostrar un indicador de progreso durante el login
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Iniciando sesión'),
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text('Conectando con el servidor...'),
+              ],
             ),
+          );
+        },
+      );
+
+      await loginCubit.login(username, password);
+
+      // Cerrar el diálogo de progreso
+      Navigator.pop(context);
+
+      if (loginCubit.state.isLogin) {
+        await _saveOrRemoveCredentials(username, password);
+
+        if (loginCubit.state.isPreference) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => RootNavScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SynchronizationPage(
+                token: loginCubit.state.userToken!,
+                email: username,
+              ),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Acceso denegado. Compruebe sus credenciales.'),
+            duration: Duration(seconds: 3),
           ),
         );
       }
-    } else {
+    } catch (e) {
+      // Cerrar el diálogo de progreso si está abierto
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      // Mostrar mensaje de error
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Acceso denegado')),
+        SnackBar(
+          content: Text('Error de conexión: ${e.toString()}'),
+          duration: Duration(seconds: 5),
+          backgroundColor: Colors.red,
+        ),
       );
+
+      print('Error en login: $e');
     }
   }
 }
