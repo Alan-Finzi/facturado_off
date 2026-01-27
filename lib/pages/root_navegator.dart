@@ -5,9 +5,12 @@ import 'package:facturador_offline/pages/page_product_list.dart';
 import 'package:facturador_offline/widget/widget_alta_clientes.dart';
 import 'package:facturador_offline/pages/page_home.dart';
 import 'package:facturador_offline/pages/page_nueva_venta.dart';
+import 'package:facturador_offline/pages/page_venta_mobile.dart'; // Importar la versión móvil
 import 'package:facturador_offline/pages/page_productos.dart';
 import 'package:facturador_offline/pages/page_ventas_sincronizacion.dart';
 import 'package:facturador_offline/pages/pege_connection.dart';
+import 'package:facturador_offline/util/platform_service.dart'; // Importar servicio de plataforma
+import 'package:facturador_offline/widget/platform_adaptive_widget.dart'; // Importar widget adaptativo
 import 'package:flutter/material.dart';
 import 'package:bottom_navy_bar/bottom_navy_bar.dart';
 
@@ -37,14 +40,14 @@ class _RootNavScreenState extends State<RootNavScreen> {
 
   Widget _body() => SizedBox.expand(
     child: IndexedStack(
-
       index: _currentIndex,
-      children:    <Widget>[
-     //   const ProductSearchPage(),
-      //  ClientesMostradorPage(),
-      //  const HomePage(),
-        //VentaMainPageMobile(),
-        VentaMainPage(),
+      children: <Widget>[
+        // Usar PlatformAdaptiveWidget para mostrar la versión correcta según la plataforma
+        // En Android/iOS mostrará VentaMainPageMobile, en Windows mostrará VentaMainPage
+        PlatformAdaptiveWidget(
+          mobileWidget: VentaMainPageMobile(), // Versión para Android/iOS
+          desktopWidget: VentaMainPage(),      // Versión para Windows/Desktop
+        ),
         ClientesListPage(),
         ProductsPage(),
         PageVentasSincronizacion(),
