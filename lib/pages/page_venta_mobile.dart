@@ -131,148 +131,298 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
 
     return Scaffold(
       appBar: AppBar(
-        title: _showSearchBar
-            ? _buildSearchField()
-            : Text('Venta', style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 2,
-        leading: _showSearchBar
-            ? IconButton(
-                icon: Icon(Icons.arrow_back),
-                onPressed: () {
-                  setState(() {
-                    _showSearchBar = false;
-                    _searchController.clear();
-                  });
-                },
-              )
-            : null,
-        actions: _showSearchBar
-            ? []
-            : [
-                // Search button
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  tooltip: 'Buscar productos',
-                  onPressed: () {
-                    setState(() {
-                      _showSearchBar = true;
-                    });
-                  },
+        title: Row(
+          children: [
+            // Logo de Flaminco
+            Expanded(
+              child: Center(
+                child: Text(
+                  'flaminco',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
-                // Client button
-                IconButton(
-                  icon: const Icon(Icons.person),
-                  tooltip: 'Cliente: ${clienteCubit.state.clienteSeleccionado?.nombre ?? "Consumidor Final"}',
-                  onPressed: () => _mostrarDialogoCliente(),
-                ),
-                // Payment button
-                IconButton(
-                  icon: const Icon(Icons.payment),
-                  tooltip: 'Ir a forma de cobro',
-                  onPressed: () => _irAFormaDeCobro(context),
-                ),
-                // Cart icon with badge showing the number of products
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.shopping_cart),
-                      tooltip: 'Ver carrito',
-                      onPressed: () {
-                        _tabController.animateTo(1); // Switch to cart tab
-                      },
-                    ),
-                    if (hasProducts)
-                      Positioned(
-                        top: 5,
-                        right: 5,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            '${productosCubit.state.productosSeleccionados.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+              ),
+            ),
+          ],
+        ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: Colors.orange),
+          onPressed: () {
+            // Menú lateral (no implementado en este ejemplo)
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.more_vert, color: Colors.orange),
+            onPressed: () {
+              // Menú de opciones (no implementado en este ejemplo)
+            },
+          ),
+        ],
       ),
+      backgroundColor: Color(0xFFF5F7FA), // Fondo gris muy claro como en las imágenes
       body: Column(
         children: [
-          // Client panel and delivery selector
-          _buildClientePanel(),
-
-          // Tab bar for products and summary
-          TabBar(
-            controller: _tabController,
-            tabs: [
-              Tab(
-                icon: Icon(Icons.inventory),
-                text: 'Productos',
+          // Título de la página
+          Container(
+            padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Punto de Venta',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              Tab(
-                icon: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(Icons.shopping_cart),
-                    if (hasProducts)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 12,
-                            minHeight: 12,
-                          ),
-                          child: Text(
-                            '${productosCubit.state.productosSeleccionados.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                text: 'Carrito',
-              ),
-            ],
+            ),
           ),
 
-          // Main content with TabBarView
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
+          // Panel de factura y cliente
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildProductsTab(), // Products tab
-                _buildCartTab(),     // Cart tab
+                // Dropdown de cliente (según imagen de referencia)
+                Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      hint: Text(
+                        clienteCubit.state.clienteSeleccionado?.nombre ?? "Consumidor Final",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      icon: Icon(Icons.keyboard_arrow_down),
+                      onChanged: (String? value) {
+                        _mostrarDialogoCliente();
+                      },
+                      items: null,
+                    ),
+                  ),
+                ),
+
+                // Dropdown de tipo de factura (según imagen de referencia)
+                Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: productosCubit.state.tipoFactura ?? 'Factura B',
+                      icon: Icon(Icons.keyboard_arrow_down),
+                      onChanged: (String? value) {
+                        if (value != null) {
+                          productosCubit.updateTipoFactura(value);
+                        }
+                      },
+                      items: ['Factura A', 'Factura B', 'Factura C']
+                          .map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ),
+                ),
+
+                // Búsqueda de cliente (según imagen de referencia)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey[300]!),
+                          color: Colors.white,
+                        ),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Buscar cliente...',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: InputBorder.none,
+                          ),
+                          onTap: () => _mostrarDialogoCliente(),
+                          readOnly: true,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey[300]!),
+                        color: Colors.white,
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.add),
+                        onPressed: () => _mostrarDialogoCliente(),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Tipo de entrega (según imagen de referencia)
+                Container(
+                  width: double.infinity,
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _deliveryType,
+                      icon: Icon(Icons.keyboard_arrow_down),
+                      onChanged: (String? value) {
+                        if (value != null) {
+                          setState(() {
+                            _deliveryType = value;
+                          });
+                        }
+                      },
+                      items: ['Entregado', 'Envío', 'Retiro']
+                          .map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ),
+                ),
+
+                // Campo de búsqueda de productos (según imagen de referencia)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey[300]!),
+                          color: Colors.white,
+                        ),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Buscar producto...',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: InputBorder.none,
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _showSearchBar = true;
+                            });
+                          },
+                          readOnly: true,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey[300]!),
+                        color: Colors.white,
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.add),
+                        onPressed: () {
+                          setState(() {
+                            _showSearchBar = true;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Botón Ver catálogo (según imagen de referencia)
+                Container(
+                  width: double.infinity,
+                  margin: EdgeInsets.only(top: 8),
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: Colors.grey[300]!),
+                      backgroundColor: Colors.white,
+                    ),
+                    onPressed: () => _showCatalogoProductos(),
+                    child: Text(
+                      'Ver catálogo',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Lista de precios (según imagen de referencia)
+                Container(
+                  margin: EdgeInsets.only(top: 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Lista de Precios: ',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        'Precio Base',
+                        style: TextStyle(
+                          fontSize: 16,
+                        ),
+                      ),
+                      Icon(Icons.keyboard_arrow_down),
+                    ],
+                  ),
+                ),
               ],
             ),
+          ),
+
+          // Lista de productos / carrito
+          Expanded(
+            child: hasProducts ? _buildCartContent(productosCubit) : _buildEmptyCartState(),
           ),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: hasProducts ? _buildBottomBar() : null,
     );
   }
 
@@ -754,17 +904,174 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              _tabController.animateTo(0); // Go to products tab
-            },
+            onPressed: () => _showCatalogoProductos(),
             icon: Icon(Icons.add_shopping_cart),
-            label: Text('Agregar productos'),
+            label: Text('Ver catálogo'),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              backgroundColor: Colors.green, // Color verde según imágenes de referencia
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Cart content based on reference images
+  Widget _buildCartContent(ProductosCubit productosCubit) {
+    final productosSeleccionados = productosCubit.state.productosSeleccionados;
+
+    return Column(
+      children: [
+        // Lista de productos seleccionados
+        Expanded(
+          child: ListView.separated(
+            padding: EdgeInsets.all(16),
+            itemCount: productosSeleccionados.length,
+            separatorBuilder: (context, index) => Divider(height: 1),
+            itemBuilder: (context, index) {
+              final producto = productosSeleccionados[index];
+              final nombre = producto.producto?.name ?? producto.datum?.nombre ?? 'Producto sin nombre';
+              final precio = producto.precioFinal ?? 0.0;
+              final cantidad = producto.cantidad ?? 1;
+
+              return Container(
+                margin: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Imagen de producto o placeholder
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Center(child: Text('IMG')),
+                    ),
+                    SizedBox(width: 12),
+
+                    // Detalles del producto
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombre,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4),
+                          Row(
+                            children: [
+                              // Campo de cantidad
+                              Container(
+                                width: 70,
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    cantidad.toString(),
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+
+                              Spacer(),
+
+                              // Precio
+                              Text(
+                                '\$ ${precio.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.green.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Botón eliminar
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.red),
+                      onPressed: () {
+                        final index = productosCubit.state.productosSeleccionados.indexOf(producto);
+                        if (index != -1) {
+                          productosCubit.eliminarProducto(index);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+
+        // Sección de notas y observaciones
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nota interna',
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+              ),
+              SizedBox(height: 4),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white,
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    contentPadding: EdgeInsets.all(12),
+                    border: InputBorder.none,
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                ),
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                'Observaciones',
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+              ),
+              SizedBox(height: 4),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white,
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    contentPadding: EdgeInsets.all(12),
+                    border: InputBorder.none,
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                ),
+              ),
+              SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1012,9 +1319,6 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
 
   // Bottom navigation bar
   Widget _buildBottomBar() {
-    // Only show bottom bar on the cart tab
-    if (_currentTabIndex != 1) return const SizedBox.shrink();
-
     final productosCubit = context.watch<ProductosCubit>();
     final productosSeleccionados = productosCubit.state.productosSeleccionados;
 
@@ -1022,13 +1326,20 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
     if (productosSeleccionados.isEmpty) return const SizedBox.shrink();
 
     // Calculate total
+    double subtotal = 0.0;
+    double iva = 0.0;
     double total = 0.0;
+
     for (var producto in productosSeleccionados) {
+      subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
+      // IVA está incluido en el precio según las imágenes
+      iva += producto.porcentajeIva ?? 0.0;
       total += producto.precioFinal ?? 0.0;
     }
 
+    // Crear formato según las imágenes de referencia
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -1040,41 +1351,133 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Total amount
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Total',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  Text(
-                    '\$${total.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+            // Mostrar subtotal, descuento, recargo, IVA y total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Subtotal:', style: TextStyle(fontSize: 16)),
+                Text('\$ ${subtotal.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Descuento:', style: TextStyle(fontSize: 16)),
+                Text('\$ 0,00', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Recargo:', style: TextStyle(fontSize: 16)),
+                Text('\$ 0,00', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('IVA:', style: TextStyle(fontSize: 16)),
+                Text('\$ ${iva.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            Text('(incluido en el precio)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('\$ ${total.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+
+            // Texto de entrega
+            SizedBox(height: 8),
+            Text(
+              _deliveryType == 'Retiro' ? 'Retiro en el local' : _deliveryType,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.amber[800],
+                fontWeight: FontWeight.w500,
               ),
             ),
 
-            // Checkout button
-            ElevatedButton.icon(
-              onPressed: () => _irAFormaDeCobro(context),
-              icon: Icon(Icons.payment),
-              label: Text('Cobrar'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                backgroundColor: Theme.of(context).primaryColor,
-              ),
+            SizedBox(height: 12),
+
+            // Botones según imágenes de referencia
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _showCancelDialog(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _irAFormaDeCobro(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: Text(
+                      'Guardar',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Deuda (según imagen de referencia)
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Deuda:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '\$ ${total.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1084,133 +1487,330 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
 
   // Floating action button
   Widget _buildFloatingActionButton() {
-    if (_currentTabIndex == 0) {
-      return FloatingActionButton(
-        onPressed: () => _showCatalogoProductos(),
-        child: const Icon(Icons.qr_code_scanner),
-        tooltip: 'Escanear código',
-      );
-    }
-    return const SizedBox.shrink(); // Widget vacío en lugar de null
+    // Botón de chat según imágenes de referencia
+    return FloatingActionButton(
+      onPressed: () {
+        // Aquí iría la funcionalidad de chat
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Chat no implementado en este ejemplo')),
+        );
+      },
+      backgroundColor: Colors.blue,
+      child: const Icon(Icons.chat_bubble_outline),
+      tooltip: 'Chat',
+    );
   }
 
-  // Client selection dialog - enhanced for mobile
+  // Client selection dialog styled according to reference images
   void _mostrarDialogoCliente() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Column(
-            children: [
-              // Handle indicator
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
+          child: Container(
+            padding: EdgeInsets.all(16),
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with close button
+                Row(
                   children: [
                     Text(
-                      'Seleccionar Cliente',
+                      'Catálogo de clientes',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Spacer(),
                     IconButton(
-                      icon: Icon(Icons.close),
+                      icon: Icon(Icons.close, color: Colors.red),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
-              ),
-              Divider(),
-              // Client search widget
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                Divider(),
+
+                // Search field
+                Container(
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre...',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                  ),
+                ),
+
+                // Lista de clientes
+                Container(
+                  height: 300,
                   child: BuscarClienteWidget(
                     clearProductsOnSelection: true,
                     showSelectedClient: false,
                   ),
                 ),
-              ),
-              // Action buttons
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text('Cancelar'),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
+
+                // Action buttons in Flaminco style
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.grey.shade300),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Get the currently selected client
-                            final clienteCubit = context.read<ClientesMostradorCubit>();
-                            if (clienteCubit.state.clienteSeleccionado != null) {
-                              Navigator.of(context).pop();
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Seleccione un cliente'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          child: Text('Seleccionar'),
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Theme.of(context).primaryColor,
-                          ),
-                        ),
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(color: Colors.black87),
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final clienteCubit = context.read<ClientesMostradorCubit>();
+                        if (clienteCubit.state.clienteSeleccionado != null) {
+                          Navigator.of(context).pop();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Seleccione un cliente'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: Text(
+                        'Seleccionar',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  // Product catalog modal - full page for better mobile experience
+  // Product catalog modal styled according to reference images
   void _showCatalogoProductos() {
-    // Navigate to full-screen catalog page
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CatalogoPage(),
-        fullscreenDialog: true,
-      ),
+    // Open a dialog similar to the design in the reference images
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog.fullscreen(
+          child: Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              title: Text(
+                'Catálogo de productos',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              leading: IconButton(
+                icon: Icon(Icons.close, color: Colors.red),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            body: Container(
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // Search field
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Buscar por nombre...',
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Category selector
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: ButtonTheme(
+                          alignedDropdown: true,
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: 'Todas las categorías',
+                            onChanged: (String? newValue) {},
+                            items: <String>['Todas las categorías'].map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Brand selector
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: ButtonTheme(
+                          alignedDropdown: true,
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: 'Todas las marcas',
+                            onChanged: (String? newValue) {},
+                            items: <String>['Todas las marcas'].map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Products list
+                  Expanded(
+                    child: ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: 5, // Elementos de muestra
+                      itemBuilder: (context, index) {
+                        // Nombres de muestra basados en las imágenes de referencia
+                        final productos = [
+                          '1 vino TORO 1 coca 2,25',
+                          'ACEITE AEROSOL NATURA X 120 CC',
+                          'Aceite de Oliva x 500',
+                          'Aceite Fritolin Manteca',
+                          'ACEITUNAS NEGRAS'
+                        ];
+                        final precios = [3448.09, 3080.88, 2515.59, 2732.81, 2343.09];
+
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 16),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.grey.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Nombre del producto
+                              Text(
+                                productos[index],
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+
+                              // Categoría
+                              Text(
+                                index % 2 == 0 ? 'Sin categoría' : 'Alimentos',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+
+                              // Precio y botón
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '\$ ${precios[index].toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  // Botón para agregar
+                                  IconButton(
+                                    onPressed: () {
+                                      // Simular agregar producto al carrito
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Producto agregado al carrito'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(
+                                      Icons.add,
+                                      color: Colors.white,
+                                    ),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      padding: EdgeInsets.all(8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
