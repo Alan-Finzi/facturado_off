@@ -657,9 +657,17 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                 InkWell(
                   onTap: () {
                     if ((producto.cantidad ?? 0) > 1) {
-                      productosCubit.decrementarProducto(producto);
+                      // Usar decrementarCantidad con el índice correcto
+                      final index = productosCubit.state.productosSeleccionados.indexOf(producto);
+                      if (index != -1) {
+                        productosCubit.decrementarCantidad(index);
+                      }
                     } else {
-                      productosCubit.eliminarProducto(producto);
+                      // Usar eliminarProducto con el índice correcto
+                      final index = productosCubit.state.productosSeleccionados.indexOf(producto);
+                      if (index != -1) {
+                        productosCubit.eliminarProducto(index);
+                      }
                     }
                   },
                   child: Container(
@@ -683,7 +691,11 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                 ),
                 InkWell(
                   onTap: () {
-                    productosCubit.incrementarProducto(producto);
+                    // Usar incrementarCantidad con el índice correcto
+                    final index = productosCubit.state.productosSeleccionados.indexOf(producto);
+                    if (index != -1) {
+                      productosCubit.incrementarCantidad(index);
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -1001,13 +1013,13 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
   // Bottom navigation bar
   Widget _buildBottomBar() {
     // Only show bottom bar on the cart tab
-    if (_currentTabIndex != 1) return null;
+    if (_currentTabIndex != 1) return const SizedBox.shrink();
 
     final productosCubit = context.watch<ProductosCubit>();
     final productosSeleccionados = productosCubit.state.productosSeleccionados;
 
     // Don't show if cart is empty
-    if (productosSeleccionados.isEmpty) return null;
+    if (productosSeleccionados.isEmpty) return const SizedBox.shrink();
 
     // Calculate total
     double total = 0.0;
@@ -1071,7 +1083,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
   }
 
   // Floating action button
-  Widget? _buildFloatingActionButton() {
+  Widget _buildFloatingActionButton() {
     if (_currentTabIndex == 0) {
       return FloatingActionButton(
         onPressed: () => _showCatalogoProductos(),
@@ -1079,7 +1091,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
         tooltip: 'Escanear código',
       );
     }
-    return null;
+    return const SizedBox.shrink(); // Widget vacío en lugar de null
   }
 
   // Client selection dialog - enhanced for mobile
@@ -1292,8 +1304,8 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
               ),
               onPressed: () {
                 // Clean up
-                context.read<ProductosCubit>().limpiarProductos();
-                context.read<ClientesMostradorCubit>().limpiarClienteSeleccionado();
+                context.read<ProductosCubit>().limpiarProductosSeleccionados();
+                context.read<ClientesMostradorCubit>().deseleccionarCliente();
 
                 // Close dialog and show confirmation
                 Navigator.of(context).pop();
