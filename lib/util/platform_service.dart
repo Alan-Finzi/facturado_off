@@ -165,5 +165,30 @@ class PlatformService {
         await requestAndroidPermissions();
       }
     }
+
+    // Log platform details for diagnostics
+    print('Plataforma: ${getPlatformName()}');
+    print('Version: ${await getPlatformVersion()}');
+  }
+
+  /// Retorna un nombre descriptivo de la plataforma actual para diagnóstico
+  String getPlatformName() {
+    if (isAndroid) return "Android";
+    if (isIOS) return "iOS";
+    if (isWindows) return "Windows";
+    if (isMacOS) return "macOS";
+    if (isLinux) return "Linux";
+    if (isWeb) return "Web";
+    return "Plataforma desconocida";
+  }
+
+  /// Retorna la versión del sistema operativo actual
+  Future<String> getPlatformVersion() async {
+    if (isAndroid) return await getAndroidVersion();
+    if (isIOS) return await getIOSVersion();
+    if (isWindows || isMacOS || isLinux) {
+      return Platform.operatingSystemVersion;
+    }
+    return "Versión desconocida";
   }
 }

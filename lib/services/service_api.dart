@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
+import 'dart:async'; // Para TimeoutException
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
@@ -49,6 +50,7 @@ class ApiServices{
 
       print('Intentando login en: $url');
       print('Email: $email');
+      print('Plataforma: ${Platform.operatingSystem}');
 
       // Crear el cuerpo de la solicitud (JSON)
       final Map<String, String> body = {
@@ -58,31 +60,45 @@ class ApiServices{
 
       print('Enviando solicitud de login...');
 
-      // Realizar la solicitud POST con el cuerpo en formato JSON
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
+      // Crear un cliente con timeout explícito
+      final client = http.Client();
+      try {
+        // Realizar la solicitud POST con el cuerpo en formato JSON y timeout
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        ).timeout(
+          const Duration(seconds: 30), // Timeout de 30 segundos para móviles y desktop
+          onTimeout: () {
+            print('Timeout en solicitud de login después de 30 segundos');
+            client.close();
+            throw TimeoutException('La solicitud de login ha tardado demasiado');
+          },
+        );
 
-      print('Respuesta recibida. Código: ${response.statusCode}');
+        print('Respuesta recibida. Código: ${response.statusCode}');
 
-      if (response.statusCode == 200) {
-        print('Login exitoso. Procesando respuesta...');
-        // Parsear la respuesta JSON
-        Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          print('Login exitoso. Procesando respuesta...');
+          // Parsear la respuesta JSON
+          Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-        tokenUser = jsonResponse['token'];
-        print('Token obtenido correctamente');
-        // Retornar el token de la respuesta
-        return jsonResponse['token'];
-      } else {
-        // Manejar errores de respuesta
-        print('Error al hacer login: ${response.statusCode}');
-        print('Cuerpo de respuesta: ${response.body}');
-        return null;
+          tokenUser = jsonResponse['token'];
+          print('Token obtenido correctamente');
+          // Retornar el token de la respuesta
+          return jsonResponse['token'];
+        } else {
+          // Manejar errores de respuesta
+          print('Error al hacer login: ${response.statusCode}');
+          print('Cuerpo de respuesta: ${response.body}');
+          return null;
+        }
+      } finally {
+        // Siempre cerrar el cliente
+        client.close();
       }
     } catch (e, stackTrace) {
       // Manejar errores de la solicitud con más detalles
@@ -110,37 +126,68 @@ class ApiServices{
       // Construir la URL con el parámetro de comercio_id
       final Uri apiUrl = Uri.parse('${apiUrlUser}?comercio_id=$idBusqueda');
 
-      final response = await http.get(
-        apiUrl,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      print('Obteniendo datos de usuario desde: $apiUrl');
 
-      if (response.statusCode == 200) {
+      // Crear un cliente con timeout explícito
+      final client = http.Client();
+      try {
+        final response = await http.get(
+          apiUrl,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(
+          const Duration(seconds: 30), // Timeout de 30 segundos
+          onTimeout: () {
+            print('Timeout en fetchUsersData después de 30 segundos');
+            client.close();
+            throw TimeoutException('La solicitud de usuarios ha tardado demasiado');
+          },
+        );
+
+        if (response.statusCode == 200) {
         List<dynamic> jsonList = jsonDecode(response.body);
 
         List<User> users = jsonList.map((json) => User.fromJson(json)).toList();
 
         for (var user in users) {
-          
-          if(user.email == "demo@gmail.com" ){
+          // Preservar la compatibilidad con el caso especial, pero añadir logs
+          if(user.email == "demo@gmail.com") {
+            print('Transformando email demo@gmail.com a depositolasgrutas@gmail.com para compatibilidad');
             user.email = "depositolasgrutas@gmail.com";
           }
 
+          // Agregar logs para diagnóstico
+          print('Insertando usuario en base de datos: ${user.email}');
           await DatabaseHelper.instance.insertUser(user);
         }
 
         // Buscar el usuario logueado por email
         User? loggedUser;
         try {
-
-
-         // loggedUser = users.firstWhere((user) => user.email == email);
-          loggedUser = users.firstWhere((user) => user.email == "depositolasgrutas@gmail.com");
+          // Usar el email proporcionado, con una consideración especial
+          // para el caso demo si la lista de usuarios contiene la dirección hardcodeada
+          if (email == "demo@gmail.com") {
+            // Intentar primero con depositolasgrutas@gmail.com para mantener compatibilidad
+            try {
+              loggedUser = users.firstWhere((user) =>
+                user.email == "depositolasgrutas@gmail.com");
+              print('Usuario encontrado con email depositolasgrutas@gmail.com');
+            } catch (e) {
+              // Si no existe, intentar con el email original
+              loggedUser = users.firstWhere((user) => user.email == email);
+              print('Usuario encontrado con email original: $email');
+            }
+          } else {
+            // Para cualquier otro email, buscar directamente
+            loggedUser = users.firstWhere((user) => user.email == email);
+            print('Usuario encontrado con email: $email');
+          }
         } catch (e) {
           print('Error: No se encontró ningún usuario con el email: $email');
+          print('Detalles del error: $e');
+          print('Usuarios disponibles: ${users.map((u) => u.email).toList()}');
           return null;
         }
 
@@ -157,6 +204,10 @@ class ApiServices{
       } else {
         print('Error al obtener los datos de los usuarios: ${response.statusCode}');
         return null;
+      }
+      } finally {
+        // Siempre cerrar el cliente HTTP
+        client.close();
       }
     } catch (e) {
       print('Error de solicitud HTTP: $e');
@@ -245,15 +296,25 @@ class ApiServices{
       // Construir la URL con ambos parámetros de comercio_id y casa_central_id
       final Uri apiUrl = Uri.parse('${apiUrlClienteMostrador}?comercio_id=$idBusqueda&casa_central_id=$idBusqueda');
 
-      final response = await http.get(
-        apiUrl,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      // Crear un cliente con timeout explícito
+      final client = http.Client();
+      try {
+        final response = await http.get(
+          apiUrl,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(
+          const Duration(seconds: 30), // Timeout de 30 segundos
+          onTimeout: () {
+            print('Timeout en fetchClientesMostrador después de 30 segundos');
+            client.close();
+            throw TimeoutException('La solicitud de clientes ha tardado demasiado');
+          },
+        );
 
-      if (response.statusCode == 200) {
+        if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         List<ClientesMostrador> clientes = data.map((json) => ClientesMostrador.fromJson(json)).toList();
 
@@ -266,6 +327,10 @@ class ApiServices{
       } else {
         print('Error al cargar clientes: ${response.statusCode}');
         throw Exception('Error al cargar los datos de cliente mostrador');
+      }
+      } finally {
+        // Siempre cerrar el cliente HTTP
+        client.close();
       }
     } catch (e) {
       print('Error en fetchClientesMostrador: $e');

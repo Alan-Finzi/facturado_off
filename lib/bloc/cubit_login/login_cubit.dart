@@ -48,9 +48,16 @@ class LoginCubit extends Cubit<LoginState> {
   Future<void> login(String? email, String? password) async {
     ApiServices apiServices = ApiServices();
 
+    // Log para diagnóstico
+    final isOfflineLogin = password == null;
+    print('=== INICIO PROCESO DE LOGIN ===');
+    print('Modo: ${isOfflineLogin ? "OFFLINE (credenciales guardadas)" : "ONLINE (API)"}');
+    print('Email: ${email ?? "no proporcionado"}');
+    print('Password: ${password != null ? "proporcionada" : "no proporcionada"}');
+
     try {
       // Validación de email o password vacíos
-      if ((email?.isEmpty ?? true) || (password?.isEmpty ?? true)) {
+      if ((email?.isEmpty ?? true) || (password?.isEmpty ?? true && !isOfflineLogin)) {
         print("Acceso denegado: Email o contraseña vacíos.");
         emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
         return;
@@ -85,26 +92,34 @@ class LoginCubit extends Cubit<LoginState> {
 
       if (token != null) {
         // Autenticación exitosa: Guardamos credenciales y emitimos el estado
+        print("✅ Login API exitoso. Token obtenido: ${token.substring(0, 10)}...");
         await _saveCredentials(email!, password!, token);
+        print("✅ Credenciales guardadas localmente para uso futuro");
+
         emit(LoginState(
           isLogin: true,
           userToken: token,
           isPreference: false,
           user: User(username: email, password: password),
         ));
+
+        print("✅ Login completado con éxito. Modo: ONLINE");
       } else {
         // Fallo en la autenticación: pero si hay token viejo, lo usamos temporalmente
         if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
           print("⚠️ Login API falló, usando token guardado temporalmente.");
+          print("Token previamente guardado: ${userCredentials['token']?.substring(0, 10)}...");
+
           emit(LoginState(
             isLogin: true,
             userToken: userCredentials['token'],
             isPreference: true,
             user: User(username: email, password: userCredentials['password']),
           ));
+          print("✅ Login completado con token almacenado. Modo: OFFLINE");
         } else {
           emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
-          print("Acceso denegado: Credenciales incorrectas.");
+          print("❌ Acceso denegado: Credenciales incorrectas. No hay token almacenado.");
         }
       }
     } catch (e) {

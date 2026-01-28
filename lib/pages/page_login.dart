@@ -3,6 +3,7 @@ import 'package:facturador_offline/pages/root_navegator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async'; // Para TimeoutException
 
 import '../bloc/cubit_login/login_cubit.dart';
 import '../util/platform_service.dart';
@@ -330,8 +331,14 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
 
+    // Obtener información de plataforma para diagnóstico
+    final platformService = PlatformService();
+    print('Intento de login en plataforma: ${platformService.getPlatformName()}');
+
     final username = emailController.text.isNotEmpty ? emailController.text : null;
     final password = passwordController.text.isNotEmpty ? passwordController.text : null;
+
+    print('Iniciando login con email: ${username ?? "vacío"}');
 
     if (username == null || password == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,16 +404,56 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pop(context);
       }
 
-      // Mostrar mensaje de error
+      // Determinar el tipo de error para mensaje más específico
+      String errorMessage;
+      if (e is TimeoutException) {
+        errorMessage = 'Tiempo de espera agotado. Verifique su conexión a internet.';
+      } else if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        errorMessage = 'No se puede conectar al servidor. Verifique su conexión a internet.';
+      } else if (e.toString().contains('certificate')) {
+        errorMessage = 'Error de seguridad en la conexión. Problema con certificados SSL.';
+      } else {
+        errorMessage = 'Error de conexión: ${e.toString()}';
+      }
+
+      // Mostrar mensaje de error más específico
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error de conexión: ${e.toString()}'),
+          content: Text(errorMessage),
           duration: Duration(seconds: 5),
           backgroundColor: Colors.red,
         ),
       );
 
       print('Error en login: $e');
+
+      // Intentar conectar offline si hay credenciales guardadas previamente
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final savedEmail = prefs.getString('remembered_email');
+        final savedPassword = prefs.getString('remembered_password');
+
+        if (savedEmail != null && savedEmail == username && savedPassword != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Intentando acceder con credenciales guardadas...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Intentar iniciar sesión de forma offline
+          await loginCubit.login(username, null);
+
+          if (loginCubit.state.isLogin) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => RootNavScreen()),
+            );
+          }
+        }
+      } catch (fallbackError) {
+        print('Error en intento de login offline: $fallbackError');
+      }
     }
   }
 }
