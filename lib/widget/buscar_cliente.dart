@@ -214,7 +214,8 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
       print('Actualizada lista de precios a: ${listaCliente.nombre} (ID: ${listaCliente.id})');
     }
 
-    // Actualizar el texto del controlador
+    // Actualizar el texto del controlador y desactivar el foco para cerrar la lista
     _controller.text = cliente.nombre ?? '';
+    _focusNode.unfocus();
   }
 }

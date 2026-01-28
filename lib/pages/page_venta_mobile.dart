@@ -110,7 +110,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
     return Scaffold(
       appBar: AppBar(
         title: SizedBox(
-          width: 150,
+          width: 120,
           child: Image.network(
             'https://flamincoapp.com.ar/wp-content/uploads/2021/09/logo-flaminco-rojo.png',
             fit: BoxFit.contain,
@@ -141,13 +141,37 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Título de la página
-              Text(
-                'Punto de Venta',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              // Título de la página y número de factura
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Punto de Venta',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        'Ejemplo - ',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Text(
+                        '21000000001',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Icon(Icons.keyboard_arrow_down, color: Colors.grey, size: 18),
+                    ],
+                  ),
+                ],
               ),
               SizedBox(height: 16),
 
@@ -200,7 +224,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
                       ),
                       child: BuscarClienteWidget(
                         clearProductsOnSelection: true,
-                        showSelectedClient: false,
+                        showSelectedClient: true,
                       ),
                     ),
                   ),
@@ -308,6 +332,31 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
               ),
 
               // Lista de precios
+              Container(
+                margin: EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Text(
+                      'Lista de Precios: ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        productosCubit.state.nombreListaPrecios ?? 'Precio Base',
+                        style: TextStyle(
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.keyboard_arrow_down),
+                  ],
+                ),
+              ),
+
+              // Lista de precios y productos en el carrito
               Container(
                 margin: EdgeInsets.only(bottom: 16),
                 child: Row(
@@ -557,7 +606,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Recargo:', style: TextStyle(fontSize: 16)),
+                          Text('Recargo: (0%)', style: TextStyle(fontSize: 16)),
                           Text('\$ 0,00', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ],
                       ),
@@ -589,47 +638,61 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
 
                       // Botones de acción
                       SizedBox(height: 24),
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  _showCancelDialog(context);
+                                },
+                                child: Text('Cancelar', style: TextStyle(fontSize: 16)),
+                              ),
+                            ),
                           ),
-                          onPressed: () {
-                            _showCancelDialog(context);
-                          },
-                          child: Text('Cancelar', style: TextStyle(fontSize: 16)),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  _confirmarVenta(context);
+                                },
+                                child: Text('Guardar', style: TextStyle(fontSize: 16)),
+                              ),
+                            ),
                           ),
-                          onPressed: () {
-                            _confirmarVenta(context);
-                          },
-                          child: Text('Guardar', style: TextStyle(fontSize: 16)),
-                        ),
+                        ],
                       ),
 
                       // Deuda
-                      if (hasProducts) ...[
-                        SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Deuda:', style: TextStyle(fontSize: 16)),
-                            Text('\$ ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ],
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Deuda:', style: TextStyle(fontSize: 16)),
+                          Text('\$ ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -662,23 +725,33 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
 
   // Construcción de cada elemento del carrito
   Widget _buildCartItem(ProductoConPrecioYStock producto, ProductosCubit productosCubit) {
+    String nombreProducto = '';
+    if (producto.producto != null && producto.producto!.name != null) {
+      nombreProducto = producto.producto!.name!;
+    } else if (producto.datum != null && producto.datum!.nombre != null) {
+      nombreProducto = producto.datum!.nombre!;
+    } else {
+      nombreProducto = 'Producto sin nombre';
+    }
+
     return Container(
-      padding: EdgeInsets.all(16),
-      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 0),
+      margin: EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Imagen del producto (placeholder)
           Container(
-            width: 60,
-            height: 60,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Center(
@@ -693,50 +766,30 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  producto.producto?.name ?? 'Producto sin nombre',
+                  nombreProducto,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '\$ ${producto.precioLista?.toStringAsFixed(2) ?? '0.00'} / unidad',
-                  style: TextStyle(fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 8),
-
                 // Control de cantidad
                 Row(
                   children: [
+                    // Entrada numérica de cantidad
                     Container(
+                      width: 35,
+                      height: 35,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.remove, size: 16),
-                            constraints: BoxConstraints(minWidth: 36, minHeight: 36),
-                            padding: EdgeInsets.zero,
-                            onPressed: () => _decrementarProducto(producto, productosCubit),
-                          ),
-                          Container(
-                            width: 40,
-                            alignment: Alignment.center,
-                            child: Text(
-                              '${producto.cantidad?.toInt() ?? 1}',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.add, size: 16),
-                            constraints: BoxConstraints(minWidth: 36, minHeight: 36),
-                            padding: EdgeInsets.zero,
-                            onPressed: () => _incrementarProducto(producto, productosCubit),
-                          ),
-                        ],
+                      child: Text(
+                        '${producto.cantidad?.toInt() ?? 1}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                     Spacer(),
@@ -745,6 +798,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: Colors.green,
                       ),
                     ),
                   ],
@@ -752,11 +806,21 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
               ],
             ),
           ),
+          SizedBox(width: 10),
 
           // Botón para eliminar
-          IconButton(
-            icon: Icon(Icons.close, color: Colors.red),
-            onPressed: () => _eliminarProducto(producto, productosCubit),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.close, color: Colors.white, size: 18),
+              onPressed: () => _eliminarProducto(producto, productosCubit),
+            ),
           ),
         ],
       ),
