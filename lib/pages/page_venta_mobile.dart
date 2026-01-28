@@ -204,7 +204,8 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                         clienteCubit.state.clienteSeleccionado?.nombre ?? "Consumidor Final",
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.black87,
+                          color: clienteCubit.state.clienteSeleccionado != null ? Colors.black : Colors.grey[600],
+                          fontWeight: clienteCubit.state.clienteSeleccionado != null ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       icon: Icon(Icons.keyboard_arrow_down),
@@ -252,41 +253,6 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                   ),
                 ),
 
-                // Búsqueda de cliente (según imagen de referencia)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey[300]!),
-                          color: Colors.white,
-                        ),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Buscar cliente...',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            border: InputBorder.none,
-                          ),
-                          onTap: () => _mostrarDialogoCliente(),
-                          readOnly: true,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.grey[300]!),
-                        color: Colors.white,
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.add),
-                        onPressed: () => _mostrarDialogoCliente(),
-                      ),
-                    ),
-                  ],
-                ),
 
                 // Tipo de entrega (según imagen de referencia)
                 Container(
@@ -340,11 +306,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             border: InputBorder.none,
                           ),
-                          onTap: () {
-                            setState(() {
-                              _showSearchBar = true;
-                            });
-                          },
+                          onTap: () => _showCatalogoProductos(),
                           readOnly: true,
                         ),
                       ),
@@ -358,11 +320,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                       ),
                       child: IconButton(
                         icon: Icon(Icons.add),
-                        onPressed: () {
-                          setState(() {
-                            _showSearchBar = true;
-                          });
-                        },
+                        onPressed: () => _showCatalogoProductos(),
                       ),
                     ),
                   ],
@@ -421,7 +379,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
           ),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(),
+      // Eliminamos el botón flotante que es redundante
       bottomNavigationBar: hasProducts ? _buildBottomBar() : null,
     );
   }
@@ -932,8 +890,9 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
             itemBuilder: (context, index) {
               final producto = productosSeleccionados[index];
               final nombre = producto.producto?.name ?? producto.datum?.nombre ?? 'Producto sin nombre';
-              final precio = producto.precioFinal ?? 0.0;
-              final cantidad = producto.cantidad ?? 1;
+              final precioUnitario = producto.precioLista ?? 0.0;
+              final precioFinal = producto.precioFinal ?? 0.0;
+              final cantidad = producto.cantidad ?? 1.0;
 
               return Container(
                 margin: EdgeInsets.symmetric(vertical: 8),
@@ -948,7 +907,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Center(child: Text('IMG')),
+                      child: Icon(Icons.inventory_2, color: Colors.grey.shade600),
                     ),
                     SizedBox(width: 12),
 
@@ -969,32 +928,82 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                           SizedBox(height: 4),
                           Row(
                             children: [
-                              // Campo de cantidad
-                              Container(
-                                width: 70,
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    cantidad.toString(),
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                              // Control de cantidad con botones + y -
+                              Row(
+                                children: [
+                                  // Botón para decrementar
+                                  InkWell(
+                                    onTap: () {
+                                      if (cantidad > 1) {
+                                        // Usar decrementarCantidad con el índice correcto
+                                        productosCubit.decrementarCantidad(index);
+                                      } else {
+                                        // Eliminar el producto si la cantidad es 1
+                                        productosCubit.eliminarProducto(index);
+                                      }
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(Icons.remove, size: 16),
+                                    ),
                                   ),
-                                ),
+
+                                  // Mostrar cantidad
+                                  Container(
+                                    width: 40,
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    child: Center(
+                                      child: Text(
+                                        '${cantidad.toInt()}',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Botón para incrementar
+                                  InkWell(
+                                    onTap: () {
+                                      // Usar incrementarCantidad con el índice correcto
+                                      productosCubit.incrementarCantidad(index);
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(Icons.add, size: 16),
+                                    ),
+                                  ),
+                                ],
                               ),
 
                               Spacer(),
 
-                              // Precio
-                              Text(
-                                '\$ ${precio.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.green.shade800,
-                                ),
+                              // Precio unitario y final
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '\$ ${precioUnitario.toStringAsFixed(2)} x ${cantidad.toInt()}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$ ${precioFinal.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.green.shade800,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1006,11 +1015,11 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                     IconButton(
                       icon: Icon(Icons.close, color: Colors.red),
                       onPressed: () {
-                        final index = productosCubit.state.productosSeleccionados.indexOf(producto);
-                        if (index != -1) {
-                          productosCubit.eliminarProducto(index);
-                        }
+                        productosCubit.eliminarProducto(index);
                       },
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
                     ),
                   ],
                 ),
@@ -1320,6 +1329,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
   // Bottom navigation bar
   Widget _buildBottomBar() {
     final productosCubit = context.watch<ProductosCubit>();
+    final paymentCubit = context.watch<PaymentMethodsCubit>();
     final productosSeleccionados = productosCubit.state.productosSeleccionados;
 
     // Don't show if cart is empty
@@ -1329,7 +1339,9 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
     double subtotal = 0.0;
     double iva = 0.0;
     double total = 0.0;
+    double descuento = productosCubit.state.descuentoGeneral;
 
+    // Calcular valores
     for (var producto in productosSeleccionados) {
       subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
       // IVA está incluido en el precio según las imágenes
@@ -1337,7 +1349,26 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
       total += producto.precioFinal ?? 0.0;
     }
 
-    // Crear formato según las imágenes de referencia
+    // Aplicar descuento si hay
+    double montoDescuento = 0.0;
+    if (descuento > 0) {
+      montoDescuento = subtotal * (descuento / 100);
+      total = total - montoDescuento;
+    }
+
+    // Obtener recargo según método de pago (si hay seleccionado)
+    double recargo = 0.0;
+    double montoRecargo = 0.0;
+    if (paymentCubit.state.currentSelectedMethods.isNotEmpty) {
+      recargo = paymentCubit.state.currentSelectedMethods.first.recargo ?? 0.0;
+      montoRecargo = total * (recargo / 100);
+      total = total + montoRecargo;
+    }
+
+    // Variable para controlar si hay pagos configurados
+    bool hayPagosConfigurados = paymentCubit.state.currentSelectedMethods.isNotEmpty;
+
+    // Crear formato según las imágenes de referencia (venta 3.jpeg)
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1355,6 +1386,208 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Sección Tipo de Pago según imagen venta 3.jpeg
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tipo de Pago',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                // Dropdown de tipo de pago
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey[300]!),
+                    color: Colors.white,
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: 'Cuenta corriente / Pago Dividido',
+                      icon: Icon(Icons.keyboard_arrow_down),
+                      onChanged: (String? newValue) {
+                        // Aquí se manejaría el cambio de tipo de pago
+                      },
+                      items: <String>['Cuenta corriente / Pago Dividido', 'Efectivo', 'Tarjeta', 'Transferencia']
+                          .map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                    ),
+                  ),
+                ),
+
+                // Botón Configurar Pagos
+                SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    // Aquí se abriría el diálogo para configurar pagos
+                    _showConfigurePagosDialog(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    'Configurar Pagos',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                // Mostrar métodos de pago configurados
+                if (hayPagosConfigurados)
+                  Container(
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Column(
+                      children: [
+                        // Ejemplo de métodos configurados (según imagen)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Banco Roela - Credito 1 pago'),
+                            Text('\$ 25,00'),
+                          ],
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Efectivo - Efectivo'),
+                            Text('\$ 60,00'),
+                          ],
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Efectivo - Efectivo'),
+                            Text('\$ 0,00'),
+                          ],
+                        ),
+                        Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total pagos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('\$ 85,00', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Deuda:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                            Text('\$ ${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Sección de descuento según imagen venta 3.jpeg
+                SizedBox(height: 12),
+                Text(
+                  'Descuento',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    // Tipo de descuento
+                    Container(
+                      width: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(4),
+                          bottomLeft: Radius.circular(4),
+                        ),
+                        border: Border.all(color: Colors.grey[300]!),
+                        color: Colors.white,
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: DropdownButtonHideUnderline(
+                        child: ButtonTheme(
+                          alignedDropdown: true,
+                          child: DropdownButton<String>(
+                            value: '%',
+                            icon: Icon(Icons.keyboard_arrow_down),
+                            isDense: true,
+                            onChanged: (String? newValue) {
+                              // Cambiar tipo de descuento
+                            },
+                            items: <String>['%', '\$']
+                                .map<DropdownMenuItem<String>>((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Valor del descuento
+                    Expanded(
+                      child: TextField(
+                        controller: TextEditingController(text: descuento.toStringAsFixed(2)),
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.only(
+                              topRight: Radius.circular(4),
+                              bottomRight: Radius.circular(4),
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.only(
+                              topRight: Radius.circular(4),
+                              bottomRight: Radius.circular(4),
+                            ),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                            ),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          // Actualizar descuento
+                          double? descuento = double.tryParse(value);
+                          if (descuento != null) {
+                            productosCubit.updateDescuentoGeneral(descuento);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            SizedBox(height: 16),
+
             // Mostrar subtotal, descuento, recargo, IVA y total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1368,7 +1601,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Descuento:', style: TextStyle(fontSize: 16)),
-                Text('\$ 0,00', style: TextStyle(fontSize: 16)),
+                Text('\$ ${montoDescuento.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
               ],
             ),
             SizedBox(height: 4),
@@ -1376,7 +1609,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Recargo:', style: TextStyle(fontSize: 16)),
-                Text('\$ 0,00', style: TextStyle(fontSize: 16)),
+                Text('\$ ${montoRecargo.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
               ],
             ),
             SizedBox(height: 4),
@@ -1485,21 +1718,140 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
     );
   }
 
-  // Floating action button
-  Widget _buildFloatingActionButton() {
-    // Botón de chat según imágenes de referencia
-    return FloatingActionButton(
-      onPressed: () {
-        // Aquí iría la funcionalidad de chat
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chat no implementado en este ejemplo')),
+  // Método para mostrar el diálogo de configuración de pagos
+  void _showConfigurePagosDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Configurar pagos',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              Divider(),
+              // Lista de métodos de pago
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Ejemplo de métodos de pago
+                      _buildPaymentMethodItem(
+                        'Efectivo',
+                        'Pago en efectivo',
+                        0.0,
+                        false,
+                      ),
+                      _buildPaymentMethodItem(
+                        'Tarjeta Crédito',
+                        'Bancor - 1 pago',
+                        5.0,
+                        true,
+                      ),
+                      _buildPaymentMethodItem(
+                        'Tarjeta Débito',
+                        'Bancor',
+                        2.0,
+                        false,
+                      ),
+                      _buildPaymentMethodItem(
+                        'Transferencia',
+                        'Transferencia bancaria',
+                        0.0,
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Botón para confirmar
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: Size(double.infinity, 50),
+                ),
+                child: Text(
+                  'Confirmar',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
-      backgroundColor: Colors.blue,
-      child: const Icon(Icons.chat_bubble_outline),
-      tooltip: 'Chat',
     );
   }
+
+  // Widget para un método de pago
+  Widget _buildPaymentMethodItem(String title, String subtitle, double recargo, bool selected) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (recargo > 0)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '+${recargo.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            SizedBox(width: 8),
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: selected ? Colors.green : Colors.grey,
+            ),
+          ],
+        ),
+        onTap: () {
+          // Seleccionar/deseleccionar método de pago
+        },
+      ),
+    );
+  }
+
+  // Eliminamos la función _buildFloatingActionButton() ya que no se usa
 
   // Client selection dialog styled according to reference images
   void _mostrarDialogoCliente() {
