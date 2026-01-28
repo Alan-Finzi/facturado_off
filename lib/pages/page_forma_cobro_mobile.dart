@@ -17,396 +17,625 @@ class FormaCobroPageMobile extends StatefulWidget {
 }
 
 class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
-  String? _selectedCaja = 'Caja #10';
+  // Variables de estado
+  String _selectedCaja = 'Caja #11';
   bool _isResumenExpanded = true;
   String _tipoDePago = 'Efectivo';
-  double? _descuento = 0.0;
+  TextEditingController _montoController = TextEditingController(text: '0');
+  TextEditingController _descuentoController = TextEditingController(text: '0');
+  String _tipoPago = 'Total';
+  String _selectedBanco = 'Efectivo';
+  String _selectedMetodo = 'Efectivo';
 
-  // Tipo de pago seleccionado (simple o dividido)
-  String _tipoPago = 'simple';
+  @override
+  void initState() {
+    super.initState();
+  }
 
-  // Método para alternar entre pago simple y dividido
-  void _togglePagoMode() {
-    setState(() {
-      _tipoPago = _tipoPago == 'simple' ? 'dividido' : 'simple';
-    });
+  @override
+  void dispose() {
+    _montoController.dispose();
+    _descuentoController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch PaymentMethods state
-    final paymentMethodsCubit = context.watch<PaymentMethodsCubit>();
-    final paymentMethodsState = paymentMethodsCubit.state;
-
-    // Get current products and total
+    // Obtener cubits y estados necesarios
     final productosCubit = context.watch<ProductosCubit>();
+    final paymentMethodsCubit = context.watch<PaymentMethodsCubit>();
+    final clienteCubit = context.watch<ClientesMostradorCubit>();
+
+    // Calcular totales
     final subtotal = productosCubit.calcularSubtotal();
     final iva = productosCubit.calcularIva();
     final descuentoGeneral = productosCubit.state.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
     final totalFinal = subtotal - montoDescuento + iva;
 
-    // Get selected client
-    final clienteCubit = context.watch<ClientesMostradorCubit>();
-    final clienteSeleccionado = clienteCubit.state.clienteSeleccionado;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Forma de Cobro'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: SizedBox(
+          width: 150,
+          child: Image.network(
+            'https://flamincoapp.com.ar/wp-content/uploads/2021/09/logo-flaminco-rojo.png',
+            fit: BoxFit.contain,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: Colors.orange),
+          onPressed: () {},
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
-            tooltip: 'Guardar venta',
-            onPressed: () => _confirmarVenta(context),
+            icon: Icon(Icons.more_vert, color: Colors.orange),
+            onPressed: () {},
           ),
         ],
       ),
       body: Column(
         children: [
-          // Cliente y caja seleccionados
-          _buildHeaderPanel(clienteSeleccionado?.nombre ?? 'Consumidor Final'),
-
-          // Contenido principal
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Selector de tipo de pago
+                  _buildNotaObservaciones(),
+                  _buildCajaSelector(),
                   _buildTipoPagoSelector(),
-
-                  const SizedBox(height: 16),
-
-                  // Contenedor de forma de pago (simple o dividido)
-                  _tipoPago == 'simple'
-                      ? _buildPagoSimple(paymentMethodsCubit, paymentMethodsState, totalFinal)
-                      : const SplitPaymentContainer(),
-
-                  // Resumen de venta expandible
-                  _buildResumenVenta(subtotal, iva, descuentoGeneral, montoDescuento, totalFinal, paymentMethodsState),
+                  _buildBancoSelector(),
+                  _buildMetodoSelector(),
+                  _buildMontoSelector(totalFinal),
+                  _buildDescuentoSelector(),
+                  _buildTotales(subtotal, iva, descuentoGeneral, montoDescuento, totalFinal),
+                  _buildDeliveryOption(),
+                  _buildActionButtons(),
                 ],
               ),
             ),
           ),
 
-          // Botones de acción
-          _buildBottomActionBar(),
+          // Botón flotante de chat
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: FloatingActionButton(
+                onPressed: () {},
+                backgroundColor: Colors.blue,
+                child: Icon(Icons.chat_bubble_outline),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderPanel(String nombreCliente) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-      ),
-      child: Row(
+  // Widgets para los diferentes componentes de la interfaz
+
+  Widget _buildNotaObservaciones() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cliente
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Cliente:',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  nombreCliente,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          Text(
+            'Nota interna',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: TextField(
+              maxLines: 3,
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.all(12),
+                border: InputBorder.none,
+                hintText: 'Escribe una nota interna...',
+              ),
             ),
           ),
-
-          // Caja seleccionada
-          DropdownButton<String>(
-            value: _selectedCaja,
-            items: const [
-              DropdownMenuItem(value: 'Caja #10', child: Text('Caja #10')),
-              DropdownMenuItem(value: 'Caja #11', child: Text('Caja #11')),
-              DropdownMenuItem(value: 'Caja #12', child: Text('Caja #12')),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _selectedCaja = value;
-              });
-            },
+          SizedBox(height: 16),
+          Text(
+            'Observaciones',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: TextField(
+              maxLines: 3,
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.all(12),
+                border: InputBorder.none,
+                hintText: 'Escribe observaciones...',
+              ),
+            ),
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                'Filas: 3',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                'Cod venta:',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(width: 8),
+              Text(
+                'CUV-20260128222635-615-2180',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ultima venta:',
+                style: TextStyle(fontSize: 16),
+              ),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(Icons.print, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Volver a la version anterior (V1)',
+            style: TextStyle(fontSize: 16, color: Colors.orange),
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCajaSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Caja', style: TextStyle(fontSize: 16)),
+          SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedCaja,
+                icon: Icon(Icons.keyboard_arrow_down),
+                items: ['Caja #10', 'Caja #11', 'Caja #12']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCaja = value!;
+                  });
+                },
+                isExpanded: true,
+              ),
+            ),
+          ),
+          SizedBox(height: 16),
         ],
       ),
     );
   }
 
   Widget _buildTipoPagoSelector() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tipo de Pago',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Tipo de Pago', style: TextStyle(fontSize: 16)),
+          SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text('Pago Simple'),
-                    selected: _tipoPago == 'simple',
-                    onSelected: (_) {
-                      if (_tipoPago != 'simple') {
-                        setState(() {
-                          _tipoPago = 'simple';
-                        });
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Text('Pago Dividido'),
-                    selected: _tipoPago == 'dividido',
-                    onSelected: (_) {
-                      if (_tipoPago != 'dividido') {
-                        setState(() {
-                          _tipoPago = 'dividido';
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ],
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _tipoPago,
+                icon: Icon(Icons.keyboard_arrow_down),
+                items: ['Total', 'Parcial']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _tipoPago = value!;
+                  });
+                },
+                isExpanded: true,
+              ),
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: 16),
+        ],
       ),
     );
   }
 
-  Widget _buildPagoSimple(PaymentMethodsCubit paymentMethodsCubit, paymentMethodsState, double total) {
-    final tipoDePagoOptions = ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Transferencia', 'Cuenta Corriente'];
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Método de Pago',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+  Widget _buildBancoSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Banco', style: TextStyle(fontSize: 16)),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: _tipoDePago,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              items: tipoDePagoOptions.map((tipo) {
-                return DropdownMenuItem<String>(
-                  value: tipo,
-                  child: Text(tipo),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _tipoDePago = value!;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            if (_tipoDePago == 'Cuenta Corriente')
-              const Text(
-                'El monto será añadido a la cuenta corriente del cliente.',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontStyle: FontStyle.italic,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedBanco,
+                      icon: Icon(Icons.keyboard_arrow_down),
+                      items: ['Efectivo', 'Banco Nación', 'Santander', 'Galicia']
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBanco = value!;
+                        });
+                      },
+                      isExpanded: true,
+                    ),
+                  ),
                 ),
               ),
-          ],
-        ),
+              SizedBox(width: 8),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: () {},
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+        ],
       ),
     );
   }
 
-  Widget _buildResumenVenta(double subtotal, double iva, double descuentoGeneral,
-      double montoDescuento, double totalFinal, paymentMethodsState) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 16),
+  Widget _buildMetodoSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Método', style: TextStyle(fontSize: 16)),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedMetodo,
+                      icon: Icon(Icons.keyboard_arrow_down),
+                      items: ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Transferencia']
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedMetodo = value!;
+                        });
+                      },
+                      isExpanded: true,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: () {},
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMontoSelector(double total) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Monto Pagado', style: TextStyle(fontSize: 16)),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      bottomLeft: Radius.circular(4),
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _montoController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(
+                  height: 54,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade300),
+                      right: BorderSide(color: Colors.grey.shade300),
+                      bottom: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(4),
+                      bottomRight: Radius.circular(4),
+                    ),
+                  ),
+                  child: TextButton(
+                    child: Text('Pago Total', style: TextStyle(color: Colors.grey.shade700)),
+                    onPressed: () {
+                      setState(() {
+                        _montoController.text = total.toStringAsFixed(2);
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescuentoSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Descuento', style: TextStyle(fontSize: 16)),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 80,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    bottomLeft: Radius.circular(4),
+                  ),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: '%',
+                    icon: Icon(Icons.keyboard_arrow_down),
+                    items: ['%', '\$']
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
+                    onChanged: (value) {},
+                    alignment: Alignment.center,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade300),
+                      right: BorderSide(color: Colors.grey.shade300),
+                      bottom: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(4),
+                      bottomRight: Radius.circular(4),
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _descuentoController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotales(double subtotal, double iva, double descuentoGeneral, double montoDescuento, double totalFinal) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Subtotal:', style: TextStyle(fontSize: 16)),
+              Text('\$ ${subtotal.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Descuento:', style: TextStyle(fontSize: 16)),
+              Text('\$ 0,00', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Recargo: (0%)', style: TextStyle(fontSize: 16)),
+              Text('\$ 0,00', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('IVA:', style: TextStyle(fontSize: 16)),
+              Text('\$ ${iva.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 4),
+          Text('(incluido en el precio)', style: TextStyle(fontSize: 14, color: Colors.grey)),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Total:', style: TextStyle(fontSize: 16)),
+              Text('\$ ${totalFinal.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliveryOption() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Retiro en el local',
+            style: TextStyle(fontSize: 16, color: Colors.orange, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    final productosCubit = context.read<ProductosCubit>();
+    final totalFinal = productosCubit.calcularSubtotal() + productosCubit.calcularIva();
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Header expandible
-          InkWell(
-            onTap: () {
-              setState(() {
-                _isResumenExpanded = !_isResumenExpanded;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const Text(
-                    'Resumen de Venta',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _isResumenExpanded
-                        ? Icons.expand_less
-                        : Icons.expand_more,
-                  ),
-                ],
+          Container(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
               ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar', style: TextStyle(fontSize: 16)),
             ),
           ),
-
-          // Contenido expandible
-          if (_isResumenExpanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                children: [
-                  const Divider(),
-
-                  // Subtotal
-                  _buildResumenRow('Subtotal:', '\$${subtotal.toStringAsFixed(2)}'),
-
-                  // Descuento general
-                  if (descuentoGeneral > 0)
-                    _buildResumenRow('Descuento (${descuentoGeneral.round()}%):', '- \$${montoDescuento.toStringAsFixed(2)}'),
-
-                  // IVA
-                  _buildResumenRow('IVA:', '+ \$${iva.toStringAsFixed(2)}'),
-
-                  // Recargo si hay
-                  if (paymentMethodsState is PaymentMethodsLoaded && paymentMethodsState.isPartialPayment)
-                    _buildResumenRow(
-                      'Recargo:',
-                      '+ \$${paymentMethodsState.splitPayments.totalRecargoAmount.toStringAsFixed(2)}',
-                      valueStyle: const TextStyle(color: Colors.red),
-                    ),
-
-                  // Monto para cuenta corriente
-                  if (paymentMethodsState is PaymentMethodsLoaded &&
-                      paymentMethodsState.isPartialPayment &&
-                      paymentMethodsState.splitPayments.remainingAmount > 0.01)
-                    _buildResumenRow(
-                      'Monto para cuenta corriente:',
-                      '\$${paymentMethodsState.splitPayments.remainingAmount.toStringAsFixed(2)}',
-                      rowColor: Colors.blue.shade50,
-                      labelStyle: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                      ),
-                      valueStyle: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                      ),
-                      icon: Icons.account_balance_wallet,
-                    ),
-
-                  const Divider(),
-
-                  // TOTAL
-                  _buildResumenRow(
-                    'TOTAL:',
-                    '\$${totalFinal.toStringAsFixed(2)}',
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    valueStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
+          SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResumenRow(
-    String label,
-    String value, {
-    TextStyle? labelStyle,
-    TextStyle? valueStyle,
-    Color? rowColor,
-    IconData? icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      decoration: BoxDecoration(
-        color: rowColor,
-        borderRadius: rowColor != null ? BorderRadius.circular(4) : null,
-      ),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 16, color: labelStyle?.color),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: labelStyle ?? const TextStyle(fontSize: 14),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: valueStyle ?? const TextStyle(fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomActionBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton.icon(
               onPressed: () => _confirmarVenta(context),
-              icon: const Icon(Icons.save),
-              label: const Text('Guardar Venta'),
+              child: Text('Guardar', style: TextStyle(fontSize: 16)),
             ),
           ),
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Deuda:', style: TextStyle(fontSize: 16)),
+              Text('\$ ${totalFinal.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 50), // Space for FAB
         ],
       ),
     );
@@ -414,17 +643,17 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
 
   // Método para mostrar el diálogo de confirmación de venta
   void _confirmarVenta(BuildContext context) {
-    final productosState = context.read<ProductosCubit>().state;
+    final productosCubit = context.read<ProductosCubit>();
+    final productosState = productosCubit.state;
     final productos = productosState.productosSeleccionados;
     final clienteCubit = context.read<ClientesMostradorCubit>();
     final cliente = clienteCubit.state.clienteSeleccionado;
-    final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
     // Calcular totales
     final subtotal = productosCubit.calcularSubtotal();
+    final iva = productosCubit.calcularIva();
     final descuentoGeneral = productosState.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
-    final iva = productosCubit.calcularIva();
     final total = subtotal - montoDescuento + iva;
 
     showDialog(
@@ -465,79 +694,6 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
                     ),
                   )),
               const Divider(),
-
-              // Información del monto restante (para pagos divididos)
-              Builder(
-                builder: (context) {
-                  // Verificar si es pago dividido
-                  if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
-                    final state = paymentMethodsCubit.state as PaymentMethodsLoaded;
-
-                    if (state.isPartialPayment) {
-                      // Calcular total pagado
-                      final totalPagado = state.splitPayments.items.fold(
-                        0.0,
-                        (sum, item) => sum + item.amount
-                      );
-
-                      // Calcular total con recargos
-                      final totalConRecargos = state.subtotalAmount +
-                        state.splitPayments.items.fold(0.0, (sum, item) => sum + item.recargoAmount);
-
-                      // Mostrar información de montos pagados/pendientes
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Total a pagar:', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text('\$${totalConRecargos.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Monto pagado:', style: TextStyle(color: Colors.green.shade800)),
-                              Text('\$${totalPagado.toStringAsFixed(2)}',
-                                  style: TextStyle(color: Colors.green.shade800)),
-                            ],
-                          ),
-                          if (totalPagado < totalConRecargos - 0.01) ...[
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Monto restante:',
-                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                                Text('\$${(totalConRecargos - totalPagado).toStringAsFixed(2)}',
-                                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.account_balance_wallet, size: 16, color: Colors.blue[700]),
-                                    const SizedBox(width: 4),
-                                    Text('Monto para cuenta corriente:',
-                                        style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                                Text('\$${(totalConRecargos - totalPagado).toStringAsFixed(2)}',
-                                    style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ],
-                          const Divider(),
-                        ],
-                      );
-                    }
-                  }
-                  return const SizedBox.shrink(); // No mostrar nada si no es pago dividido
-                },
-              ),
 
               // Mostrar totales
               Row(
@@ -580,7 +736,7 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
           ),
           TextButton(
             onPressed: () {
-              // Guardar venta y salir
+              // Guardar venta y salir - utilizando la lógica original
               Navigator.of(context).pop(); // Cerrar diálogo
               Navigator.of(context).pop(); // Volver a pantalla anterior
             },

@@ -19,7 +19,7 @@ import '../widget/split_payment_container.dart';
 import '../widget/listado_precios.dart';
 import 'package:facturador_offline/widget/platform_adaptive_widget.dart';
 import 'page_catalogo.dart';
-import 'page_forma_cobro.dart';
+import 'page_forma_cobro_mobile.dart';
 
 /// Página principal de venta optimizada para dispositivos móviles
 /// Esta página implementa un diseño responsive que se adapta a pantallas pequeñas
@@ -2459,14 +2459,9 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
   void _navigateToPaymentForm() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => FormaCobroPage(
-          onBackPressed: () {
-            Navigator.of(context).pop();
-          },
-          onGetDatosEnvio: (datos) {
-            // Store delivery data if needed
-            setState(() {});
-          },
+        builder: (context) => FormaCobroPageMobile(
+          // Mobile payment form doesn't have the same parameters,
+          // navigation is handled within the page itself
         ),
       ),
     );
