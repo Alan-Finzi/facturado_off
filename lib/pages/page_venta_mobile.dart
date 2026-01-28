@@ -1359,14 +1359,35 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
     // Obtener recargo según método de pago (si hay seleccionado)
     double recargo = 0.0;
     double montoRecargo = 0.0;
-    if (paymentCubit.state.currentSelectedMethods.isNotEmpty) {
-      recargo = paymentCubit.state.currentSelectedMethods.first.recargo ?? 0.0;
-      montoRecargo = total * (recargo / 100);
-      total = total + montoRecargo;
+
+    // Verificar si el estado es PaymentMethodsLoaded y tiene un método seleccionado
+    if (paymentCubit.state is PaymentMethodsLoaded) {
+      final paymentState = paymentCubit.state as PaymentMethodsLoaded;
+
+      // Verificar si hay un método de pago seleccionado
+      if (paymentState.selectedMethodId != null && paymentState.selectedProviderId != null) {
+        // Buscar el método seleccionado para obtener su recargo
+        for (final provider in paymentState.providers) {
+          if (provider.id == paymentState.selectedProviderId && provider.metodosPago != null) {
+            for (final method in provider.metodosPago!) {
+              if (method.id == paymentState.selectedMethodId) {
+                recargo = method.recargo;
+                montoRecargo = total * (recargo / 100);
+                total = total + montoRecargo;
+                break;
+              }
+            }
+          }
+        }
+      }
     }
 
     // Variable para controlar si hay pagos configurados
-    bool hayPagosConfigurados = paymentCubit.state.currentSelectedMethods.isNotEmpty;
+    bool hayPagosConfigurados = false;
+    if (paymentCubit.state is PaymentMethodsLoaded) {
+      final paymentState = paymentCubit.state as PaymentMethodsLoaded;
+      hayPagosConfigurados = paymentState.selectedMethodId != null;
+    }
 
     // Crear formato según las imágenes de referencia (venta 3.jpeg)
     return Container(
@@ -1447,8 +1468,32 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                 ),
 
                 // Mostrar métodos de pago configurados
-                if (hayPagosConfigurados)
-                  Container(
+                if (hayPagosConfigurados && paymentCubit.state is PaymentMethodsLoaded) {
+                  final paymentState = paymentCubit.state as PaymentMethodsLoaded;
+
+                  // Buscar el método y proveedor seleccionados
+                  String providerName = "Método de pago";
+                  String methodName = "No seleccionado";
+
+                  if (paymentState.selectedProviderId != null && paymentState.selectedMethodId != null) {
+                    for (final provider in paymentState.providers) {
+                      if (provider.id == paymentState.selectedProviderId) {
+                        providerName = provider.nombre ?? "Proveedor";
+
+                        if (provider.metodosPago != null) {
+                          for (final method in provider.metodosPago!) {
+                            if (method.id == paymentState.selectedMethodId) {
+                              methodName = method.nombre;
+                              break;
+                            }
+                          }
+                        }
+                        break;
+                      }
+                    }
+                  }
+
+                  return Container(
                     margin: EdgeInsets.symmetric(vertical: 8),
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1457,48 +1502,38 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                     ),
                     child: Column(
                       children: [
-                        // Ejemplo de métodos configurados (según imagen)
+                        // Método configurado
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Banco Roela - Credito 1 pago'),
-                            Text('\$ 25,00'),
+                            Text('$providerName - $methodName'),
+                            Text('\$ ${total.toStringAsFixed(2)}'),
                           ],
                         ),
-                        SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Efectivo - Efectivo'),
-                            Text('\$ 60,00'),
-                          ],
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Efectivo - Efectivo'),
-                            Text('\$ 0,00'),
-                          ],
-                        ),
+                        if (montoRecargo > 0) ...[
+                          SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Incluye recargo ${recargo.toStringAsFixed(1)}%',
+                                style: TextStyle(fontSize: 12, color: Colors.red)),
+                              Text('\$ ${montoRecargo.toStringAsFixed(2)}',
+                                style: TextStyle(fontSize: 12, color: Colors.red)),
+                            ],
+                          ),
+                        ],
                         Divider(),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Total pagos:', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('\$ 85,00', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Deuda:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                            Text('\$ ${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                            Text('Total a pagar:', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('\$ ${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ],
                     ),
-                  ),
+                  );
+                },
 
                 // Sección de descuento según imagen venta 3.jpeg
                 SizedBox(height: 12),
@@ -1720,6 +1755,12 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
 
   // Método para mostrar el diálogo de configuración de pagos
   void _showConfigurePagosDialog(BuildContext context) {
+    final paymentCubit = context.read<PaymentMethodsCubit>();
+    // Cargar los proveedores de pagos si no están cargados
+    if (!(paymentCubit.state is PaymentMethodsLoaded)) {
+      paymentCubit.loadPaymentProviders();
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1731,89 +1772,285 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
         ),
       ),
       builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Configurar pagos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              Divider(),
-              // Lista de métodos de pago
-              Expanded(
-                child: SingleChildScrollView(
+        return BlocBuilder<PaymentMethodsCubit, PaymentMethodsState>(
+          builder: (context, state) {
+            // Mostrar cargando si el estado es PaymentMethodsLoading
+            if (state is PaymentMethodsLoading) {
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.5,
+                padding: EdgeInsets.all(16),
+                child: Center(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ejemplo de métodos de pago
-                      _buildPaymentMethodItem(
-                        'Efectivo',
-                        'Pago en efectivo',
-                        0.0,
-                        false,
-                      ),
-                      _buildPaymentMethodItem(
-                        'Tarjeta Crédito',
-                        'Bancor - 1 pago',
-                        5.0,
-                        true,
-                      ),
-                      _buildPaymentMethodItem(
-                        'Tarjeta Débito',
-                        'Bancor',
-                        2.0,
-                        false,
-                      ),
-                      _buildPaymentMethodItem(
-                        'Transferencia',
-                        'Transferencia bancaria',
-                        0.0,
-                        false,
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Cargando métodos de pago...'),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Mostrar error si el estado es PaymentMethodsError
+            if (state is PaymentMethodsError) {
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.5,
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 48),
+                      SizedBox(height: 16),
+                      Text('Error al cargar métodos de pago'),
+                      SizedBox(height: 8),
+                      Text(state.message, textAlign: TextAlign.center),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          paymentCubit.loadPaymentProviders();
+                        },
+                        child: Text('Reintentar'),
                       ),
                     ],
                   ),
                 ),
-              ),
-              // Botón para confirmar
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  minimumSize: Size(double.infinity, 50),
-                ),
-                child: Text(
-                  'Confirmar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+              );
+            }
+
+            // Mostrar mensaje si no hay métodos de pago
+            if (state is PaymentMethodsEmpty) {
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.5,
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 48),
+                      SizedBox(height: 16),
+                      Text('No hay métodos de pago disponibles'),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('Cerrar'),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
+              );
+            }
+
+            // Mostrar lista de métodos si el estado es PaymentMethodsLoaded
+            if (state is PaymentMethodsLoaded) {
+              final providers = state.providers;
+
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Configurar pagos',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    Divider(),
+
+                    // Selector de proveedor
+                    Text(
+                      'Proveedor de pago',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          isExpanded: true,
+                          value: state.selectedProviderId,
+                          hint: Text('Seleccione proveedor'),
+                          onChanged: (int? value) {
+                            if (value != null) {
+                              paymentCubit.selectPaymentProvider(value);
+                            }
+                          },
+                          items: providers.map((provider) {
+                            return DropdownMenuItem<int>(
+                              value: provider.id,
+                              child: Text(provider.nombre ?? 'Proveedor sin nombre'),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    // Selector de método de pago
+                    Text(
+                      'Método de pago',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    if (state.selectedProviderId != null)
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            isExpanded: true,
+                            value: state.selectedMethodId,
+                            hint: Text('Seleccione método'),
+                            onChanged: (int? value) {
+                              if (value != null) {
+                                paymentCubit.selectPaymentMethod(value);
+                              }
+                            },
+                            items: _getMethodsForProvider(providers, state.selectedProviderId!).map((method) {
+                              return DropdownMenuItem<int>(
+                                value: method.id,
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Text(method.nombre)),
+                                    if (method.recargo > 0)
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          '+${method.recargo}%',
+                                          style: TextStyle(color: Colors.red, fontSize: 12),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+
+                    Divider(),
+
+                    // Lista de métodos de pago
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: providers.length,
+                        itemBuilder: (context, providerIndex) {
+                          final provider = providers[providerIndex];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  provider.nombre ?? 'Proveedor sin nombre',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              // Mostrar métodos de este proveedor
+                              if (provider.metodosPago != null)
+                                ...provider.metodosPago!.map((method) {
+                                  final isSelected = state.selectedMethodId == method.id &&
+                                      state.selectedProviderId == provider.id;
+                                  return _buildPaymentMethodItem(
+                                    method.nombre,
+                                    provider.nombre ?? '',
+                                    method.recargo,
+                                    isSelected,
+                                    onTap: () {
+                                      paymentCubit.selectPaymentProvider(provider.id);
+                                      paymentCubit.selectPaymentMethod(method.id);
+                                    },
+                                  );
+                                }).toList(),
+                              SizedBox(height: 16),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Botón para confirmar
+                    ElevatedButton(
+                      onPressed: () {
+                        // Actualizar el monto subtotal antes de cerrar
+                        final productosCubit = context.read<ProductosCubit>();
+                        double subtotal = 0.0;
+                        for (var producto in productosCubit.state.productosSeleccionados) {
+                          subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
+                        }
+                        paymentCubit.updateSubtotalAmount(subtotal);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: Size(double.infinity, 50),
+                      ),
+                      child: Text(
+                        'Confirmar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Por defecto mostrar un cargando
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.5,
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
         );
       },
     );
   }
 
+  // Método auxiliar para obtener los métodos de un proveedor
+  List<PaymentMethod> _getMethodsForProvider(List<PaymentProvider> providers, int providerId) {
+    try {
+      final provider = providers.firstWhere((p) => p.id == providerId);
+      return provider.metodosPago ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   // Widget para un método de pago
-  Widget _buildPaymentMethodItem(String title, String subtitle, double recargo, bool selected) {
+  Widget _buildPaymentMethodItem(String title, String subtitle, double recargo, bool selected, {VoidCallback? onTap}) {
     return Card(
       margin: EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -1844,9 +2081,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
             ),
           ],
         ),
-        onTap: () {
-          // Seleccionar/deseleccionar método de pago
-        },
+        onTap: onTap,
       ),
     );
   }
