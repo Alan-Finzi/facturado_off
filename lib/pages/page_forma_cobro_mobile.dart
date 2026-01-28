@@ -40,8 +40,20 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
 
     // Get current products and total
     final productosCubit = context.watch<ProductosCubit>();
-    final subtotal = productosCubit.calcularSubtotal();
-    final iva = productosCubit.calcularIva();
+    final productosSeleccionados = productosCubit.state.productosSeleccionados;
+
+    // Calcular subtotal manualmente
+    final subtotal = productosSeleccionados.fold(
+      0.0,
+      (sum, producto) => sum + (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0)
+    );
+
+    // Calcular IVA manualmente
+    final iva = productosSeleccionados.fold(
+      0.0,
+      (sum, producto) => sum + (producto.iva ?? 0.0) * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0)
+    );
+
     final descuentoGeneral = productosCubit.state.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
     final totalFinal = subtotal - montoDescuento + iva;
@@ -81,7 +93,7 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
                   // Contenedor de forma de pago (simple o dividido)
                   _tipoPago == 'simple'
                       ? _buildPagoSimple(paymentMethodsCubit, paymentMethodsState, totalFinal)
-                      : SplitPaymentContainer(),
+                      : const SplitPaymentContainer(),
 
                   // Resumen de venta expandible
                   _buildResumenVenta(subtotal, iva, descuentoGeneral, montoDescuento, totalFinal, paymentMethodsState),
@@ -421,10 +433,10 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
     final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
     // Calcular totales
-    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioFinal ?? 0.0) * (producto.cantidad ?? 0.0));
+    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0));
     final descuentoGeneral = productosState.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
-    final iva = productos.fold(0.0, (sum, producto) => sum + ((producto.producto?.porcentaje_iva ?? 0.0) / 100) * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 0.0));
+    final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0) * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0));
     final total = subtotal - montoDescuento + iva;
 
     showDialog(
