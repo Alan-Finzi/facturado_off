@@ -131,28 +131,26 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
     final clienteCubit = context.watch<ClientesMostradorCubit>();
     final hasProducts = productosCubit.state.productosSeleccionados.isNotEmpty;
 
+    // Calcular totales para el resumen
+    final productos = productosCubit.state.productosSeleccionados;
+    final subtotal = productosCubit.calcularSubtotal();
+    final iva = productosCubit.calcularIva();
+    final descuentoGeneral = productosCubit.state.descuentoGeneral;
+    final montoDescuento = subtotal * (descuentoGeneral / 100);
+    final total = subtotal - montoDescuento + iva;
+
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            // Logo de Flaminco
-            Expanded(
-              child: Center(
-                child: Text(
-                  'flaminco',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        title: SizedBox(
+          width: 150,
+          child: Image.network(
+            'https://flamincoapp.com.ar/wp-content/uploads/2021/09/logo-flaminco-rojo.png',
+            fit: BoxFit.contain,
+          ),
         ),
         elevation: 0,
         backgroundColor: Colors.white,
+        centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.menu, color: Colors.orange),
           onPressed: () {
@@ -169,27 +167,23 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
         ],
       ),
       backgroundColor: Color(0xFFF5F7FA), // Fondo gris muy claro como en las imágenes
-      body: Column(
-        children: [
-          // Título de la página
-          Container(
-            padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8),
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Punto de Venta',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Título de la página
+              Text(
+                'Punto de Venta',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ),
+              SizedBox(height: 16),
 
-          // Panel de factura y cliente
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              // Panel de factura
                 // Dropdown de cliente (según imagen de referencia)
                 Container(
                   margin: EdgeInsets.only(bottom: 8),
