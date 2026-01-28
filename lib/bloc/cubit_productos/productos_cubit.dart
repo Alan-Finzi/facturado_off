@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../calculos/calculo_iva.dart';
+import '../../calculos/calculo_iva.dart' as IvaCalculator;
 import '../../models/Producto_precio_stock.dart';
 import '../../models/datos_facturacion_model.dart';
 import '../../models/lista_precio_model.dart';
@@ -203,7 +203,7 @@ class ProductosCubit extends Cubit<ProductosState> {
         }
 
         // Calcular IVA según condición fiscal del cliente
-        final resultadoIva = calcularIva(
+        final resultadoIva = IvaCalculator.calcularIva(
           precioProducto: precioLista,
           alicuotaIva: ivaEncontrado!,
           condicionIva: condIva.toString(),
