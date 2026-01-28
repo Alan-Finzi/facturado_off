@@ -64,25 +64,25 @@ class ProductosCubit extends Cubit<ProductosState> {
   void updateCategoriaIvaUser(String categoriaIvaUser) {
     emit(state.copyWith(categoriaIvaUser: categoriaIvaUser));
   }
-  
+
   void updateTipoFactura(String tipoFactura) {
     emit(state.copyWith(tipoFactura: tipoFactura));
   }
-  
+
   void updateCajaSeleccionada(String cajaSeleccionada) {
     emit(state.copyWith(cajaSeleccionada: cajaSeleccionada));
   }
-  
+
   void updateCanalVenta(String canalVenta) {
     emit(state.copyWith(canalVenta: canalVenta));
   }
-  
+
   /// Actualiza el porcentaje de descuento general
   /// @param descuento El porcentaje de descuento a aplicar
   void updateDescuentoGeneral(double descuento) {
     emit(state.copyWith(descuentoGeneral: descuento));
   }
-  
+
   void updateListaPreciosInfo(int listaId, String nombre) {
     emit(state.copyWith(listaPrecios: listaId, nombreListaPrecios: nombre));
   }
@@ -117,7 +117,7 @@ class ProductosCubit extends Cubit<ProductosState> {
     try {
       // Activar indicador de carga
       emit(state.copyWith(isLoading: true));
-      
+
       final user = User.currencyUser;
       if (user == null) {
         print('Error: Usuario no autenticado.');
@@ -127,7 +127,7 @@ class ProductosCubit extends Cubit<ProductosState> {
 
       // Determinar la sucursal activa
       final sucursalId = user.comercioId == 1 ? user.sucursal : user.comercioId;
-      
+
       // Obtener datos necesarios para el cálculo de IVA
       final productosIvas = await userRepository.fetchProductosIvas();
       final condIva = state.datosFacturacionModel?[0].condicionIva;
@@ -156,8 +156,8 @@ class ProductosCubit extends Cubit<ProductosState> {
       }
 
       // Buscar primero por ID si está disponible, luego por código de barras
-      final existingProductIndex = updatedList.indexWhere((p) => 
-        (productoId != null && p.datum?.id == productoId) || 
+      final existingProductIndex = updatedList.indexWhere((p) =>
+        (productoId != null && p.datum?.id == productoId) ||
         (barcode != null && p.producto?.barcode == barcode)
       );
 
@@ -172,7 +172,7 @@ class ProductosCubit extends Cubit<ProductosState> {
         );
 
         emit(state.copyWith(
-          productosSeleccionados: updatedList, 
+          productosSeleccionados: updatedList,
           precioTotal: !state.precioTotal,
           isLoading: false
         ));
@@ -182,7 +182,7 @@ class ProductosCubit extends Cubit<ProductosState> {
       // Si es un producto nuevo, agregarlo a la lista
       if (data.containsKey('productoSeleccionado')) {
         final productoSeleccionado = data['productoSeleccionado'];
-        
+
         // Obtener el precio de lista del producto
         double precioLista = 0.0;
         if (productoSeleccionado.listasPrecios != null && productoSeleccionado.listasPrecios!.isNotEmpty) {
@@ -192,7 +192,7 @@ class ProductosCubit extends Cubit<ProductosState> {
         // Buscar el IVA correspondiente al producto
         try {
           ivaEncontrado = productosIvas.firstWhere(
-                (iva) => iva.sucursalId.toString() == sucursalId.toString() && 
+                (iva) => iva.sucursalId.toString() == sucursalId.toString() &&
                        iva.productId.toString() == productoSeleccionado.id.toString(),
           ).iva;
         } catch (e) {
@@ -229,7 +229,7 @@ class ProductosCubit extends Cubit<ProductosState> {
         // Agregar el producto a la lista y emitir el nuevo estado
         updatedList.add(productoAgregar);
         emit(state.copyWith(
-          productosSeleccionados: updatedList, 
+          productosSeleccionados: updatedList,
           precioTotal: !state.precioTotal,
           isLoading: false
         ));
@@ -362,22 +362,67 @@ class ProductosCubit extends Cubit<ProductosState> {
     }
   }
 
-  /// Calcula el subtotal de todos los productos seleccionados (sin IVA ni descuentos)
+  /// Calcula el subtotal de los productos seleccionados
+  /// @return El subtotal calculado como la suma de precios sin IVA
   double calcularSubtotal() {
     double subtotal = 0.0;
     for (var producto in state.productosSeleccionados) {
-      subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
+      subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 0.0);
     }
     return subtotal;
   }
 
-  /// Calcula el IVA total de todos los productos seleccionados
+  /// Calcula el IVA total de los productos seleccionados
+  /// @return El IVA calculado como la suma del IVA de cada producto
   double calcularIva() {
-    double iva = 0.0;
+    double ivaTotal = 0.0;
     for (var producto in state.productosSeleccionados) {
-      double ivaProducto = (producto.porcentajeIva ?? 0.0) / 100.0;
-      iva += ivaProducto * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
+      double precioSinIva = (producto.precioLista ?? 0.0) * (producto.cantidad ?? 0.0);
+      double ivaProducto = precioSinIva * (producto.porcentajeIva ?? 0.0);
+      ivaTotal += ivaProducto;
     }
-    return iva;
+    return ivaTotal;
+  }
+
+  /// Incrementa la cantidad de un producto específico
+  /// @param producto El producto a incrementar
+  void incrementarProducto(ProductoConPrecioYStock producto) {
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    final index = updatedList.indexWhere((p) =>
+      (p.producto?.id == producto.producto?.id) ||
+      (p.producto?.barcode == producto.producto?.barcode)
+    );
+
+    if (index != -1) {
+      double? cantidadActual = updatedList[index].cantidad;
+      updatedList[index].cantidad = (updatedList[index].cantidad ?? 0) + 1;
+      double precioUnitario = updatedList[index].precioFinal! / cantidadActual!;
+      updatedList[index].precioFinal = precioUnitario * updatedList[index].cantidad!;
+      emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+    }
+  }
+
+  /// Decrementa la cantidad de un producto específico
+  /// @param producto El producto a decrementar
+  void decrementarProducto(ProductoConPrecioYStock producto) {
+    final updatedList = List<ProductoConPrecioYStock>.from(state.productosSeleccionados);
+    final index = updatedList.indexWhere((p) =>
+      (p.producto?.id == producto.producto?.id) ||
+      (p.producto?.barcode == producto.producto?.barcode)
+    );
+
+    if (index != -1 && updatedList[index].cantidad! > 1) {
+      double? cantidadActual = updatedList[index].cantidad;
+      updatedList[index].cantidad = (updatedList[index].cantidad ?? 0) - 1;
+      double precioUnitario = updatedList[index].precioFinal! / cantidadActual!;
+      updatedList[index].precioFinal = precioUnitario * updatedList[index].cantidad!;
+      emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: !state.precioTotal));
+    }
+  }
+
+  /// Limpia todos los productos seleccionados
+  /// Utilizado al finalizar una venta o cancelarla
+  void limpiarProductos() {
+    emit(state.copyWith(productosSeleccionados: []));
   }
 }

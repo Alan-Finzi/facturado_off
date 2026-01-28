@@ -40,20 +40,8 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
 
     // Get current products and total
     final productosCubit = context.watch<ProductosCubit>();
-    final productosSeleccionados = productosCubit.state.productosSeleccionados;
-
-    // Calcular subtotal manualmente
-    final subtotal = productosSeleccionados.fold(
-      0.0,
-      (sum, producto) => sum + (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0)
-    );
-
-    // Calcular IVA manualmente
-    final iva = productosSeleccionados.fold(
-      0.0,
-      (sum, producto) => sum + (producto.iva ?? 0.0) * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0)
-    );
-
+    final subtotal = productosCubit.calcularSubtotal();
+    final iva = productosCubit.calcularIva();
     final descuentoGeneral = productosCubit.state.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
     final totalFinal = subtotal - montoDescuento + iva;
@@ -433,10 +421,10 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
     final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
     // Calcular totales
-    final subtotal = productos.fold(0.0, (sum, producto) => sum + (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0));
+    final subtotal = productosCubit.calcularSubtotal();
     final descuentoGeneral = productosState.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
-    final iva = productos.fold(0.0, (sum, producto) => sum + (producto.iva ?? 0.0) * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0));
+    final iva = productosCubit.calcularIva();
     final total = subtotal - montoDescuento + iva;
 
     showDialog(
