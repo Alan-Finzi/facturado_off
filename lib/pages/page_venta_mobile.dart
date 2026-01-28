@@ -1470,9 +1470,10 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                 ),
 
                 // Mostrar métodos de pago configurados
-                Widget buildPaymentMethodInfo() {
-                  if (hayPagosConfigurados && paymentCubit.state is PaymentMethodsLoaded) {
-                    final paymentState = paymentCubit.state as PaymentMethodsLoaded;
+                Builder(
+                  builder: (context) {
+                    if (hayPagosConfigurados && paymentCubit.state is PaymentMethodsLoaded) {
+                      final paymentState = paymentCubit.state as PaymentMethodsLoaded;
 
                   // Buscar el método y proveedor seleccionados
                   String providerName = "Método de pago";
@@ -1536,12 +1537,10 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                       ],
                     ),
                   );
-                  }
-                  return SizedBox.shrink(); // Return empty widget when no payment method is selected
-                }
-
-                // Call the function to build payment info
-                buildPaymentMethodInfo(),
+                    }
+                    return SizedBox.shrink(); // Return empty widget when no payment method is selected
+                  },
+                ),
 
                 // Sección de descuento según imagen venta 3.jpeg
                 SizedBox(height: 12),
@@ -1904,8 +1903,8 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                           },
                           items: providers.map((provider) {
                             return DropdownMenuItem<int>(
-                              value: provider['id'],
-                              child: Text(provider['nombre'] ?? 'Proveedor sin nombre'),
+                              value: provider.id,
+                              child: Text(provider.nombre ?? 'Proveedor sin nombre'),
                             );
                           }).toList(),
                         ),
@@ -1938,11 +1937,11 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                             },
                             items: _getMethodsForProvider(providers, state.selectedProviderId!).map((method) {
                               return DropdownMenuItem<int>(
-                                value: method['id'],
+                                value: method.id,
                                 child: Row(
                                   children: [
-                                    Expanded(child: Text(method['nombre'] ?? 'Sin nombre')),
-                                    if ((method['recargo'] ?? 0) > 0)
+                                    Expanded(child: Text(method.nombre)),
+                                    if (method.recargo > 0)
                                       Container(
                                         padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
@@ -1950,7 +1949,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
-                                          '+${method['recargo']}%',
+                                          '+${method.recargo}%',
                                           style: TextStyle(color: Colors.red, fontSize: 12),
                                         ),
                                       ),
@@ -1976,7 +1975,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                               Padding(
                                 padding: EdgeInsets.symmetric(vertical: 8),
                                 child: Text(
-                                  provider['nombre'] ?? 'Proveedor sin nombre',
+                                  provider.nombre ?? 'Proveedor sin nombre',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -1984,18 +1983,18 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
                                 ),
                               ),
                               // Mostrar métodos de este proveedor
-                              if (provider['metodosPago'] != null)
-                                ...(provider['metodosPago'] ?? []).map((method) {
-                                  final isSelected = state.selectedMethodId == method['id'] &&
-                                      state.selectedProviderId == provider['id'];
+                              if (provider.metodosPago != null)
+                                ...provider.metodosPago!.map((method) {
+                                  final isSelected = state.selectedMethodId == method.id &&
+                                      state.selectedProviderId == provider.id;
                                   return _buildPaymentMethodItem(
-                                    method['nombre'] ?? 'Sin nombre',
-                                    provider['nombre'] ?? '',
-                                    method['recargo'] ?? 0.0,
+                                    method.nombre,
+                                    provider.nombre ?? '',
+                                    method.recargo,
                                     isSelected,
                                     onTap: () {
-                                      paymentCubit.selectPaymentProvider(provider['id']);
-                                      paymentCubit.selectPaymentMethod(method['id']);
+                                      paymentCubit.selectPaymentProvider(provider.id);
+                                      paymentCubit.selectPaymentMethod(method.id);
                                     },
                                   );
                                 }).toList(),
@@ -2048,10 +2047,10 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> with TickerPr
   }
 
   // Método auxiliar para obtener los métodos de un proveedor
-  List<dynamic> _getMethodsForProvider(List<dynamic> providers, int providerId) {
+  List<PaymentMethod> _getMethodsForProvider(List<PaymentProvider> providers, int providerId) {
     try {
-      final provider = providers.firstWhere((p) => p['id'] == providerId);
-      return provider['metodosPago'] ?? [];
+      final provider = providers.firstWhere((p) => p.id == providerId);
+      return provider.metodosPago ?? [];
     } catch (e) {
       return [];
     }
