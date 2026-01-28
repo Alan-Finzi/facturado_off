@@ -362,4 +362,22 @@ class ProductosCubit extends Cubit<ProductosState> {
     }
   }
 
+  /// Calcula el subtotal de todos los productos seleccionados (sin IVA ni descuentos)
+  double calcularSubtotal() {
+    double subtotal = 0.0;
+    for (var producto in state.productosSeleccionados) {
+      subtotal += (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
+    }
+    return subtotal;
+  }
+
+  /// Calcula el IVA total de todos los productos seleccionados
+  double calcularIva() {
+    double iva = 0.0;
+    for (var producto in state.productosSeleccionados) {
+      double ivaProducto = (producto.porcentajeIva ?? 0.0) / 100.0;
+      iva += ivaProducto * (producto.precioLista ?? 0.0) * (producto.cantidad ?? 1.0);
+    }
+    return iva;
+  }
 }

@@ -81,12 +81,7 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
                   // Contenedor de forma de pago (simple o dividido)
                   _tipoPago == 'simple'
                       ? _buildPagoSimple(paymentMethodsCubit, paymentMethodsState, totalFinal)
-                      : SplitPaymentContainer(
-                          subtotalAmount: totalFinal,
-                          onSplitComplete: (SplitPaymentCollection splitPayments) {
-                            // Manejar finalización de división de pago
-                          },
-                        ),
+                      : SplitPaymentContainer(),
 
                   // Resumen de venta expandible
                   _buildResumenVenta(subtotal, iva, descuentoGeneral, montoDescuento, totalFinal, paymentMethodsState),
