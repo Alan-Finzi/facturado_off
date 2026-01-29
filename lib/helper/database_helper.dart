@@ -1174,23 +1174,30 @@ class DatabaseHelper {
       final db = await this.database;
 
       // Verificar las tablas esenciales que se llenan durante la sincronización
-      final List<String> tablesToCheck = [
-        'productos_stock_sucursales',
-        'productos_lista_precios',
-        'Clientes_mostrador',
-        'datos_facturacion',
-        'productos_ivas',
-        'categorias',
-        'product'
-      ];
+      // Definimos pesos para cada tabla según su importancia (datos_facturacion es crítica)
+      final Map<String, int> tablesToCheck = {
+        'datos_facturacion': 5,  // Crítico - peso 5
+        'product': 3,            // Muy importante - peso 3
+        'productos_lista_precios': 2, // Importante - peso 2
+        'productos_stock_sucursales': 2, // Importante - peso 2
+        'Clientes_mostrador': 2, // Importante - peso 2
+        'productos_ivas': 1,     // Útil - peso 1
+        'categorias': 1,         // Útil - peso 1
+      };
 
-      // Contadores para tablas con datos
-      int tablesWithData = 0;
+      // Contadores y métricas
+      int dataSyncScore = 0;    // Puntuación total de sincronización
       bool hasFacturacionData = false;
       Map<String, int> tableDataCounts = {};
 
+      // Tabla de facturación que DEBE tener al menos un registro
+      int facturacionCount = 0;
+
       // Verificar cada tabla si contiene datos
-      for (String table in tablesToCheck) {
+      for (var entry in tablesToCheck.entries) {
+        final String table = entry.key;
+        final int tableWeight = entry.value;
+
         try {
           final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
           final count = result.first['count'] as int;
@@ -1198,12 +1205,14 @@ class DatabaseHelper {
 
           // Si la tabla tiene datos
           if (count > 0) {
-            tablesWithData++;
-            print('DEBUG isDataSynchronized: Tabla $table contiene datos ($count registros)');
+            // Sumar la puntuación según el peso de la tabla
+            dataSyncScore += tableWeight;
+            print('DEBUG isDataSynchronized: Tabla $table contiene datos ($count registros), peso: $tableWeight');
 
             // Marcar específicamente si tenemos datos de facturación
             if (table == 'datos_facturacion') {
               hasFacturacionData = true;
+              facturacionCount = count;
             }
           }
         } catch (tableError) {
@@ -1217,15 +1226,22 @@ class DatabaseHelper {
       // Imprime resumen completo para diagnóstico
       print('DEBUG isDataSynchronized RESUMEN:');
       tableDataCounts.forEach((table, count) {
-        print('- $table: ${count >= 0 ? "$count registros" : "ERROR"}');
+        final int weight = tablesToCheck[table] ?? 0;
+        print('- $table: ${count >= 0 ? "$count registros" : "ERROR"} (peso: $weight)');
       });
 
-      // Para considerar la DB sincronizada, necesitamos tener datos en al menos 3 tablas
-      // incluyendo obligatoriamente datos de facturación
-      bool isSynchronized = tablesWithData >= 3 && hasFacturacionData;
+      // Criterios para considerar la DB sincronizada:
+      // 1. Datos de facturación DEBEN existir (obligatorio)
+      // 2. La puntuación total debe ser >= 8 (lo que garantiza varias tablas con datos)
+      bool isSynchronized = hasFacturacionData && dataSyncScore >= 8;
+
+      // Verificación especial para datos de facturación
+      if (!hasFacturacionData) {
+        print('⚠️ CRÍTICO: No se encontraron datos de facturación!');
+      }
 
       print('DEBUG isDataSynchronized RESULTADO: ${isSynchronized ? "SINCRONIZADA" : "NO SINCRONIZADA"} '
-          '(${tablesWithData} tablas con datos, datos_facturacion: ${hasFacturacionData ? "SÍ" : "NO"})');
+          '(Puntuación: $dataSyncScore/16, datos_facturacion: ${hasFacturacionData ? "SÍ ($facturacionCount)" : "NO"})');
 
       return isSynchronized;
     } catch (e) {

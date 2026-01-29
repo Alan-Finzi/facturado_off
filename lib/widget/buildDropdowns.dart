@@ -67,10 +67,33 @@ class VentaDropdownsWidget extends StatelessWidget {
             DatosFacturacionModel.datosFacturacionCurrent.clear();
             DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
         } else if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
-            // Si no hay datos en el estado ni en la variable estática, usar el primero
-            DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
-            // Y guardarlo también en el estado
-            productosCubit.updateDatosFacturacion([datosFacturacion.first]);
+            // Si no hay datos en el estado ni en la variable estática,
+            // verificar que la lista de datos de facturación no esté vacía
+            if (datosFacturacion.isNotEmpty) {
+                DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
+                // Y guardarlo también en el estado
+                productosCubit.updateDatosFacturacion([datosFacturacion.first]);
+            } else {
+                // Si no hay datos de facturación, crear uno temporal
+                final tempDatosFact = DatosFacturacionModel(
+                    id: -1, // ID temporal
+                    razonSocial: "Sin datos de facturación",
+                    comercioId: 0,
+                    condicionIva: CondicionIva.ELEGIR
+                );
+
+                DatosFacturacionModel.datosFacturacionCurrent.add(tempDatosFact);
+                productosCubit.updateDatosFacturacion([tempDatosFact]);
+
+                // Mostrar un mensaje de error
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('No se encontraron datos de facturación. Por favor sincronice la aplicación.'),
+                    backgroundColor: Colors.red,
+                    duration: Duration(seconds: 5),
+                  )
+                );
+            }
         }
 
         return Column(

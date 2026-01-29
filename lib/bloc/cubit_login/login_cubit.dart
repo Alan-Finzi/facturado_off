@@ -97,16 +97,30 @@ class LoginCubit extends Cubit<LoginState> {
             final hasData = await dbHelper.isDataSynchronized();
             print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-            // Para login normal sin solicitud de sincronización:
-            // - Si hay datos, omitir sincronización (isPreference=true)
-            // - Si no hay datos, mostrar sincronización (isPreference=false)
-            emit(LoginState(
-              isLogin: true,
-              userToken: savedToken,
-              isPreference: hasData, // Si hay datos, omitir sincronización
-              user: User(username: email, password: savedPassword),
-              needsOnlineAuth: false,
-            ));
+            if (!hasData) {
+              print("⚠️ Datos sincronizados incompletos o faltantes - forzando sincronización");
+
+              // Para login normal sin solicitud de sincronización,
+              // pero detectamos que faltan datos esenciales:
+              // 1. Mantenemos al usuario logueado (isLogin=true)
+              // 2. Pero forzamos la sincronización (isPreference=false)
+              emit(LoginState(
+                isLogin: true,
+                userToken: savedToken,
+                isPreference: false, // Forzar sincronización cuando faltan datos
+                user: User(username: email, password: savedPassword),
+                needsOnlineAuth: false,
+              ));
+            } else {
+              // Datos sincronizados completos, continuar normalmente
+              emit(LoginState(
+                isLogin: true,
+                userToken: savedToken,
+                isPreference: true, // Omitir sincronización
+                user: User(username: email, password: savedPassword),
+                needsOnlineAuth: false,
+              ));
+            }
             return;
           }
         }
@@ -141,15 +155,27 @@ class LoginCubit extends Cubit<LoginState> {
           print("✅ Login exitoso para sincronización solicitada. Mostrando pantalla de sincronización.");
         } else {
           // Para login normal:
-          emit(LoginState(
-            isLogin: true,
-            userToken: token,
-            isPreference: hasData, // Si hay datos, omitir sincronización
-            user: User(username: email, password: password),
-            needsOnlineAuth: false,
-          ));
-          print("✅ Login completado con éxito. Modo: ONLINE");
-          if (hasData) {
+          if (!hasData) {
+            print("⚠️ Datos sincronizados incompletos o faltantes - forzando sincronización");
+            // Forzar la sincronización cuando detectamos datos faltantes
+            emit(LoginState(
+              isLogin: true,
+              userToken: token,
+              isPreference: false, // Forzar sincronización
+              user: User(username: email, password: password),
+              needsOnlineAuth: false,
+            ));
+            print("✅ Login completado. Forzando sincronización por datos faltantes.");
+          } else {
+            // Datos sincronizados completos, continuar normalmente
+            emit(LoginState(
+              isLogin: true,
+              userToken: token,
+              isPreference: true, // Omitir sincronización
+              user: User(username: email, password: password),
+              needsOnlineAuth: false,
+            ));
+            print("✅ Login completado con éxito. Modo: ONLINE");
             print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
           }
         }
@@ -220,15 +246,25 @@ class LoginCubit extends Cubit<LoginState> {
           final hasData = await dbHelper.isDataSynchronized();
           print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-          emit(LoginState(
-            isLogin: true,
-            userToken: userCredentials['token'],
-            isPreference: hasData, // Si hay datos, omitir sincronización
-            user: User(username: email, password: userCredentials['password']),
-            needsOnlineAuth: false,
-          ));
-
-          if (hasData) {
+          if (!hasData) {
+            print("⚠️ Datos sincronizados incompletos o faltantes - forzando sincronización");
+            emit(LoginState(
+              isLogin: true,
+              userToken: userCredentials['token'],
+              isPreference: false, // Forzar sincronización cuando faltan datos
+              user: User(username: email, password: userCredentials['password']),
+              needsOnlineAuth: false,
+            ));
+            print("✅ Login de emergencia completado. Forzando sincronización por datos faltantes.");
+          } else {
+            emit(LoginState(
+              isLogin: true,
+              userToken: userCredentials['token'],
+              isPreference: true, // Omitir sincronización cuando hay datos
+              user: User(username: email, password: userCredentials['password']),
+              needsOnlineAuth: false,
+            ));
+            print("✅ Login de emergencia completado con éxito.");
             print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
           }
         } else {

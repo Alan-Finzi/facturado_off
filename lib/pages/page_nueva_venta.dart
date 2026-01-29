@@ -53,20 +53,105 @@ class _VentaMainPageState extends State<VentaMainPage> {
     if (!_datosFacturacionCargados) {
       try {
         final loginCubit = context.read<LoginCubit>();
-        String comercioId = (loginCubit.state.user!.comercioId == "1")
-            ? loginCubit.state.user!.id.toString()
-            : loginCubit.state.user!.comercioId!;
 
-        final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId));
-
-        if (mounted) {
+        // Verificar que el usuario exista
+        if (loginCubit.state.user == null) {
+          print('Error: Usuario no disponible para cargar datos de facturación');
           setState(() {
-            datosFacturacion = datos;
-            _datosFacturacionCargados = true;
+            _datosFacturacionCargados = true; // Marcar como cargado para evitar intentos repetidos
           });
+          return;
+        }
+
+        // Obtener y validar el comercioId
+        String? rawComercioId = loginCubit.state.user!.comercioId;
+        String? userId = loginCubit.state.user!.id?.toString();
+
+        // Validación segura de comercioId
+        String comercioId;
+        if (rawComercioId == "1" && userId != null) {
+          comercioId = userId;
+        } else if (rawComercioId != null && rawComercioId.isNotEmpty) {
+          comercioId = rawComercioId;
+        } else if (userId != null) {
+          // Si no hay comercioId, intentar con userId
+          comercioId = userId;
+        } else {
+          // Si no hay ninguno, usar un valor predeterminado
+          comercioId = "0";
+          print('Warning: Usando comercioId por defecto (0)');
+        }
+
+        // Intentar cargar los datos
+        try {
+          final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId));
+
+          // Verificar si se obtuvieron datos
+          if (datos.isEmpty) {
+            print('Warning: No se encontraron datos de facturación para comercioId: $comercioId');
+
+            // Intentar con comercioId = 0 como fallback
+            if (comercioId != "0") {
+              print('Intentando con comercioId = 0 como fallback...');
+              final datosFallback = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
+
+              if (datosFallback.isNotEmpty) {
+                print('Se encontraron datos de facturación con comercioId = 0');
+                if (mounted) {
+                  setState(() {
+                    datosFacturacion = datosFallback;
+                    _datosFacturacionCargados = true;
+                  });
+                }
+                return;
+              }
+            }
+          }
+
+          if (mounted) {
+            setState(() {
+              datosFacturacion = datos;
+              _datosFacturacionCargados = true;
+            });
+          }
+        } catch (parseError) {
+          print('Error al parsear comercioId o consultar BD: $parseError');
+          // Intentar con ID 0 como último recurso
+          final datosFallback = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
+
+          if (mounted) {
+            setState(() {
+              datosFacturacion = datosFallback;
+              _datosFacturacionCargados = true;
+            });
+          }
         }
       } catch (e) {
         print('Error al cargar datos de facturación: $e');
+        if (mounted) {
+          setState(() {
+            _datosFacturacionCargados = true; // Marcar como intentado para no repetir
+          });
+
+          // Mostrar mensaje de error al usuario
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al cargar datos de facturación. Intente sincronizar la aplicación.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'Ir a Sync',
+                onPressed: () {
+                  // Navegar a página de sincronización
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PageVentasSincronizacion())
+                  );
+                },
+              ),
+            )
+          );
+        }
       }
     }
   }
