@@ -8,7 +8,8 @@ import 'dart:async'; // Para TimeoutException
 import '../bloc/cubit_login/login_cubit.dart';
 import '../util/platform_service.dart';
 import '../widget/platform_adaptive_widget.dart';
-
+import '../util/constants.dart';
+import '../widget/icon_button_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -22,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   late LoginCubit loginCubit;
   bool rememberUser = false;
+  // Variable para controlar la visibilidad de la contraseña
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -77,14 +80,26 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 10),
               TextField(
                 controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  // Usar IconButtonWidget personalizado para el botón de visibilidad
+                  suffixIcon: IconButtonWidget.passwordVisibility(
+                    isVisible: !_obscurePassword,
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+                obscureText: _obscurePassword,
               ),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Checkbox(
                     value: rememberUser,
+                    activeColor: Constants.miColor,
                     onChanged: (value) {
                       setState(() {
                         rememberUser = value ?? false;
@@ -97,6 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () => _handleLogin(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                ),
                 child: const Text('Iniciar Sesión'),
               ),
             ],
@@ -115,6 +133,10 @@ class _LoginScreenState extends State<LoginScreen> {
     // Determinar si el teclado está abierto
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardOpen = keyboardSpace > 0;
+
+    // Definir colores personalizados
+    final Color primaryColor = Constants.miColor;
+    final Color orangeColor = Colors.orange;
 
     // Usar SingleChildScrollView para evitar errores de RenderFlex overflow
     return Scaffold(
@@ -145,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.red,
+                        color: primaryColor, // Usar color primario (rojo/magenta)
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -202,7 +224,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
-                  suffixIcon: const Icon(Icons.email_outlined),
+                  // Usar IconButtonWidget para el icono de email
+                  suffixIcon: IconButtonWidget(
+                    icon: Icons.email_outlined,
+                    onPressed: null, // Sin acción
+                    variant: IconButtonVariant.ghost,
+                    useOrangeColor: false, // Usar color primario (rojo/magenta)
+                    disabled: true,
+                  ),
                 ),
               ),
 
@@ -220,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: passwordController,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   hintText: 'Ingresa tu password',
                   fillColor: Colors.white,
@@ -234,7 +263,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
-                  suffixIcon: const Icon(Icons.visibility_off_outlined),
+                  // Usar IconButtonWidget.passwordVisibility personalizado
+                  suffixIcon: IconButtonWidget.passwordVisibility(
+                    isVisible: !_obscurePassword,
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
               ),
 
@@ -246,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Acción para recuperar contraseña
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.orange,
+                    foregroundColor: orangeColor, // Usar color naranja
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                   child: const Text(
@@ -261,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Checkbox(
                     value: rememberUser,
-                    activeColor: Theme.of(context).primaryColor,
+                    activeColor: primaryColor, // Usar color primario para el checkbox
                     onChanged: (value) {
                       setState(() {
                         rememberUser = value ?? false;
@@ -281,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: () => _handleLogin(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: orangeColor, // Usar color naranja para el botón
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -357,7 +394,9 @@ class _LoginScreenState extends State<LoginScreen> {
             title: Text('Iniciando sesión'),
             content: Row(
               children: [
-                CircularProgressIndicator(),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Constants.miColor),
+                ),
                 SizedBox(width: 20),
                 Text('Conectando con el servidor...'),
               ],
@@ -421,7 +460,7 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(
           content: Text(errorMessage),
           duration: Duration(seconds: 5),
-          backgroundColor: Colors.red,
+          backgroundColor: Constants.miColor,
         ),
       );
 
