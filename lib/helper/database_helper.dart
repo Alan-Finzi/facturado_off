@@ -1167,6 +1167,50 @@ class DatabaseHelper {
    return maps.map((e) => ClientesMostrador.fromJson(e)).toList();
  }
 
+  /// Verifica si la base de datos ya contiene datos sincronizados
+  /// Retorna true si las tablas esenciales ya contienen datos
+  Future<bool> isDataSynchronized() async {
+    try {
+      final db = await this.database;
+
+      // Verificar las tablas esenciales que se llenan durante la sincronización
+      final List<String> tablesToCheck = [
+        'productos_stock_sucursales',
+        'productos_lista_precios',
+        'Clientes_mostrador',
+        'datos_facturacion',
+        'productos_ivas',
+        'categorias',
+        'product'
+      ];
+
+      // Verificar cada tabla si contiene datos
+      for (String table in tablesToCheck) {
+        try {
+          final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
+          final count = result.first['count'] as int;
+
+          // Si al menos una tabla contiene datos, consideramos que ya existe sincronización
+          if (count > 0) {
+            print('DEBUG isDataSynchronized: Tabla $table contiene datos ($count registros)');
+            return true;
+          }
+        } catch (tableError) {
+          print('Error al verificar tabla $table: $tableError');
+          // Continuamos con la siguiente tabla si hay error en esta
+          continue;
+        }
+      }
+
+      print('DEBUG isDataSynchronized: No se encontraron datos en las tablas esenciales. Base de datos vacía.');
+      return false;
+    } catch (e) {
+      print('ERROR isDataSynchronized: Error al verificar el estado de sincronización: $e');
+      // En caso de error, asumimos que no hay datos sincronizados
+      return false;
+    }
+  }
+
    Future<void> marcarClienteSincronizado(String? idCliente) async {
    final db = await this.database;
    await db.update('clientes_mostrador', {'modificado': 0}, where: 'id_cliente = ?', whereArgs: [idCliente]);

@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../models/user.dart';
+import '../../helper/database_helper.dart';
 import '../../services/service_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 part 'login_state.dart';
@@ -47,6 +48,7 @@ class LoginCubit extends Cubit<LoginState> {
   ///login
   Future<void> login(String? email, String? password) async {
     ApiServices apiServices = ApiServices();
+    final dbHelper = DatabaseHelper.instance;
 
     // Log para diagnóstico
     final isOfflineLogin = password == null;
@@ -77,10 +79,14 @@ class LoginCubit extends Cubit<LoginState> {
 
         // Si ya hay un token guardado y no se ingresó manualmente password, lo usamos
         if (savedToken != null && (password == null || password.isEmpty)) {
+          // Verificar si ya hay datos sincronizados en la DB
+          final hasData = await dbHelper.isDataSynchronized();
+          print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
+
           emit(LoginState(
             isLogin: true,
             userToken: savedToken,
-            isPreference: true,
+            isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
             user: User(username: email, password: savedPassword),
           ));
           return;
@@ -96,27 +102,41 @@ class LoginCubit extends Cubit<LoginState> {
         await _saveCredentials(email!, password!, token);
         print("✅ Credenciales guardadas localmente para uso futuro");
 
+        // Verificar si ya hay datos sincronizados en la DB
+        final hasData = await dbHelper.isDataSynchronized();
+        print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
+
         emit(LoginState(
           isLogin: true,
           userToken: token,
-          isPreference: false,
+          isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
           user: User(username: email, password: password),
         ));
 
         print("✅ Login completado con éxito. Modo: ONLINE");
+        if (hasData) {
+          print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+        }
       } else {
         // Fallo en la autenticación: pero si hay token viejo, lo usamos temporalmente
         if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
           print("⚠️ Login API falló, usando token guardado temporalmente.");
           print("Token previamente guardado: ${userCredentials['token']?.substring(0, 10)}...");
 
+          // Verificar si ya hay datos sincronizados en la DB
+          final hasData = await dbHelper.isDataSynchronized();
+          print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
+
           emit(LoginState(
             isLogin: true,
             userToken: userCredentials['token'],
-            isPreference: true,
+            isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
             user: User(username: email, password: userCredentials['password']),
           ));
           print("✅ Login completado con token almacenado. Modo: OFFLINE");
+          if (hasData) {
+            print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+          }
         } else {
           emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
           print("❌ Acceso denegado: Credenciales incorrectas. No hay token almacenado.");
@@ -134,12 +154,21 @@ class LoginCubit extends Cubit<LoginState> {
 
       if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
         print("⚠️ Error en login, usando token guardado temporalmente.");
+
+        // Verificar si ya hay datos sincronizados en la DB
+        final hasData = await dbHelper.isDataSynchronized();
+        print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
+
         emit(LoginState(
           isLogin: true,
           userToken: userCredentials['token'],
-          isPreference: true,
+          isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
           user: User(username: email, password: userCredentials['password']),
         ));
+
+        if (hasData) {
+          print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+        }
       } else {
         emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
       }
