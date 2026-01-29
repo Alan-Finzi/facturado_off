@@ -1184,26 +1184,50 @@ class DatabaseHelper {
         'product'
       ];
 
+      // Contadores para tablas con datos
+      int tablesWithData = 0;
+      bool hasFacturacionData = false;
+      Map<String, int> tableDataCounts = {};
+
       // Verificar cada tabla si contiene datos
       for (String table in tablesToCheck) {
         try {
           final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
           final count = result.first['count'] as int;
+          tableDataCounts[table] = count;
 
-          // Si al menos una tabla contiene datos, consideramos que ya existe sincronización
+          // Si la tabla tiene datos
           if (count > 0) {
+            tablesWithData++;
             print('DEBUG isDataSynchronized: Tabla $table contiene datos ($count registros)');
-            return true;
+
+            // Marcar específicamente si tenemos datos de facturación
+            if (table == 'datos_facturacion') {
+              hasFacturacionData = true;
+            }
           }
         } catch (tableError) {
           print('Error al verificar tabla $table: $tableError');
+          tableDataCounts[table] = -1; // -1 indica error
           // Continuamos con la siguiente tabla si hay error en esta
           continue;
         }
       }
 
-      print('DEBUG isDataSynchronized: No se encontraron datos en las tablas esenciales. Base de datos vacía.');
-      return false;
+      // Imprime resumen completo para diagnóstico
+      print('DEBUG isDataSynchronized RESUMEN:');
+      tableDataCounts.forEach((table, count) {
+        print('- $table: ${count >= 0 ? "$count registros" : "ERROR"}');
+      });
+
+      // Para considerar la DB sincronizada, necesitamos tener datos en al menos 3 tablas
+      // incluyendo obligatoriamente datos de facturación
+      bool isSynchronized = tablesWithData >= 3 && hasFacturacionData;
+
+      print('DEBUG isDataSynchronized RESULTADO: ${isSynchronized ? "SINCRONIZADA" : "NO SINCRONIZADA"} '
+          '(${tablesWithData} tablas con datos, datos_facturacion: ${hasFacturacionData ? "SÍ" : "NO"})');
+
+      return isSynchronized;
     } catch (e) {
       print('ERROR isDataSynchronized: Error al verificar el estado de sincronización: $e');
       // En caso de error, asumimos que no hay datos sincronizados

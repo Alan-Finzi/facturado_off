@@ -12,11 +12,16 @@ part 'login_state.dart';
 
 class LoginCubit extends Cubit<LoginState> {
   LoginCubit({bool isLogin = false, bool isPreference = false})
-      : super(LoginState(isLogin: isLogin, userToken: null, isPreference: isPreference));
+      : super(LoginState(isLogin: isLogin, userToken: null, isPreference: isPreference, needsOnlineAuth: false));
 
   // Método para cerrar sesión (mantener credenciales guardadas)
   void logout() {
-    emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
+    emit(const LoginState(isLogin: false, userToken: null, isPreference: false, needsOnlineAuth: false));
+  }
+
+  // Método para solicitar sincronización explícita
+  void requestSynchronization() {
+    emit(state.copyWith(needsOnlineAuth: true, isPreference: false));
   }
 
   Future<void> _saveCredentials(String email, String password, String token) async {
@@ -52,16 +57,23 @@ class LoginCubit extends Cubit<LoginState> {
 
     // Log para diagnóstico
     final isOfflineLogin = password == null;
+    final isSyncRequest = state.needsOnlineAuth;
     print('=== INICIO PROCESO DE LOGIN ===');
     print('Modo: ${isOfflineLogin ? "OFFLINE (credenciales guardadas)" : "ONLINE (API)"}');
     print('Email: ${email ?? "no proporcionado"}');
     print('Password: ${password != null ? "proporcionada" : "no proporcionada"}');
+    print('Solicitud de sincronización: ${isSyncRequest ? "SÍ" : "NO"}');
 
     try {
       // Validación de email o password vacíos
       if ((email?.isEmpty ?? true) || (password?.isEmpty ?? true && !isOfflineLogin)) {
         print("Acceso denegado: Email o contraseña vacíos.");
-        emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
+        emit(LoginState(
+          isLogin: false,
+          userToken: null,
+          isPreference: false,
+          needsOnlineAuth: isSyncRequest,
+        ));
         return;
       }
 
@@ -72,28 +84,40 @@ class LoginCubit extends Cubit<LoginState> {
         orElse: () => {},
       );
 
-      // Si el usuario tiene credenciales guardadas, intentamos usarlas primero
-      if (userCredentials.isNotEmpty) {
-        final savedToken = userCredentials['token'];
-        final savedPassword = userCredentials['password'];
+      // Primer flujo: Login normal (no es una solicitud de sincronización)
+      if (!isSyncRequest) {
+        // Si el usuario tiene credenciales guardadas, intentamos usarlas primero
+        if (userCredentials.isNotEmpty && !isSyncRequest) {
+          final savedToken = userCredentials['token'];
+          final savedPassword = userCredentials['password'];
 
-        // Si ya hay un token guardado y no se ingresó manualmente password, lo usamos
-        if (savedToken != null && (password == null || password.isEmpty)) {
-          // Verificar si ya hay datos sincronizados en la DB
-          final hasData = await dbHelper.isDataSynchronized();
-          print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
+          // Si ya hay un token guardado y no se ingresó manualmente password, lo usamos
+          if (savedToken != null && (password == null || password.isEmpty)) {
+            // Verificar si ya hay datos sincronizados en la DB
+            final hasData = await dbHelper.isDataSynchronized();
+            print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-          emit(LoginState(
-            isLogin: true,
-            userToken: savedToken,
-            isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
-            user: User(username: email, password: savedPassword),
-          ));
-          return;
+            // Para login normal sin solicitud de sincronización:
+            // - Si hay datos, omitir sincronización (isPreference=true)
+            // - Si no hay datos, mostrar sincronización (isPreference=false)
+            emit(LoginState(
+              isLogin: true,
+              userToken: savedToken,
+              isPreference: hasData, // Si hay datos, omitir sincronización
+              user: User(username: email, password: savedPassword),
+              needsOnlineAuth: false,
+            ));
+            return;
+          }
         }
       }
+      // Segundo flujo: Solicitud explícita de sincronización - siempre necesita API
+      else {
+        print("⚠️ Solicitud explícita de sincronización - Forzando API login");
+        // No usamos credenciales guardadas, siempre forzamos login online
+      }
 
-      // Si tenemos email y password (ingresados manualmente o de SharedPreferences), llamamos a la API
+      // Llamar a la API (login online obligatorio para sincronización explícita)
       final token = await apiServices.loginUser(email!, password!);
 
       if (token != null) {
@@ -102,75 +126,114 @@ class LoginCubit extends Cubit<LoginState> {
         await _saveCredentials(email!, password!, token);
         print("✅ Credenciales guardadas localmente para uso futuro");
 
-        // Verificar si ya hay datos sincronizados en la DB
         final hasData = await dbHelper.isDataSynchronized();
         print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-        emit(LoginState(
-          isLogin: true,
-          userToken: token,
-          isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
-          user: User(username: email, password: password),
-        ));
-
-        print("✅ Login completado con éxito. Modo: ONLINE");
-        if (hasData) {
-          print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+        if (isSyncRequest) {
+          // Para solicitud de sincronización explícita: siempre mostrar pantalla de sincronización
+          emit(LoginState(
+            isLogin: true,
+            userToken: token,
+            isPreference: false, // Forzar sincronización
+            user: User(username: email, password: password),
+            needsOnlineAuth: false, // Ya no necesitamos auth
+          ));
+          print("✅ Login exitoso para sincronización solicitada. Mostrando pantalla de sincronización.");
+        } else {
+          // Para login normal:
+          emit(LoginState(
+            isLogin: true,
+            userToken: token,
+            isPreference: hasData, // Si hay datos, omitir sincronización
+            user: User(username: email, password: password),
+            needsOnlineAuth: false,
+          ));
+          print("✅ Login completado con éxito. Modo: ONLINE");
+          if (hasData) {
+            print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+          }
         }
       } else {
-        // Fallo en la autenticación: pero si hay token viejo, lo usamos temporalmente
-        if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
+        // Fallo en la autenticación API
+        if (isSyncRequest) {
+          // Para solicitud de sincronización: error, no podemos sincronizar sin token válido
+          emit(LoginState(
+            isLogin: false,
+            userToken: null,
+            isPreference: true, // Mantener en la app con datos existentes
+            needsOnlineAuth: true, // Seguir solicitando auth para sincronizar
+          ));
+          print("❌ Error de autenticación para sincronización. Se requiere credenciales válidas.");
+        } else if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
+          // Para login normal: usar credenciales guardadas si existen
           print("⚠️ Login API falló, usando token guardado temporalmente.");
           print("Token previamente guardado: ${userCredentials['token']?.substring(0, 10)}...");
 
-          // Verificar si ya hay datos sincronizados en la DB
           final hasData = await dbHelper.isDataSynchronized();
           print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
           emit(LoginState(
             isLogin: true,
             userToken: userCredentials['token'],
-            isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
+            isPreference: hasData, // Si hay datos, omitir sincronización
             user: User(username: email, password: userCredentials['password']),
+            needsOnlineAuth: false,
           ));
           print("✅ Login completado con token almacenado. Modo: OFFLINE");
           if (hasData) {
             print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
           }
         } else {
-          emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
+          // Sin credenciales guardadas y fallo API = error
+          emit(LoginState(
+            isLogin: false,
+            userToken: null,
+            isPreference: false,
+            needsOnlineAuth: isSyncRequest, // Mantener el estado de solicitud de sincronización
+          ));
           print("❌ Acceso denegado: Credenciales incorrectas. No hay token almacenado.");
         }
       }
     } catch (e) {
       print("Error durante el login: $e");
 
-      // En caso de error inesperado, intentamos emitir un acceso temporal si hay token guardado
-      final credentialsList = await _getCredentials();
-      final userCredentials = credentialsList.firstWhere(
-            (user) => user['email'] == email,
-        orElse: () => {},
-      );
-
-      if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
-        print("⚠️ Error en login, usando token guardado temporalmente.");
-
-        // Verificar si ya hay datos sincronizados en la DB
-        final hasData = await dbHelper.isDataSynchronized();
-        print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
-
+      if (isSyncRequest) {
+        // Si es solicitud de sincronización, mantenemos el estado
         emit(LoginState(
-          isLogin: true,
-          userToken: userCredentials['token'],
-          isPreference: hasData, // Si hay datos, marcar como isPreference=true para saltar sincronización
-          user: User(username: email, password: userCredentials['password']),
+          isLogin: false,
+          userToken: null,
+          isPreference: true, // Mantener en la app
+          needsOnlineAuth: true, // Seguir solicitando auth
         ));
-
-        if (hasData) {
-          print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
-        }
+        print("❌ Error durante login para sincronización: $e");
       } else {
-        emit(const LoginState(isLogin: false, userToken: null, isPreference: false));
+        // Para login normal, intentamos usar credenciales guardadas
+        final credentialsList = await _getCredentials();
+        final userCredentials = credentialsList.firstWhere(
+              (user) => user['email'] == email,
+          orElse: () => {},
+        );
+
+        if (userCredentials.isNotEmpty && userCredentials['token'] != null) {
+          print("⚠️ Error en login, usando token guardado temporalmente.");
+
+          final hasData = await dbHelper.isDataSynchronized();
+          print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
+
+          emit(LoginState(
+            isLogin: true,
+            userToken: userCredentials['token'],
+            isPreference: hasData, // Si hay datos, omitir sincronización
+            user: User(username: email, password: userCredentials['password']),
+            needsOnlineAuth: false,
+          ));
+
+          if (hasData) {
+            print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+          }
+        } else {
+          emit(const LoginState(isLogin: false, userToken: null, isPreference: false, needsOnlineAuth: false));
+        }
       }
     }
   }

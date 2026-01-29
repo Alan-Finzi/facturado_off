@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
+import 'package:facturador_offline/bloc/cubit_login/login_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../helper/database_helper.dart';
 import '../helper/sales_database_helper.dart';
 import '../helper/sales_sync_helper.dart';
 import '../models/sales/sale.dart';
@@ -17,16 +19,25 @@ class PageVentasSincronizacion extends StatefulWidget {
   _PageVentasSincronizacionState createState() => _PageVentasSincronizacionState();
 }
 
-class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
+class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> with SingleTickerProviderStateMixin {
   final SalesDatabaseHelper _salesHelper = SalesDatabaseHelper();
   final SalesSyncHelper _syncHelper = SalesSyncHelper();
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Control de pestañas para alternar entre sincronización de ventas y datos maestros
+  late TabController _tabController;
 
   List<Sale> _ventas = [];
   List<Sale> _ventasFiltradas = [];
 
   bool _isLoading = true;
+  bool _isVerifyingDb = false;
   bool _isInternetConnected = false;
   ConnectionQuality _connectionQuality = ConnectionQuality.unknown;
+
+  // Estado de la DB para la pestaña de datos maestros
+  bool _hasMasterData = false;
+  Map<String, int> _tablesData = {};
 
   // Controladores para filtros
   final TextEditingController _searchController = TextEditingController();
@@ -40,16 +51,72 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _cargarVentas();
+    _verificarDatosMaestros();
     _iniciarMonitorDeConexion();
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     _connectivitySubscription.cancel();
     _internetQualityTimer?.cancel();
     super.dispose();
+  }
+
+  // Verificar los datos maestros en la base de datos
+  Future<void> _verificarDatosMaestros() async {
+    setState(() {
+      _isVerifyingDb = true;
+    });
+
+    try {
+      // Tablas esenciales a verificar y sus nombres amigables
+      final Map<String, String> tablesToCheck = {
+        'productos_stock_sucursales': 'Stock',
+        'productos_lista_precios': 'Precios',
+        'Clientes_mostrador': 'Clientes',
+        'datos_facturacion': 'Facturación',
+        'productos_ivas': 'IVAs',
+        'categorias': 'Categorías',
+        'product': 'Productos'
+      };
+
+      // Limpiar datos anteriores
+      _tablesData.clear();
+
+      // Contar registros por tabla
+      final db = await _dbHelper.database;
+      for (final entry in tablesToCheck.entries) {
+        try {
+          final tableName = entry.key;
+          final List<Map<String, dynamic>> result =
+              await db.rawQuery('SELECT COUNT(*) as count FROM $tableName');
+          final count = result.first['count'] as int;
+          _tablesData[entry.value] = count;
+        } catch (e) {
+          _tablesData[entry.value] = -1; // -1 indica error
+          print('Error al verificar tabla ${entry.key}: $e');
+        }
+      }
+
+      // Determinar si tenemos datos maestros
+      final bool hasData = _tablesData.values.any((count) => count > 0);
+      final bool hasFacturacionData = _tablesData['Facturación'] != null && _tablesData['Facturación']! > 0;
+
+      setState(() {
+        _hasMasterData = hasData && hasFacturacionData;
+        _isVerifyingDb = false;
+      });
+    } catch (e) {
+      print('Error al verificar datos maestros: $e');
+      setState(() {
+        _isVerifyingDb = false;
+        _hasMasterData = false;
+      });
+    }
   }
 
   // Cargar ventas desde la base de datos
@@ -338,6 +405,51 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
     );
   }
 
+  // Solicitar sincronización de datos maestros
+  void _solicitarSincronizacionDatosMaestros() {
+    final loginCubit = context.read<LoginCubit>();
+
+    // Indicar que necesitamos autenticación online para sincronizar
+    loginCubit.requestSynchronization();
+
+    // Mostrar diálogo explicando el proceso
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Sincronización de Datos'),
+        content: Text(
+          'Para sincronizar los datos maestros se requiere iniciar sesión nuevamente.\n\n'
+          'Será redirigido a la pantalla de login. Por favor, ingrese sus credenciales para continuar con la sincronización.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar diálogo
+
+              // Cerrar sesión y volver a la pantalla de login
+              loginCubit.logout();
+              // Usar pushAndRemoveUntil con ruta directa en lugar de ruta nombrada
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen()),
+                (route) => false
+              );
+            },
+            child: Text('Aceptar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Solo cerrar diálogo
+              // Cancelar la solicitud de sincronización
+              loginCubit.emit(loginCubit.state.copyWith(needsOnlineAuth: false));
+            },
+            child: Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeCubit = context.watch<ThemaCubit>();
@@ -346,206 +458,448 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Sincronización de Ventas',
+          'Sincronización',
           style: TextStyle(color: isDark ? Colors.white : Colors.black),
         ),
         actions: [
           _buildInternetIndicator(),
           SizedBox(width: 12),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: isDark ? Colors.white : Colors.black,
+          indicatorColor: Colors.blue,
+          tabs: [
+            Tab(text: 'Ventas', icon: Icon(Icons.receipt_long)),
+            Tab(text: 'Datos Maestros', icon: Icon(Icons.dashboard)),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _isLoading ? null : _sincronizarVentas,
-        backgroundColor: _isInternetConnected ? Colors.blue : Colors.grey,
-        tooltip: 'Sincronizar ventas',
-        child: Icon(_isLoading ? Icons.hourglass_top : Icons.sync),
-      ),
-      body: Column(
+      floatingActionButton: _tabController.index == 0
+        ? FloatingActionButton(
+            onPressed: _isLoading ? null : _sincronizarVentas,
+            backgroundColor: _isInternetConnected ? Colors.blue : Colors.grey,
+            tooltip: 'Sincronizar ventas',
+            child: Icon(_isLoading ? Icons.hourglass_top : Icons.sync),
+          )
+        : FloatingActionButton(
+            onPressed: (_isVerifyingDb || !_isInternetConnected) ? null : _solicitarSincronizacionDatosMaestros,
+            backgroundColor: _isInternetConnected ? Colors.blue : Colors.grey,
+            tooltip: 'Sincronizar datos maestros',
+            child: Icon(_isVerifyingDb ? Icons.hourglass_top : Icons.sync),
+          ),
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Filtros y búsqueda
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Campo de búsqueda
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    labelText: 'Buscar por ID, fecha o cliente',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _aplicarFiltros();
-                            },
-                          )
-                        : null,
-                  ),
-                  onChanged: (value) => _aplicarFiltros(),
-                ),
-
-                SizedBox(height: 16),
-
-                // Filtros y ordenamiento
-                Row(
+          // TAB 1: Ventas
+          Column(
+            children: [
+              // Filtros y búsqueda
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Filtro por estado
-                    Expanded(
-                      flex: 3,
-                      child: DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Estado',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    // Campo de búsqueda
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Buscar por ID, fecha o cliente',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        value: _filtroEstado,
-                        items: [
-                          DropdownMenuItem(value: 'todos', child: Text('Todos')),
-                          DropdownMenuItem(
-                            value: 'sincronizados',
-                            child: Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.green, size: 16),
-                                SizedBox(width: 8),
-                                Text('Sincronizados'),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'pendientes',
-                            child: Row(
-                              children: [
-                                Icon(Icons.schedule, color: Colors.grey, size: 16),
-                                SizedBox(width: 8),
-                                Text('Pendientes'),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'error',
-                            child: Row(
-                              children: [
-                                Icon(Icons.error, color: Colors.red, size: 16),
-                                SizedBox(width: 8),
-                                Text('Con error'),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _filtroEstado = value;
-                              _aplicarFiltros();
-                            });
-                          }
-                        },
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _aplicarFiltros();
+                                },
+                              )
+                            : null,
                       ),
+                      onChanged: (value) => _aplicarFiltros(),
                     ),
 
-                    SizedBox(width: 12),
+                    SizedBox(height: 16),
 
-                    // Ordenamiento
-                    Expanded(
-                      flex: 4,
-                      child: DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Ordenar por',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    // Filtros y ordenamiento
+                    Row(
+                      children: [
+                        // Filtro por estado
+                        Expanded(
+                          flex: 3,
+                          child: DropdownButtonFormField<String>(
+                            decoration: InputDecoration(
+                              labelText: 'Estado',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            value: _filtroEstado,
+                            items: [
+                              DropdownMenuItem(value: 'todos', child: Text('Todos')),
+                              DropdownMenuItem(
+                                value: 'sincronizados',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Sincronizados'),
+                                  ],
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'pendientes',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.schedule, color: Colors.grey, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Pendientes'),
+                                  ],
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'error',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error, color: Colors.red, size: 16),
+                                    SizedBox(width: 8),
+                                    Text('Con error'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _filtroEstado = value;
+                                  _aplicarFiltros();
+                                });
+                              }
+                            },
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        value: _ordenActual,
-                        items: [
-                          DropdownMenuItem(
-                            value: 'fecha_desc',
-                            child: Text('Fecha (más reciente)'),
+
+                        SizedBox(width: 12),
+
+                        // Ordenamiento
+                        Expanded(
+                          flex: 4,
+                          child: DropdownButtonFormField<String>(
+                            decoration: InputDecoration(
+                              labelText: 'Ordenar por',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            value: _ordenActual,
+                            items: [
+                              DropdownMenuItem(
+                                value: 'fecha_desc',
+                                child: Text('Fecha (más reciente)'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'fecha_asc',
+                                child: Text('Fecha (más antigua)'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'estado',
+                                child: Text('Estado (error, pendiente, ok)'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'total_desc',
+                                child: Text('Importe (mayor a menor)'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _ordenActual = value;
+                                  _aplicarFiltros();
+                                });
+                              }
+                            },
                           ),
-                          DropdownMenuItem(
-                            value: 'fecha_asc',
-                            child: Text('Fecha (más antigua)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'estado',
-                            child: Text('Estado (error, pendiente, ok)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'total_desc',
-                            child: Text('Importe (mayor a menor)'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _ordenActual = value;
-                              _aplicarFiltros();
-                            });
-                          }
-                        },
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          // Información de cantidad de ventas filtradas
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Mostrando ${_ventasFiltradas.length} de ${_ventas.length} ventas',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-                TextButton.icon(
-                  icon: Icon(Icons.refresh),
-                  label: Text('Actualizar'),
-                  onPressed: _isLoading ? null : _cargarVentas,
-                ),
-              ],
-            ),
-          ),
-
-          // Tabla de ventas
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : _ventasFiltradas.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.search_off, size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text(
-                              'No se encontraron ventas',
-                              style: TextStyle(fontSize: 18, color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _ventasFiltradas.length,
-                        itemBuilder: (context, index) {
-                          final venta = _ventasFiltradas[index];
-                          return _buildVentaItem(context, venta);
-                        },
+              // Información de cantidad de ventas filtradas
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Mostrando ${_ventasFiltradas.length} de ${_ventas.length} ventas',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white70 : Colors.black54,
                       ),
+                    ),
+                    TextButton.icon(
+                      icon: Icon(Icons.refresh),
+                      label: Text('Actualizar'),
+                      onPressed: _isLoading ? null : _cargarVentas,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Tabla de ventas
+              Expanded(
+                child: _isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : _ventasFiltradas.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.search_off, size: 64, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text(
+                                  'No se encontraron ventas',
+                                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _ventasFiltradas.length,
+                            itemBuilder: (context, index) {
+                              final venta = _ventasFiltradas[index];
+                              return _buildVentaItem(context, venta);
+                            },
+                          ),
+              ),
+            ],
+          ),
+
+          // TAB 2: Datos Maestros
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título y explicación
+                  Text(
+                    'Datos Maestros',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'En esta sección puede verificar los datos maestros sincronizados y solicitar una actualización completa.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // Estado actual
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Estado Actual de la Base de Datos',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+
+                          // Estado general
+                          Row(
+                            children: [
+                              Icon(
+                                _hasMasterData ? Icons.check_circle : Icons.error_outline,
+                                color: _hasMasterData ? Colors.green : Colors.orange,
+                                size: 24,
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _hasMasterData
+                                      ? 'La base de datos contiene datos maestros sincronizados'
+                                      : 'La base de datos no tiene todos los datos maestros necesarios',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 16),
+                          Divider(),
+                          SizedBox(height: 8),
+
+                          // Estado por tabla
+                          _isVerifyingDb
+                              ? Center(
+                                  child: Column(
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 16),
+                                      Text('Verificando datos...'),
+                                    ],
+                                  ),
+                                )
+                              : Column(
+                                  children: _tablesData.entries.map((entry) {
+                                    final String tableName = entry.key;
+                                    final int count = entry.value;
+                                    final bool hasData = count > 0;
+                                    final bool hasError = count == -1;
+
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            hasError
+                                                ? Icons.error
+                                                : hasData
+                                                    ? Icons.check_circle
+                                                    : Icons.info_outline,
+                                            color: hasError
+                                                ? Colors.red
+                                                : hasData
+                                                    ? Colors.green
+                                                    : Colors.grey,
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              tableName,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              hasError
+                                                  ? 'Error al verificar'
+                                                  : hasData
+                                                      ? '$count registros'
+                                                      : 'Sin datos',
+                                              style: TextStyle(
+                                                color: hasError
+                                                    ? Colors.red
+                                                    : hasData
+                                                        ? Colors.black87
+                                                        : Colors.grey,
+                                                fontWeight: hasData ? FontWeight.w500 : FontWeight.normal,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+
+                          SizedBox(height: 16),
+
+                          // Botón para actualizar verificación
+                          Center(
+                            child: OutlinedButton.icon(
+                              icon: Icon(Icons.refresh),
+                              label: Text('Actualizar verificación'),
+                              onPressed: _isVerifyingDb ? null : _verificarDatosMaestros,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.blue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // Tarjeta con información sobre sincronización
+                  Card(
+                    elevation: 2,
+                    color: Theme.of(context).primaryColor.withOpacity(0.05),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '¿Cómo sincronizar los datos maestros?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Para sincronizar los datos maestros (productos, precios, clientes, etc.), '
+                            'presione el botón azul de sincronización que aparece en la esquina inferior derecha.\n\n'
+                            'Este proceso:\n'
+                            '• Requiere conexión a Internet\n'
+                            '• Le pedirá sus credenciales de acceso\n'
+                            '• Actualizará todos los datos de catálogos\n',
+                            style: TextStyle(
+                              fontSize: 14,
+                            ),
+                          ),
+
+                          if (!_isInternetConnected)
+                            Container(
+                              margin: EdgeInsets.only(top: 8),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.orange.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.wifi_off, color: Colors.orange),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'No hay conexión a Internet. Conéctese para poder sincronizar.',
+                                      style: TextStyle(color: Colors.orange.shade800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
