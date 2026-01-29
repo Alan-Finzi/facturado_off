@@ -5,6 +5,7 @@ import 'dart:async'; // Para TimeoutException
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../bloc/cubit_login/login_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/categorias_model.dart';
@@ -394,6 +395,28 @@ class ApiServices{
 
   Future<void> fetchDatosFacturacion(String token) async {
     try {
+      // Intentar obtener el ID de comercio del usuario actual
+      final String? comercioId = User.currencyUser?.comercioId;
+      final String? userId = User.currencyUser?.id?.toString();
+
+      // Determinar cuál ID usar
+      String idComercioToUse;
+      if (comercioId == "1" && userId != null) {
+        idComercioToUse = userId;
+      } else if (comercioId != null && comercioId.isNotEmpty) {
+        idComercioToUse = comercioId;
+      } else if (userId != null) {
+        idComercioToUse = userId;
+      } else {
+        idComercioToUse = "0";
+        print('Warning: Usando comercioId por defecto (0)');
+      }
+
+      // Guardar el comercioId en SharedPreferences para uso futuro
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('datos_facturacion_comercio_id', idComercioToUse);
+      print('ComercioId guardado en SharedPreferences: $idComercioToUse');
+
       final response = await http.get(
         Uri.parse(apiUrlDatosFacturacion),
         headers: {

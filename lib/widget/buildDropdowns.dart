@@ -21,6 +21,55 @@ class VentaDropdownsWidget extends StatelessWidget {
         this.datosFacturacionPrecargados,
     });
 
+    // Método para crear datos de facturación de emergencia
+    DatosFacturacionModel _crearDatoEmergencia() {
+        return DatosFacturacionModel(
+            id: -1, // ID negativo indica dato de emergencia
+            razonSocial: "Datos de emergencia",
+            comercioId: int.tryParse(comercioId) ?? 0,
+            condicionIva: CondicionIva.ELEGIR,
+            cuit: "",
+            ptoVenta: "1",
+            predeterminado: 1,
+        );
+    }
+
+    // Método para mostrar diálogo de error con opciones
+    void _mostrarDialogoError(BuildContext context, String mensaje) {
+        if (!context.mounted) return;
+
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+                title: const Text('Error al cargar datos'),
+                content: Text('$mensaje\n\n¿Qué desea hacer?'),
+                actions: [
+                    TextButton(
+                        onPressed: () {
+                            Navigator.pop(context);
+                            // Forzar reconstrucción del widget
+                            if (context.mounted) {
+                                (context as Element).markNeedsBuild();
+                            }
+                        },
+                        child: const Text('Reintentar'),
+                    ),
+                    TextButton(
+                        onPressed: () {
+                            Navigator.pop(context);
+                            // Solicitar sincronización
+                            if (context.mounted) {
+                                context.read<LoginCubit>().requestSynchronization();
+                            }
+                        },
+                        child: const Text('Ir a Sincronización'),
+                    ),
+                ],
+            ),
+        );
+    }
+
     @override
     Widget build(BuildContext context) {
         // Si tenemos datos precargados, los usamos directamente sin hacer una llamada a la base de datos
@@ -30,26 +79,35 @@ class VentaDropdownsWidget extends StatelessWidget {
 
         // De lo contrario, usamos FutureBuilder como antes
         return FutureBuilder<List<DatosFacturacionModel>>(
-            future: DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId)),
+            future: DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.tryParse(comercioId) ?? 0),
             builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                 }
 
+                // CASO 1: Error explícito - Mostrar datos de emergencia y diálogo
                 if (snapshot.hasError) {
-                    return const Center(child: Text('Error al cargar datos'));
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _mostrarDialogoError(context, 'Error al cargar datos: ${snapshot.error}');
+                    });
+
+                    // Crear y usar datos de emergencia para que la UI funcione
+                    final datosEmergencia = [_crearDatoEmergencia()];
+                    return _buildDropdowns(context, datosEmergencia);
                 }
 
+                // CASO 2: Sin datos - Mostrar datos de emergencia y diálogo
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                        child: Text('No hay datos de facturación', style: TextStyle(color: Colors.black)),
-                    );
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _mostrarDialogoError(context, 'No se encontraron datos de facturación');
+                    });
+
+                    // Crear y usar datos de emergencia para que la UI funcione
+                    final datosEmergencia = [_crearDatoEmergencia()];
+                    return _buildDropdowns(context, datosEmergencia);
                 }
 
                 final datosFacturacion = snapshot.data!;
-
-                // Los datos ya están procesados en el método _buildDropdowns
-
                 return _buildDropdowns(context, datosFacturacion);
             },
         );
@@ -57,42 +115,92 @@ class VentaDropdownsWidget extends StatelessWidget {
 
     // Método para construir los dropdowns con datos precargados
     Widget _buildDropdowns(BuildContext context, List<DatosFacturacionModel> datosFacturacion) {
+        // VERIFICACIÓN DE SEGURIDAD ADICIONAL: Si la lista de datosFacturacion está vacía
+        // a pesar de todas las protecciones anteriores, creamos un modelo de emergencia
+        if (datosFacturacion.isEmpty) {
+            // Crear datos de emergencia como último recurso
+            final emergencyData = DatosFacturacionModel(
+                id: -999, // ID muy negativo indica dato de super emergencia
+                razonSocial: "⚠️ Datos de emergencia",
+                comercioId: int.tryParse(comercioId) ?? 0,
+                condicionIva: CondicionIva.ELEGIR,
+                cuit: "",
+                ptoVenta: "1",
+                predeterminado: 1,
+            );
+
+            // Usar estos datos de emergencia
+            datosFacturacion = [emergencyData];
+
+            // Notificar al usuario con un SnackBar persistente
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('ADVERTENCIA: Usando datos de emergencia. Se recomienda sincronizar la aplicación.'),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 10),
+                            behavior: SnackBarBehavior.floating,
+                        )
+                    );
+                }
+            });
+
+            // Intentar registrar el error (método silencioso que no debe fallar)
+            try {
+                print("ERROR CRÍTICO: datosFacturacion está vacío en _buildDropdowns a pesar de todas las protecciones.");
+            } catch (_) {}
+        }
+
         // Accedemos al cubit
         final productosCubit = context.watch<ProductosCubit>();
         final state = productosCubit.state;
 
         // Obtener datos del estado si están disponibles, sino usar el primero por defecto
         if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
-            // Actualizamos datosFacturacionCurrent desde el estado guardado
-            DatosFacturacionModel.datosFacturacionCurrent.clear();
-            DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
+            try {
+                // Actualizamos datosFacturacionCurrent desde el estado guardado (con try-catch)
+                DatosFacturacionModel.datosFacturacionCurrent.clear();
+                DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
+            } catch (e) {
+                print("Error al actualizar datosFacturacionCurrent desde estado: $e");
+            }
         } else if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
             // Si no hay datos en el estado ni en la variable estática,
             // verificar que la lista de datos de facturación no esté vacía
             if (datosFacturacion.isNotEmpty) {
-                DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
-                // Y guardarlo también en el estado
-                productosCubit.updateDatosFacturacion([datosFacturacion.first]);
+                try {
+                    DatosFacturacionModel.datosFacturacionCurrent.add(datosFacturacion.first);
+                    // Y guardarlo también en el estado
+                    productosCubit.updateDatosFacturacion([datosFacturacion.first]);
+                } catch (e) {
+                    print("Error al guardar primer dato de facturación: $e");
+                }
             } else {
+                // Este caso no debería ocurrir por la verificación inicial, pero por si acaso:
                 // Si no hay datos de facturación, crear uno temporal
-                final tempDatosFact = DatosFacturacionModel(
-                    id: -1, // ID temporal
-                    razonSocial: "Sin datos de facturación",
-                    comercioId: 0,
-                    condicionIva: CondicionIva.ELEGIR
-                );
+                try {
+                    final tempDatosFact = DatosFacturacionModel(
+                        id: -1, // ID temporal
+                        razonSocial: "Sin datos de facturación",
+                        comercioId: 0,
+                        condicionIva: CondicionIva.ELEGIR
+                    );
 
-                DatosFacturacionModel.datosFacturacionCurrent.add(tempDatosFact);
-                productosCubit.updateDatosFacturacion([tempDatosFact]);
+                    DatosFacturacionModel.datosFacturacionCurrent.add(tempDatosFact);
+                    productosCubit.updateDatosFacturacion([tempDatosFact]);
 
-                // Mostrar un mensaje de error
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('No se encontraron datos de facturación. Por favor sincronice la aplicación.'),
-                    backgroundColor: Colors.red,
-                    duration: Duration(seconds: 5),
-                  )
-                );
+                    // Mostrar un mensaje de error
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('No se encontraron datos de facturación. Por favor sincronice la aplicación.'),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 5),
+                        )
+                    );
+                } catch (e) {
+                    print("Error al crear dato de facturación temporal: $e");
+                }
             }
         }
 
@@ -257,72 +365,136 @@ class DropButtonDatosFact extends StatelessWidget {
 
     const DropButtonDatosFact({super.key, required this.datosFacturacion});
 
+    // Método para crear un dato de facturación seguro
+    DatosFacturacionModel _crearDatoSeguro() {
+        return DatosFacturacionModel(
+            id: -2,  // ID negativo indica dato de emergencia
+            razonSocial: "Dato de facturación por defecto",
+            comercioId: 0,
+            condicionIva: CondicionIva.ELEGIR,
+            cuit: "",
+            ptoVenta: "1"
+        );
+    }
+
     @override
     Widget build(BuildContext context) {
+        // VERIFICACIÓN DE SEGURIDAD: Si la lista está vacía a pesar de todas las protecciones,
+        // crear un dato de facturación por defecto
+        List<DatosFacturacionModel> datosFacturacionSeguros = datosFacturacion;
+        if (datosFacturacionSeguros.isEmpty) {
+            datosFacturacionSeguros = [_crearDatoSeguro()];
+        }
+
         return BlocBuilder<ProductosCubit, ProductosState>(
           builder: (context, state) {
             // Obtener el valor seleccionado, priorizando el estado del cubit
             DatosFacturacionModel? selected;
-            
-            if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
-                // Usar el valor del estado
-                selected = state.datosFacturacionModel!.first;
-            } else if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty) {
-                // Si no hay en el estado, usar la variable estática
-                selected = DatosFacturacionModel.datosFacturacionCurrent.first;
+
+            try {
+                if (state.datosFacturacionModel != null && state.datosFacturacionModel!.isNotEmpty) {
+                    // Usar el valor del estado
+                    selected = state.datosFacturacionModel!.first;
+                } else if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty) {
+                    // Si no hay en el estado, usar la variable estática
+                    selected = DatosFacturacionModel.datosFacturacionCurrent.first;
+                }
+            } catch (e) {
+                print("Error al obtener dato seleccionado: $e");
             }
-            
-            // Verificar que el valor seleccionado esté en la lista disponible
-            if (selected != null && !datosFacturacion.contains(selected)) {
-                // Si no está en la lista, intentar encontrar uno por ID
+
+            // Si no se pudo obtener un valor seleccionado, usar el primero de la lista segura
+            if (selected == null) {
+                selected = datosFacturacionSeguros.first;
+
+                // Intentar actualizar el estado y la variable estática
                 try {
-                  // Intentar encontrar por ID
-                  if (selected!.id != null) {
-                    final matchById = datosFacturacion.firstWhere(
-                      (df) => df.id == selected?.id,
-                      orElse: () => datosFacturacion.first,
-                    );
-                    selected = matchById;
-                  } else {
-                    // Si no tiene ID, usar el primero
-                    selected = datosFacturacion.isNotEmpty ? datosFacturacion.first : null;
-                  }
+                    // Actualizar la variable estática
+                    if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+                        DatosFacturacionModel.datosFacturacionCurrent.add(selected);
+                    }
+
+                    // Actualizar el estado
+                    context.read<ProductosCubit>().updateDatosFacturacion([selected]);
                 } catch (e) {
-                  // En caso de error, asignar el primer elemento si existe
-                  selected = datosFacturacion.isNotEmpty ? datosFacturacion.first : null;
+                    print("Error al actualizar estado con valor por defecto: $e");
+                }
+            }
+
+            // Verificar que el valor seleccionado esté en la lista disponible
+            bool encontrado = false;
+            try {
+                encontrado = datosFacturacionSeguros.any((df) => df.id == selected?.id);
+            } catch (e) {
+                print("Error al verificar si el valor está en la lista: $e");
+            }
+
+            if (!encontrado) {
+                try {
+                    // Si no está en la lista, intentar encontrar uno por ID
+                    if (selected?.id != null) {
+                        try {
+                            final matchById = datosFacturacionSeguros.firstWhere(
+                                (df) => df.id == selected?.id,
+                                orElse: () => datosFacturacionSeguros.first,
+                            );
+                            selected = matchById;
+                        } catch (e) {
+                            selected = datosFacturacionSeguros.first;
+                        }
+                    } else {
+                        // Si no tiene ID, usar el primero
+                        selected = datosFacturacionSeguros.first;
+                    }
+                } catch (e) {
+                    // En caso de error, asignar el primer elemento
+                    selected = datosFacturacionSeguros.first;
                 }
             }
 
             return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DropdownButton<DatosFacturacionModel>(
-                value: selected,
-                onChanged: (DatosFacturacionModel? selectedFactura) {
-                    if (selectedFactura != null) {
-                        DatosFacturacionModel.datosFacturacionCurrent
-                            ..clear()
-                            ..add(selectedFactura);
+                    value: selected,
+                    onChanged: (DatosFacturacionModel? selectedFactura) {
+                        if (selectedFactura != null) {
+                            try {
+                                DatosFacturacionModel.datosFacturacionCurrent.clear();
+                                DatosFacturacionModel.datosFacturacionCurrent.add(selectedFactura);
+                                context.read<ProductosCubit>().updateDatosFacturacion([selectedFactura]);
+                                print("Seleccionado: ${selectedFactura.razonSocial} - ${selectedFactura.condicionIva}");
+                            } catch (e) {
+                                print("Error al actualizar dato seleccionado: $e");
+                            }
+                        }
+                    },
+                    items: datosFacturacionSeguros.map((factura) {
+                        String condicionIvaText = 'IVA: No disponible';
+                        try {
+                            condicionIvaText = factura.condicionIva?.toString().split('.').last ?? 'IVA: No disponible';
+                        } catch (e) {
+                            print("Error al obtener condición IVA: $e");
+                        }
 
-                        context.read<ProductosCubit>().updateDatosFacturacion([selectedFactura]);
+                        String razonSocialText = 'Sin razón social';
+                        try {
+                            razonSocialText = factura.razonSocial?.isNotEmpty == true ? factura.razonSocial! : 'Sin razón social';
+                        } catch (e) {
+                            print("Error al obtener razón social: $e");
+                        }
 
-                        print("Seleccionado: ${selectedFactura.razonSocial} - ${selectedFactura.condicionIva}");
-                    }
-                },
-                items: datosFacturacion.map((factura) {
-                    String condicionIvaText =
-                        factura.condicionIva?.toString().split('.').last ?? 'IVA: No disponible';
-                    return DropdownMenuItem<DatosFacturacionModel>(
-                        value: factura,
-                        key: Key(factura.id.toString()),
-                        child: Text(
-                            '${factura.razonSocial?.isNotEmpty == true ? factura.razonSocial : 'Sin razón social'} - $condicionIvaText',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
-                        ),
-                    );
-                }).toList(),
-                isExpanded: false,
-                iconSize: 20,
-                style: const TextStyle(fontSize: 14),
+                        return DropdownMenuItem<DatosFacturacionModel>(
+                            value: factura,
+                            key: Key((factura.id ?? -1).toString()),
+                            child: Text(
+                                '$razonSocialText - $condicionIvaText',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black),
+                            ),
+                        );
+                    }).toList(),
+                    isExpanded: false,
+                    iconSize: 20,
+                    style: const TextStyle(fontSize: 14),
                 ),
             );
           },

@@ -1173,80 +1173,82 @@ class DatabaseHelper {
     try {
       final db = await this.database;
 
-      // Verificar las tablas esenciales que se llenan durante la sincronización
-      // Definimos pesos para cada tabla según su importancia (datos_facturacion es crítica)
-      final Map<String, int> tablesToCheck = {
-        'datos_facturacion': 5,  // Crítico - peso 5
-        'product': 3,            // Muy importante - peso 3
-        'productos_lista_precios': 2, // Importante - peso 2
-        'productos_stock_sucursales': 2, // Importante - peso 2
-        'Clientes_mostrador': 2, // Importante - peso 2
-        'productos_ivas': 1,     // Útil - peso 1
-        'categorias': 1,         // Útil - peso 1
-      };
+      // Verificación simple: ¿Hay datos en la tabla datos_facturacion?
+      try {
+        final List<Map<String, dynamic>> facturacionResult =
+            await db.rawQuery('SELECT COUNT(*) as count FROM datos_facturacion');
+        final int facturacionCount = facturacionResult.first['count'] as int;
 
-      // Contadores y métricas
-      int dataSyncScore = 0;    // Puntuación total de sincronización
-      bool hasFacturacionData = false;
-      Map<String, int> tableDataCounts = {};
+        // Si no hay datos de facturación, consideramos NO sincronizado inmediatamente
+        if (facturacionCount == 0) {
+          print('⚠️ CRÍTICO: No se encontraron datos de facturación! '
+                'Considerando base de datos NO sincronizada.');
+          return false;
+        }
 
-      // Tabla de facturación que DEBE tener al menos un registro
-      int facturacionCount = 0;
+        print('✅ Se encontraron $facturacionCount registros en datos_facturacion');
+      } catch (facturacionError) {
+        print('⚠️ CRÍTICO: Error al verificar tabla datos_facturacion: $facturacionError');
+        return false;
+      }
 
-      // Verificar cada tabla si contiene datos
-      for (var entry in tablesToCheck.entries) {
-        final String table = entry.key;
-        final int tableWeight = entry.value;
+      // Verificación de las tablas críticas
+      final List<String> criticalTables = ['datos_facturacion', 'product', 'productos_lista_precios'];
+      bool allCriticalTablesHaveData = true;
 
+      for (final table in criticalTables) {
         try {
           final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
           final count = result.first['count'] as int;
-          tableDataCounts[table] = count;
 
-          // Si la tabla tiene datos
-          if (count > 0) {
-            // Sumar la puntuación según el peso de la tabla
-            dataSyncScore += tableWeight;
-            print('DEBUG isDataSynchronized: Tabla $table contiene datos ($count registros), peso: $tableWeight');
-
-            // Marcar específicamente si tenemos datos de facturación
-            if (table == 'datos_facturacion') {
-              hasFacturacionData = true;
-              facturacionCount = count;
-            }
+          if (count == 0) {
+            print('⚠️ La tabla crítica $table está vacía');
+            allCriticalTablesHaveData = false;
+          } else {
+            print('✅ La tabla $table contiene $count registros');
           }
         } catch (tableError) {
-          print('Error al verificar tabla $table: $tableError');
-          tableDataCounts[table] = -1; // -1 indica error
-          // Continuamos con la siguiente tabla si hay error en esta
-          continue;
+          print('❌ Error al verificar tabla $table: $tableError');
+          allCriticalTablesHaveData = false;
         }
       }
 
-      // Imprime resumen completo para diagnóstico
-      print('DEBUG isDataSynchronized RESUMEN:');
-      tableDataCounts.forEach((table, count) {
-        final int weight = tablesToCheck[table] ?? 0;
-        print('- $table: ${count >= 0 ? "$count registros" : "ERROR"} (peso: $weight)');
-      });
+      // Verificar específicamente datos de facturación para el comercioId guardado
+      try {
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        final savedComercioId = prefs.getString('datos_facturacion_comercio_id');
 
-      // Criterios para considerar la DB sincronizada:
-      // 1. Datos de facturación DEBEN existir (obligatorio)
-      // 2. La puntuación total debe ser >= 8 (lo que garantiza varias tablas con datos)
-      bool isSynchronized = hasFacturacionData && dataSyncScore >= 8;
+        if (savedComercioId != null && savedComercioId.isNotEmpty) {
+          print('Verificando datos de facturación para comercioId guardado: $savedComercioId');
 
-      // Verificación especial para datos de facturación
-      if (!hasFacturacionData) {
-        print('⚠️ CRÍTICO: No se encontraron datos de facturación!');
+          final List<Map<String, dynamic>> specificData = await db.query(
+            'datos_facturacion',
+            where: 'comercio_id = ?',
+            whereArgs: [int.tryParse(savedComercioId) ?? 0]
+          );
+
+          if (specificData.isEmpty) {
+            print('⚠️ No hay datos de facturación para el comercioId guardado: $savedComercioId');
+
+            // Buscar cualquier dato de facturación y actualizar el SharedPreferences
+            final List<Map<String, dynamic>> anyData = await db.query('datos_facturacion', limit: 1);
+
+            if (anyData.isNotEmpty) {
+              final int anyComercioId = anyData.first['comercio_id'] as int? ?? 0;
+              await prefs.setString('datos_facturacion_comercio_id', anyComercioId.toString());
+              print('✅ Actualizado comercioId en SharedPreferences: $anyComercioId');
+            }
+          } else {
+            print('✅ Se encontraron datos de facturación para comercioId: $savedComercioId');
+          }
+        }
+      } catch (e) {
+        print('Error al verificar datos de facturación específicos: $e');
       }
 
-      print('DEBUG isDataSynchronized RESULTADO: ${isSynchronized ? "SINCRONIZADA" : "NO SINCRONIZADA"} '
-          '(Puntuación: $dataSyncScore/16, datos_facturacion: ${hasFacturacionData ? "SÍ ($facturacionCount)" : "NO"})');
-
-      return isSynchronized;
+      return allCriticalTablesHaveData;
     } catch (e) {
-      print('ERROR isDataSynchronized: Error al verificar el estado de sincronización: $e');
-      // En caso de error, asumimos que no hay datos sincronizados
+      print('ERROR isDataSynchronized: Error general al verificar sincronización: $e');
       return false;
     }
   }
@@ -1711,17 +1713,93 @@ class DatabaseHelper {
   //datos facturacion
   Future<List<DatosFacturacionModel>> getAllDatosFacturacionCommerce(int comercioId) async {
     final db = await this.database;
+    List<Map<String, dynamic>> maps = [];
 
-    // Modificar la consulta para filtrar por comercioId
-    final List<Map<String, dynamic>> maps = await db.query(
-      'datos_facturacion',
-      where: 'comercio_id = ?', // Filtro por comercioId
-      whereArgs: [comercioId],   // Usamos el comercioId en los argumentos
-    );
+    try {
+      // PASO 1: Si el comercioId es 0, intentar obtenerlo de SharedPreferences
+      if (comercioId == 0) {
+        try {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          final String? savedComercioId = prefs.getString('datos_facturacion_comercio_id');
+          if (savedComercioId != null && savedComercioId.isNotEmpty) {
+            comercioId = int.tryParse(savedComercioId) ?? 0;
+            print('Usando comercioId guardado: $comercioId');
+          }
+        } catch (e) {
+          print('Error al leer comercioId de SharedPreferences: $e');
+        }
+      }
 
-    return List.generate(maps.length, (i) {
-      return DatosFacturacionModel.fromJson(maps[i]);
-    });
+      // PASO 2: Intentar obtener datos para el comercioId específico
+      maps = await db.query(
+        'datos_facturacion',
+        where: 'comercio_id = ?',
+        whereArgs: [comercioId],
+      );
+
+      // Si encontramos datos para este comercioId, guardarlo para usos futuros
+      if (maps.isNotEmpty) {
+        try {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('datos_facturacion_comercio_id', comercioId.toString());
+          print('comercioId: $comercioId guardado en SharedPreferences');
+        } catch (e) {
+          print('Error al guardar comercioId: $e');
+        }
+      }
+
+      // PASO 3: Si no hay datos para este comercioId, buscar cualquier dato disponible
+      if (maps.isEmpty) {
+        print('No se encontraron datos para comercioId: $comercioId. Buscando cualquier dato disponible...');
+        maps = await db.query('datos_facturacion');
+
+        // Si encontramos cualquier dato, guardar su comercioId para usos futuros
+        if (maps.isNotEmpty) {
+          try {
+            final int foundComercioId = maps.first['comercio_id'] as int? ?? 0;
+            final SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setString('datos_facturacion_comercio_id', foundComercioId.toString());
+            print('Encontrado y guardado nuevo comercioId: $foundComercioId');
+          } catch (e) {
+            print('Error al guardar nuevo comercioId: $e');
+          }
+        }
+      }
+
+      // PASO 4: Si no hay datos en absoluto, crear un dato de emergencia
+      if (maps.isEmpty) {
+        print('EMERGENCIA: No hay datos de facturación en la BD');
+
+        // Crear dato de emergencia en memoria
+        return [DatosFacturacionModel(
+          id: 1,
+          razonSocial: 'Facturación de emergencia',
+          comercioId: comercioId,
+          condicionIva: CondicionIva.MONOTRIBUTO,
+          cuit: '00000000000',
+          ptoVenta: '1',
+          predeterminado: 1
+        )];
+      }
+
+      // PASO 5: Convertir los datos de la BD a objetos DatosFacturacionModel
+      return List.generate(maps.length, (i) => DatosFacturacionModel.fromJson(maps[i]));
+
+    } catch (e) {
+      print('ERROR en getAllDatosFacturacionCommerce: $e');
+
+      // Dato de emergencia como último recurso
+      return [DatosFacturacionModel(
+        id: -1,
+        razonSocial: 'Facturación de emergencia (error)',
+        comercioId: comercioId,
+        condicionIva: CondicionIva.MONOTRIBUTO,
+        cuit: '00000000000',
+        ptoVenta: '1',
+        predeterminado: 1
+      )];
+    }
+  }
   }
 
   Future<List<ProductoConPrecioYStock>> getProductosConPrecioYStockQuery(

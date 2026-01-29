@@ -3,6 +3,7 @@ import 'package:facturador_offline/pages/page_forma_cobro.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_lista_precios/lista_precios_state.dart';
@@ -48,112 +49,198 @@ class _VentaMainPageState extends State<VentaMainPage> {
     _cargarDatosFacturacion();
   }
 
-  // Método para cargar los datos de facturación una sola vez
-  Future<void> _cargarDatosFacturacion() async {
-    if (!_datosFacturacionCargados) {
-      try {
-        final loginCubit = context.read<LoginCubit>();
+  // Método para cargar los datos de facturación, con opción de reintento
+  Future<void> _cargarDatosFacturacion({bool forzarRecarga = false}) async {
+    // Si ya están cargados y no se fuerza recarga, salir
+    if (_datosFacturacionCargados && !forzarRecarga) {
+      return;
+    }
 
-        // Verificar que el usuario exista
-        if (loginCubit.state.user == null) {
-          print('Error: Usuario no disponible para cargar datos de facturación');
+    // Si forzamos recarga, resetear estado
+    if (forzarRecarga) {
+      setState(() {
+        _datosFacturacionCargados = false;
+        datosFacturacion = [];
+      });
+    }
+
+    try {
+      // 1. Mostrar indicador de carga cuando se intenta recargar
+      if (forzarRecarga) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
+      // 2. Intentar obtener primero el comercioId desde SharedPreferences
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? savedComercioId = prefs.getString('datos_facturacion_comercio_id');
+
+      // 3. Si hay un comercioId guardado en SharedPreferences, usarlo directamente
+      if (savedComercioId != null && savedComercioId.isNotEmpty) {
+        print('Usando comercioId desde SharedPreferences: $savedComercioId');
+
+        // El método getAllDatosFacturacionCommerce buscará datos para este comercioId
+        // y si no encuentra, buscará otros disponibles y actualizará SharedPreferences
+        final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(savedComercioId));
+
+        if (mounted) {
           setState(() {
-            _datosFacturacionCargados = true; // Marcar como cargado para evitar intentos repetidos
-          });
-          return;
-        }
+            datosFacturacion = datos;
+            _datosFacturacionCargados = true;
+            _isLoading = false;
 
-        // Obtener y validar el comercioId
-        String? rawComercioId = loginCubit.state.user!.comercioId;
-        String? userId = loginCubit.state.user!.id?.toString();
-
-        // Validación segura de comercioId
-        String comercioId;
-        if (rawComercioId == "1" && userId != null) {
-          comercioId = userId;
-        } else if (rawComercioId != null && rawComercioId.isNotEmpty) {
-          comercioId = rawComercioId;
-        } else if (userId != null) {
-          // Si no hay comercioId, intentar con userId
-          comercioId = userId;
-        } else {
-          // Si no hay ninguno, usar un valor predeterminado
-          comercioId = "0";
-          print('Warning: Usando comercioId por defecto (0)');
-        }
-
-        // Intentar cargar los datos
-        try {
-          final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId));
-
-          // Verificar si se obtuvieron datos
-          if (datos.isEmpty) {
-            print('Warning: No se encontraron datos de facturación para comercioId: $comercioId');
-
-            // Intentar con comercioId = 0 como fallback
-            if (comercioId != "0") {
-              print('Intentando con comercioId = 0 como fallback...');
-              final datosFallback = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
-
-              if (datosFallback.isNotEmpty) {
-                print('Se encontraron datos de facturación con comercioId = 0');
-                if (mounted) {
-                  setState(() {
-                    datosFacturacion = datosFallback;
-                    _datosFacturacionCargados = true;
-                  });
-                }
-                return;
-              }
+            // Si se forzó la recarga y fue exitosa, mostrar mensaje
+            if (forzarRecarga && datos.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Datos de facturación cargados correctamente'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 3),
+                )
+              );
             }
-          }
-
-          if (mounted) {
-            setState(() {
-              datosFacturacion = datos;
-              _datosFacturacionCargados = true;
-            });
-          }
-        } catch (parseError) {
-          print('Error al parsear comercioId o consultar BD: $parseError');
-          // Intentar con ID 0 como último recurso
-          final datosFallback = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
-
-          if (mounted) {
-            setState(() {
-              datosFacturacion = datosFallback;
-              _datosFacturacionCargados = true;
-            });
-          }
+          });
         }
+        return;
+      }
+
+      // 4. Si no hay comercioId guardado, intentar obtenerlo del usuario logueado
+      final loginCubit = context.read<LoginCubit>();
+
+      // Verificar que el usuario exista
+      if (loginCubit.state.user == null) {
+        print('Error: Usuario no disponible para cargar datos de facturación');
+
+        // Usar el método mejorado de DatabaseHelper que siempre devuelve al menos un registro
+        final datosEmergencia = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
+
+        if (mounted) {
+          setState(() {
+            datosFacturacion = datosEmergencia;
+            _datosFacturacionCargados = true;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Obtener y validar el comercioId
+      String? rawComercioId = loginCubit.state.user!.comercioId;
+      String? userId = loginCubit.state.user!.id?.toString();
+
+      // Validación segura de comercioId
+      String comercioId;
+      if (rawComercioId == "1" && userId != null) {
+        comercioId = userId;
+      } else if (rawComercioId != null && rawComercioId.isNotEmpty) {
+        comercioId = rawComercioId;
+      } else if (userId != null) {
+        // Si no hay comercioId, intentar con userId
+        comercioId = userId;
+      } else {
+        // Si no hay ninguno, usar un valor predeterminado
+        comercioId = "0";
+        print('Warning: Usando comercioId por defecto (0)');
+      }
+
+      // Guardar el comercioId para futuros usos
+      try {
+        await prefs.setString('datos_facturacion_comercio_id', comercioId);
+        print('ComercioId guardado en SharedPreferences: $comercioId');
       } catch (e) {
-        print('Error al cargar datos de facturación: $e');
+        print('Error al guardar comercioId: $e');
+      }
+
+      // El método getAllDatosFacturacionCommerce siempre retornará datos
+      final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId));
+
+      // Guardar los datos obtenidos
+      if (mounted) {
+        setState(() {
+          datosFacturacion = datos;
+          _datosFacturacionCargados = true;
+          _isLoading = false;
+
+          // Si se forzó la recarga y fue exitosa, mostrar mensaje
+          if (forzarRecarga && datos.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Datos de facturación cargados correctamente'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 3),
+              )
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error crítico al cargar datos de facturación: $e');
+
+      // Intentar obtener datos de emergencia directamente
+      try {
+        final datosEmergencia = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
+
+        if (mounted) {
+          setState(() {
+            datosFacturacion = datosEmergencia;
+            _datosFacturacionCargados = true;
+            _isLoading = false;
+          });
+
+          // Mostrar mensaje de error y opciones al usuario
+          _mostrarDialogoError();
+        }
+      } catch (criticalError) {
+        // Error verdaderamente crítico, no se pudo recuperar
         if (mounted) {
           setState(() {
             _datosFacturacionCargados = true; // Marcar como intentado para no repetir
+            _isLoading = false;
           });
 
-          // Mostrar mensaje de error al usuario
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al cargar datos de facturación. Intente sincronizar la aplicación.'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'Ir a Sync',
-                onPressed: () {
-                  // Navegar a página de sincronización
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => PageVentasSincronizacion())
-                  );
-                },
-              ),
-            )
-          );
+          // Mostrar mensaje de error y opciones al usuario
+          _mostrarDialogoError();
         }
       }
     }
+  }
+
+  // Muestra un diálogo de error con opciones para el usuario
+  void _mostrarDialogoError() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('Error de datos'),
+        content: Text(
+          'No se pudieron cargar los datos de facturación correctamente.\n\n'
+          'Esto puede deberse a que la base de datos no está sincronizada o hay un problema con los datos.\n\n'
+          'Por favor, elija una de las siguientes opciones:'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar diálogo
+              // Reintentar carga
+              _cargarDatosFacturacion(forzarRecarga: true);
+            },
+            child: Text('Reintentar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar diálogo
+              // Ir a sincronización
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PageVentasSincronizacion())
+              );
+            },
+            child: Text('Ir a Sincronización'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
