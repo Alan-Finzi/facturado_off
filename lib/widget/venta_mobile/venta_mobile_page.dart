@@ -364,7 +364,7 @@ class _VentaMobilePageState extends State<VentaMobilePage> {
   void _showCatalogoProductos() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const CatalogoPage(),
+        builder: (context) =>  CatalogoPage(),
       ),
     );
   }

@@ -112,6 +112,8 @@ class _MyappState extends State<Myapp> {
 
     // Crear tema para aplicación
     final ThemeData lightTheme = ThemeData(
+      hoverColor:primaryColor ,
+
       primaryColor: primaryColor,
       colorScheme: ColorScheme.light(
         primary: primaryColor,
@@ -171,6 +173,7 @@ class _MyappState extends State<Myapp> {
           fontWeight: FontWeight.bold,
         ),
       ),
+
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: MaterialStateProperty.all<Color>(primaryColor),
