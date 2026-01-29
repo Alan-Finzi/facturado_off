@@ -8,7 +8,7 @@ Este documento explica las mejoras realizadas en el campo de contraseña de la p
 Se ha implementado un botón de ojito funcional en el campo de contraseña que:
 - Alterna entre mostrar y ocultar la contraseña al hacer clic
 - Cambia el color del icono dependiendo del estado:
-  - **Rojo** (Color primario #FFD11C83) cuando la contraseña está oculta
+  - **Rojo puro** (#FF0000) cuando la contraseña está oculta
   - **Naranja** cuando la contraseña está visible
 
 ### 2. Componente Reutilizable `IconButtonWidget`
@@ -17,7 +17,7 @@ Se ha creado un componente personalizado y reutilizable para botones de icono co
 - **Tamaños**: small, medium, large, custom
 - **Variantes**: filled, outlined, ghost, light
 - **Estado**: normal, disabled, loading
-- **Colores**: Implementa los colores de la aplicación (rojo/magenta y naranja)
+- **Colores**: Implementa los colores de la aplicación (rojo puro y naranja)
 
 ### 3. Constructor de Fábrica para Visibilidad de Contraseña
 Se ha agregado un constructor de fábrica especializado para crear botones de visibilidad de contraseña:
@@ -43,7 +43,10 @@ IconButtonWidget.passwordVisibility({
    - Constructor de fábrica para crear botones de visibilidad de contraseña
    - Configuraciones de colores basadas en los colores de la aplicación
 
-3. **Tests Unitarios**
+3. **constants.dart**
+   - Se cambió el color de `miColor` de magenta (#FFD11C83) a rojo puro (#FF0000)
+
+4. **Tests Unitarios**
    - Añadidos tests para verificar el comportamiento del `IconButtonWidget`
    - Tests específicos para la funcionalidad de visibilidad de contraseña
    - Verificación de cambios de color según el estado
@@ -102,6 +105,6 @@ IconButtonWidget.passwordVisibility(
 ## Consistencia de Diseño
 
 La implementación mantiene consistencia con el diseño de la aplicación utilizando:
-- Color primario (#FFD11C83) para los iconos principales
+- Color primario (Rojo puro #FF0000) para los iconos principales
 - Color naranja para botones de acción y el icono de visibilidad activa
 - Mismos tamaños, bordes y estilos que el resto de la aplicación

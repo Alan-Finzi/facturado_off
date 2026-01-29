@@ -19,6 +19,7 @@ import 'helper/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'util/platform_service.dart';
 import 'widget/platform_adaptive_widget.dart';
+import 'util/constants.dart';
 
 
 void main() async {
@@ -106,7 +107,7 @@ class _MyappState extends State<Myapp> {
     final themeCubit = context.watch<ThemaCubit>();
 
     // Definir colores principales
-    const primaryColor = Color(0xFFD11C83);
+    final primaryColor = Constants.miColor; // Usar el rojo puro desde Constants
     const secondaryColor = Color(0xFF3F51B5);
 
     // Crear tema para aplicación
@@ -117,10 +118,10 @@ class _MyappState extends State<Myapp> {
         secondary: secondaryColor,
         onPrimary: Colors.white,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         elevation: 2.0,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: Colors.white,
           fontFamily: 'ubuntuBold',
           fontSize: 18,
@@ -160,10 +161,10 @@ class _MyappState extends State<Myapp> {
         secondary: secondaryColor,
         onPrimary: Colors.white,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         elevation: 2.0,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: Colors.white,
           fontFamily: 'ubuntuBold',
           fontSize: 18,
@@ -210,4 +211,3 @@ class _MyappState extends State<Myapp> {
     );
   }
 }
-

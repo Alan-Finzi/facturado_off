@@ -1,11 +1,11 @@
-
 import 'package:flutter/foundation.dart' as Foundation;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 
 class Constants {
-    static const Color miColor = Color(0xFFD11C83);
+    // Cambio del color de magenta a rojo puro
+    static const Color miColor = Color(0xFFFF0000);
     static const String serviceId = '3';
     static const String API_URL = Foundation.kReleaseMode
         ? "https://api-dev.moobfans.com"
@@ -18,4 +18,3 @@ class Constants {
     static const String FLAVOR = Foundation.kReleaseMode ? "STAGING" : "STAGING";
 
 }
-
