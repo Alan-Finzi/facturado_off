@@ -77,7 +77,7 @@ class DatabaseHelper {
 
       // Eliminar el archivo de la base de datos
       String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
-      bool exists = await _databaseExists(path);
+      bool exists = await databaseExists(path);
 
       if (exists) {
         print('Eliminando base de datos existente en: $path');
@@ -603,7 +603,7 @@ class DatabaseHelper {
   }
   Future<void> insertProductoResponse(ProductoResponse productoResponse) async {
     try {
-      final db = await this.database;
+      final db = await database;
 
       // Inserta la cabecera de ProductoResponse
       int responseId = await db.insert(
@@ -770,7 +770,7 @@ class DatabaseHelper {
 
   Future<ProductoResponse> getProductoResponseBySucursalId(
       int sucursalId, int listaId) async {
-    final db = await this.database;
+    final db = await database;
 
     // Ejecutar consulta para obtener productos con sus datos básicos y campos JSON
     final List<Map<String, dynamic>> rows = await db.rawQuery('''
@@ -968,7 +968,7 @@ class DatabaseHelper {
 
   //datos facturacion
   Future<List<DatosFacturacionModel>> getAllDatosFacturacion() async {
-    final db = await this.database;
+    final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('datos_facturacion');
 
     return List.generate(maps.length, (i) {
@@ -978,7 +978,7 @@ class DatabaseHelper {
 
   //
   Future<int> insertDatosFacturacion(DatosFacturacionModel datos) async {
-    final db = await this.database;
+    final db = await database;
     return await db.insert(
       'datos_facturacion',
       datos.toJson(),
@@ -987,7 +987,7 @@ class DatabaseHelper {
   }
 
   Future<void> insertDatosFacturacionList(List<DatosFacturacionModel> datosList) async {
-    final db = await this.database;
+    final db = await database;
     await db.transaction((txn) async {
       for (final datos in datosList) {
         await txn.insert(
@@ -1002,7 +1002,7 @@ class DatabaseHelper {
 // Métodos para usuarios
   Future<void> insertUser(User user) async {
     try {
-      final db = await this.database;
+      final db = await database;
       await db.insert(
         'users',
         user.toJson(),
@@ -1017,7 +1017,7 @@ class DatabaseHelper {
   }
 
   Future<User?> getUser(String username) async {
-    Database db = await this.database;
+    Database db = await database;
     final maps = await db.query('users', where: 'username = ?', whereArgs: [username]);
     return maps.isNotEmpty ? User.fromJson(maps.first) : null;
   }
@@ -1025,7 +1025,7 @@ class DatabaseHelper {
   // Método para obtener un usuario por su email
   Future<User?> getUserByEmail(String email) async {
     try {
-      final db = await this.database;
+      final db = await database;
       final maps = await db.query('users', where: 'email = ?', whereArgs: [email]);
 
       if (maps.isNotEmpty) {
@@ -1092,25 +1092,25 @@ class DatabaseHelper {
   }
 
   Future<List<User>> getUsers() async {
-    final db = await this.database;
+    final db = await database;
     final maps = await db.query('users');
     return List.generate(maps.length, (i) => User.fromJson(maps[i]));
   }
 
   // Métodos para productos
   Future<void> insertProducto(ProductoModel producto) async {
-    final db = await this.database;
+    final db = await database;
     await db.insert('productos', producto.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<ProductoModel?> getProductoById(int id) async {
-    final db = await this.database;
+    final db = await database;
     final maps = await db.query('productos', where: 'id = ?', whereArgs: [id]);
     return maps.isNotEmpty ? ProductoModel.fromMap(maps.first) : null;
   }
 
   Future<void> insertCategorias(List<CategoriaModel> categorias) async {
-    final db = await this.database;
+    final db = await database;
     try {
       await db.transaction((txn) async {
         for (var categoria in categorias) {
@@ -1130,13 +1130,13 @@ class DatabaseHelper {
   }
 
   Future<List<CategoriaModel>> getCategorias() async {
-    Database db = await this.database;
+    Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('categorias');
     return List.generate(maps.length, (i) => CategoriaModel.fromJson(maps[i]));
   }
   // Métodos relacionados con la tabla lista_precios
   Future<void> insertListaPrecio(ListaPreciosModel listaPrecio) async {
-    Database db = await this.database;
+    Database db = await database;
     await db.insert(
       'lista_precios',
       listaPrecio.toMap(),
@@ -1155,7 +1155,7 @@ class DatabaseHelper {
     }
 
     // Consultar la base de datos
-    final db = await this.database;
+    final db = await database;
     final maps = await db.query('productos');
     final result = maps.map((map) => ProductoModel.fromMap(map)).toList();
 
@@ -1166,7 +1166,7 @@ class DatabaseHelper {
   }
 
   Future<void> insertOrUpdateProductos(List<ProductoModel> productos) async {
-    final db = await this.database;
+    final db = await database;
     await db.transaction((txn) async {
       for (var producto in productos) {
         await txn.insert(
@@ -1179,7 +1179,7 @@ class DatabaseHelper {
   }
 
   Future<void> insertListaPrecios(List<ListaPreciosModel> listaPrecios) async {
-    final db = await this.database;
+    final db = await database;
 
     await db.transaction((txn) async {
       for (var listaPrecio in listaPrecios) {
@@ -1194,13 +1194,13 @@ class DatabaseHelper {
 
 
   Future<List<Lista>> getListaPrecios() async {
-    Database db = await this.database;
+    Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('Lista');
     return List.generate(maps.length, (i) => Lista.fromJson(maps[i]));
   }
 
   Future<void> deleteListaPrecio(int id) async {
-    Database db = await this.database;
+    Database db = await database;
     await db.delete(
       'lista_precio',
       where: 'id = ?',
@@ -1211,7 +1211,7 @@ class DatabaseHelper {
   // Métodos relacionados con la tabla Clientes_mostrador
   Future<void> insertCliente(ClientesMostrador cliente) async {
     if (!await clienteExiste(cliente.idCliente!)) {
-      Database db = await this.database;
+      Database db = await database;
       await db.insert(
         'Clientes_mostrador',
         cliente.toMap(),
@@ -1221,7 +1221,7 @@ class DatabaseHelper {
   }
 
   Future<bool> clienteExiste(String idCliente) async {
-    Database db = await this.database;
+    Database db = await database;
     final result = await db.query(
       'Clientes_mostrador',
       where: 'id_cliente = ?',
@@ -1232,7 +1232,7 @@ class DatabaseHelper {
 
 
  Future<List<ClientesMostrador>> getClientesModificados() async {
-   final db = await this.database;
+   final db = await database;
    final maps = await db.query('clientes_mostrador', where: 'modificado = 1');
    return maps.map((e) => ClientesMostrador.fromJson(e)).toList();
  }
@@ -1241,7 +1241,7 @@ class DatabaseHelper {
   /// Retorna true si las tablas esenciales ya contienen datos
   Future<bool> isDataSynchronized() async {
     try {
-      final db = await this.database;
+      final db = await database;
 
       // Verificación simple: ¿Hay datos en la tabla datos_facturacion?
       try {
@@ -1324,7 +1324,7 @@ class DatabaseHelper {
   }
 
    Future<void> marcarClienteSincronizado(String? idCliente) async {
-   final db = await this.database;
+   final db = await database;
    await db.update('clientes_mostrador', {'modificado': 0}, where: 'id_cliente = ?', whereArgs: [idCliente]);
  }
 
@@ -1333,7 +1333,7 @@ class DatabaseHelper {
   /// Inserta un proveedor de pago y sus métodos de pago asociados
   Future<void> insertPaymentProvider(Map<String, dynamic> providerJson) async {
     try {
-      final db = await this.database;
+      final db = await database;
       final provider = PaymentProvider.fromJson(providerJson);
 
       // Inserta el proveedor usando UPSERT (replace)
@@ -1374,7 +1374,7 @@ class DatabaseHelper {
   /// Obtiene todos los proveedores de pago
   Future<List<PaymentProvider>> getPaymentProviders() async {
     try {
-      final db = await this.database;
+      final db = await database;
 
       // Verificar si la tabla existe
       final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='payment_providers'");
@@ -1544,7 +1544,7 @@ class DatabaseHelper {
 
   /// Obtiene un proveedor de pago por ID con sus métodos de pago
   Future<PaymentProvider?> getPaymentProviderById(int id) async {
-    final db = await this.database;
+    final db = await database;
     final maps = await db.query(
       'payment_providers',
       where: 'id = ?',
@@ -1573,7 +1573,7 @@ class DatabaseHelper {
 
   /// Inserta o actualiza un método de pago
   Future<void> insertPaymentMethod(PaymentMethod method) async {
-    final db = await this.database;
+    final db = await database;
 
     // Insertar el método usando UPSERT
     await db.insert(
@@ -1593,7 +1593,7 @@ class DatabaseHelper {
 
   /// Obtiene todos los métodos de pago
   Future<List<PaymentMethod>> getPaymentMethods() async {
-    final db = await this.database;
+    final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('payment_methods');
 
     return maps.map((map) => PaymentMethod.fromJson(map)).toList();
@@ -1601,7 +1601,7 @@ class DatabaseHelper {
 
   /// Obtiene un método de pago por ID
   Future<PaymentMethod?> getPaymentMethodById(int id) async {
-    final db = await this.database;
+    final db = await database;
     final maps = await db.query(
       'payment_methods',
       where: 'id = ?',
@@ -1620,7 +1620,7 @@ class DatabaseHelper {
     required String operation,
     required String payload,
   }) async {
-    final db = await this.database;
+    final db = await database;
 
     final syncItem = SyncQueue(
       resourceType: resourceType,
@@ -1636,7 +1636,7 @@ class DatabaseHelper {
 
   /// Obtiene elementos pendientes en la cola de sincronización
   Future<List<SyncQueue>> getPendingSyncItems() async {
-    final db = await this.database;
+    final db = await database;
     final maps = await db.query(
       'sync_queue',
       where: 'status = ?',
@@ -1649,7 +1649,7 @@ class DatabaseHelper {
 
   /// Actualiza el estado de un elemento en la cola de sincronización
   Future<void> updateSyncQueueItemStatus(int id, SyncQueue updatedItem) async {
-    final db = await this.database;
+    final db = await database;
 
     await db.update(
       'sync_queue',
@@ -1661,7 +1661,7 @@ class DatabaseHelper {
 
   /// Elimina elementos completados de la cola de sincronización
   Future<int> cleanCompletedSyncItems() async {
-    final db = await this.database;
+    final db = await database;
 
     return await db.delete(
       'sync_queue',
@@ -1672,7 +1672,7 @@ class DatabaseHelper {
 
 
   Future<void> updateCliente(ClientesMostrador cliente) async {
-    Database db = await this.database;
+    Database db = await database;
     await db.update(
       'Clientes_mostrador',
       cliente.toMap(),
@@ -1682,7 +1682,7 @@ class DatabaseHelper {
   }
 
   Future<void> deleteCliente(String idCliente) async {
-    Database db = await this.database;
+    Database db = await database;
     await db.delete(
       'Clientes_mostrador',
       where: 'id_cliente = ?',
@@ -1701,7 +1701,7 @@ class DatabaseHelper {
     // }
 
     // Consultar la base de datos
-    Database db = await this.database;
+    Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('Clientes_mostrador');
     print('Clientes encontrados en BD: ${maps.length}');
 
@@ -1715,7 +1715,7 @@ class DatabaseHelper {
 
   // Métodos relacionados con la tabla productos_stock_sucursales
   Future<void> insertProductosStockSucursal(ProductosStockSucursalesModel productoStockSucursal) async {
-    final db = await this.database;
+    final db = await database;
     await db.insert(
       'productos_stock_sucursales',
       productoStockSucursal.toMap(),
@@ -1724,7 +1724,7 @@ class DatabaseHelper {
   }
   // Método para insertar una lista de productos en productos_stock_sucursales
   Future<void> insertProductosStockSucursales(List<ProductosStockSucursalesModel> productosStockSucursales) async {
-    final db = await this.database;
+    final db = await database;
 
     await db.transaction((txn) async {
       for (var productoStockSucursal in productosStockSucursales) {
@@ -1738,7 +1738,7 @@ class DatabaseHelper {
   }
 
   Future<List<ProductosStockSucursalesModel>> getProductosStockSucursales({ required int sucursalId}) async {
-    final db = await this.database;
+    final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'productos_stock_sucursales',
       where: 'sucursal_id = ?', // Condición para filtrar por sucursal
@@ -1749,7 +1749,7 @@ class DatabaseHelper {
   
   // Obtiene todas las sucursales disponibles en la base de datos
   Future<List<Map<String, dynamic>>> getSucursales() async {
-    final db = await this.database;
+    final db = await database;
     
     try {
       // Obtener sucursales únicas de la tabla productos_stock_sucursales
@@ -1782,7 +1782,7 @@ class DatabaseHelper {
 
   //datos facturacion
   Future<List<DatosFacturacionModel>> getAllDatosFacturacionCommerce(int comercioId) async {
-    final db = await this.database;
+    final db = await database;
     List<Map<String, dynamic>> maps = [];
 
     try {
@@ -1874,7 +1874,7 @@ class DatabaseHelper {
 
   Future<List<ProductoConPrecioYStock>> getProductosConPrecioYStockQuery(
       {required int sucursalId,required int listaId}) async {
-    final db = await this.database;
+    final db = await database;
 
     try {
       final List<Map<String, dynamic>> maps = await db.rawQuery('''
@@ -1929,7 +1929,7 @@ class DatabaseHelper {
 
 
   Future<void> insertProductosListaPrecio(ProductosListaPreciosModel productoListaPrecio) async {
-    final db = await this.database;
+    final db = await database;
     try {
       await db.insert(
         'productos_lista_precios',
@@ -1944,7 +1944,7 @@ class DatabaseHelper {
 
   // Método para insertar una lista de productos en productos_lista_precios en una transacción
   Future<void> insertProductosListasPrecios(List<ProductosListaPreciosModel> productosListaPrecios) async {
-    final db = await this.database;
+    final db = await database;
 
     await db.transaction((txn) async {
       for (var productoListaPrecio in productosListaPrecios) {
@@ -1957,7 +1957,7 @@ class DatabaseHelper {
     });
   }
   Future<List<ProductosListaPreciosModel>> getProductosListaPrecios(int listaId) async {
-    final db = await this.database;
+    final db = await database;
 
     final List<Map<String, dynamic>> maps = await db.query(
       'productos_lista_precios',
@@ -1970,7 +1970,7 @@ class DatabaseHelper {
 
 
   Future<List<Map<String, dynamic>>> getProductosConPrecioYStock(int listaId, int sucursalId) async {
-    final db = await this.database;
+    final db = await database;
 
     final result = await db.rawQuery('''
     SELECT
@@ -1995,7 +1995,7 @@ class DatabaseHelper {
 
 
   Future<List<Map<String, dynamic>>> getProductosYStock(int listaId, int sucursalId) async {
-    final db = await this.database;
+    final db = await database;
 
     final result = await db.rawQuery('''
     SELECT 
@@ -2013,7 +2013,7 @@ class DatabaseHelper {
   }
   // Métodos relacionados con la tabla productos_ivas
   Future<List<ProductosIvasModel>> getProductosIvas() async {
-    final db = await this.database;
+    final db = await database;
     try {
       final List<Map<String, dynamic>> maps = await db.query('productos_ivas');
       return List.generate(maps.length, (i) => ProductosIvasModel.fromMap(maps[i]));
@@ -2024,7 +2024,7 @@ class DatabaseHelper {
   }
 
   Future<void> insertProductoIva(ProductosIvasModel productoIva) async {
-    final db = await this.database;
+    final db = await database;
     try {
       await db.insert(
         'productos_ivas',
@@ -2038,7 +2038,7 @@ class DatabaseHelper {
 
   // Método para insertar una lista de productosIvas en una sola transacción
   Future<void> insertProductosIvas(List<ProductosIvasModel> productosIvas) async {
-    final db = await this.database;
+    final db = await database;
 
     await db.transaction((txn) async {
       for (var productoIva in productosIvas) {
@@ -2052,7 +2052,7 @@ class DatabaseHelper {
   }
 
   Future<List<Datum>> getProducts() async {
-    final db = await this.database;
+    final db = await database;
 
     try {
       final List<Map<String, dynamic>> productResults = await db.rawQuery('''
@@ -2157,7 +2157,7 @@ class DatabaseHelper {
       }
     }
 
-    return datumMap.values.toList();
+      return datumMap.values.toList();
     } catch (e) {
       print('Error en getProducts: $e');
       return [];
