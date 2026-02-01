@@ -25,7 +25,7 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
   }
 
   void loadProducts() async {
-    products = await DatabaseHelper.instance.getProducts();
+    products = await DatabaseHelper.instance.getProductos();
     setState(() {
       filteredProducts = products;
     });
