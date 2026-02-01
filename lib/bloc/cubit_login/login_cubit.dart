@@ -112,14 +112,50 @@ class LoginCubit extends Cubit<LoginState> {
                 needsOnlineAuth: false,
               ));
             } else {
-              // Datos sincronizados completos, continuar normalmente
-              emit(LoginState(
-                isLogin: true,
-                userToken: savedToken,
-                isPreference: true, // Omitir sincronización
-                user: User(username: email, password: savedPassword),
-                needsOnlineAuth: false,
-              ));
+              // Datos sincronizados completos, obtener el usuario completo de la BD
+              try {
+                // Buscar el usuario completo en la base de datos por email
+                User? userFromDB = await dbHelper.getUserByEmail(email!);
+
+                if (userFromDB != null) {
+                  // Establecer el usuario actual en memoria para toda la sesión
+                  User.setCurrencyUser(userFromDB);
+                  print("✅ Usuario cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
+
+                  // Cargar los demás modelos currency
+                  await dbHelper.loadAllCurrencyModels(userFromDB);
+                  print("✅ Datos currency adicionales cargados para login offline");
+
+                  // Emitir estado con el usuario completo
+                  emit(LoginState(
+                    isLogin: true,
+                    userToken: savedToken,
+                    isPreference: true, // Omitir sincronización
+                    user: userFromDB, // Usuario completo con todos sus campos
+                    needsOnlineAuth: false,
+                  ));
+                } else {
+                  print("⚠️ No se encontró el usuario en la BD, usando usuario básico");
+                  // Emitir estado con usuario básico
+                  emit(LoginState(
+                    isLogin: true,
+                    userToken: savedToken,
+                    isPreference: true, // Omitir sincronización
+                    user: User(username: email, password: savedPassword),
+                    needsOnlineAuth: false,
+                  ));
+                }
+              } catch (e) {
+                print("❌ Error al cargar usuario desde BD: $e");
+                // Si falla, usar el usuario básico
+                emit(LoginState(
+                  isLogin: true,
+                  userToken: savedToken,
+                  isPreference: true, // Omitir sincronización
+                  user: User(username: email, password: savedPassword),
+                  needsOnlineAuth: false,
+                ));
+              }
             }
             return;
           }
@@ -198,13 +234,38 @@ class LoginCubit extends Cubit<LoginState> {
           final hasData = await dbHelper.isDataSynchronized();
           print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-          emit(LoginState(
-            isLogin: true,
-            userToken: userCredentials['token'],
-            isPreference: hasData, // Si hay datos, omitir sincronización
-            user: User(username: email, password: userCredentials['password']),
-            needsOnlineAuth: false,
-          ));
+          // Buscar el usuario completo en la base de datos
+          User? userFromDB = await dbHelper.getUserByEmail(email!);
+
+          if (userFromDB != null) {
+            // Establecer el usuario actual en memoria para toda la sesión
+            User.setCurrencyUser(userFromDB);
+            print("✅ Usuario cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
+
+            // Cargar los demás modelos currency
+            await dbHelper.loadAllCurrencyModels(userFromDB);
+            print("✅ Datos currency adicionales cargados para login con token almacenado");
+
+            // Emitir estado con el usuario completo
+            emit(LoginState(
+              isLogin: true,
+              userToken: userCredentials['token'],
+              isPreference: hasData, // Si hay datos, omitir sincronización
+              user: userFromDB, // Usuario completo con todos sus campos
+              needsOnlineAuth: false,
+            ));
+          } else {
+            // Si no se encuentra el usuario en la BD, usar usuario básico
+            print("⚠️ No se encontró el usuario en la BD, usando usuario básico");
+            emit(LoginState(
+              isLogin: true,
+              userToken: userCredentials['token'],
+              isPreference: hasData, // Si hay datos, omitir sincronización
+              user: User(username: email, password: userCredentials['password']),
+              needsOnlineAuth: false,
+            ));
+          }
+
           print("✅ Login completado con token almacenado. Modo: OFFLINE");
           if (hasData) {
             print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
@@ -246,24 +307,59 @@ class LoginCubit extends Cubit<LoginState> {
           final hasData = await dbHelper.isDataSynchronized();
           print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
+          // Buscar el usuario completo en la base de datos
+          User? userFromDB = await dbHelper.getUserByEmail(email!);
+
           if (!hasData) {
             print("⚠️ Datos sincronizados incompletos o faltantes - forzando sincronización");
+
+            // Emitir estado, usando el usuario completo si está disponible
             emit(LoginState(
               isLogin: true,
               userToken: userCredentials['token'],
               isPreference: false, // Forzar sincronización cuando faltan datos
-              user: User(username: email, password: userCredentials['password']),
+              user: userFromDB ?? User(username: email, password: userCredentials['password']),
               needsOnlineAuth: false,
             ));
+
+            // Si hay usuario completo, establecerlo en memoria y cargar datos adicionales
+            if (userFromDB != null) {
+              User.setCurrencyUser(userFromDB);
+              print("✅ Usuario de emergencia cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
+
+              // Cargar los demás modelos currency
+              await dbHelper.loadAllCurrencyModels(userFromDB);
+              print("✅ Datos currency adicionales cargados para login de emergencia");
+            }
+
             print("✅ Login de emergencia completado. Forzando sincronización por datos faltantes.");
           } else {
-            emit(LoginState(
-              isLogin: true,
-              userToken: userCredentials['token'],
-              isPreference: true, // Omitir sincronización cuando hay datos
-              user: User(username: email, password: userCredentials['password']),
-              needsOnlineAuth: false,
-            ));
+            // Si hay datos sincronizados, usar el usuario completo si está disponible
+            if (userFromDB != null) {
+              User.setCurrencyUser(userFromDB);
+              print("✅ Usuario de emergencia cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
+
+              // Cargar los demás modelos currency
+              await dbHelper.loadAllCurrencyModels(userFromDB);
+              print("✅ Datos currency adicionales cargados para login normal con datos");
+
+              emit(LoginState(
+                isLogin: true,
+                userToken: userCredentials['token'],
+                isPreference: true, // Omitir sincronización cuando hay datos
+                user: userFromDB,
+                needsOnlineAuth: false,
+              ));
+            } else {
+              emit(LoginState(
+                isLogin: true,
+                userToken: userCredentials['token'],
+                isPreference: true, // Omitir sincronización cuando hay datos
+                user: User(username: email, password: userCredentials['password']),
+                needsOnlineAuth: false,
+              ));
+            }
+
             print("✅ Login de emergencia completado con éxito.");
             print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
           }

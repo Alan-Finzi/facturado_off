@@ -1021,6 +1021,75 @@ class DatabaseHelper {
     return maps.isNotEmpty ? User.fromJson(maps.first) : null;
   }
 
+  // Método para obtener un usuario por su email
+  Future<User?> getUserByEmail(String email) async {
+    try {
+      final db = await this.database;
+      final maps = await db.query('users', where: 'email = ?', whereArgs: [email]);
+
+      if (maps.isNotEmpty) {
+        // Convertir el registro a objeto User
+        final user = User.fromJson(maps.first);
+        print('Usuario encontrado en BD para email $email: ${user.username} (comercioId: ${user.comercioId})');
+        return user;
+      } else {
+        print('No se encontró ningún usuario con email $email en la BD');
+        return null;
+      }
+    } catch (e) {
+      print('Error al buscar usuario por email $email: $e');
+      return null;
+    }
+  }
+
+  // Método para cargar todos los modelos currency desde la BD
+  Future<bool> loadAllCurrencyModels(User user) async {
+    try {
+      print('Iniciando carga de modelos currency para: ${user.username}');
+      bool success = true;
+
+      // 1. Cargar datos de facturación si no están ya cargados
+      if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+        try {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          final String? savedComercioId = prefs.getString('datos_facturacion_comercio_id');
+
+          // Determinar el comercioId a usar (preferimos el guardado en SharedPreferences)
+          int comercioId = 0;
+
+          if (savedComercioId != null && savedComercioId.isNotEmpty) {
+            comercioId = int.tryParse(savedComercioId) ?? 0;
+            print('Usando comercioId desde SharedPreferences: $comercioId');
+          } else if (user.comercioId != null) {
+            comercioId = int.tryParse(user.comercioId!) ?? 0;
+            print('Usando comercioId desde usuario: $comercioId');
+          }
+
+          // Cargar datos de facturación
+          final datosList = await getAllDatosFacturacionCommerce(comercioId);
+          if (datosList.isNotEmpty) {
+            DatosFacturacionModel.datosFacturacionCurrent.clear();
+            DatosFacturacionModel.datosFacturacionCurrent.addAll(datosList);
+            print('✅ Datos de facturación cargados: ${datosList.length} registros');
+          } else {
+            print('⚠️ No se encontraron datos de facturación');
+            success = false;
+          }
+        } catch (e) {
+          print('❌ Error al cargar datos de facturación: $e');
+          success = false;
+        }
+      } else {
+        print('✓ Datos de facturación ya estaban cargados');
+      }
+
+      return success;
+    } catch (e) {
+      print('❌ Error al cargar modelos currency: $e');
+      return false;
+    }
+  }
+
   Future<List<User>> getUsers() async {
     final db = await this.database;
     final maps = await db.query('users');
