@@ -43,12 +43,21 @@ class _InicializacionDatosPageState extends State<InicializacionDatosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.deepPurple[700], // Color de fondo más agradable
       body: BlocProvider(
         create: (context) => _inicializacionCubit,
         child: BlocConsumer<InicializacionDatosCubit, InicializacionDatosState>(
           listener: (context, state) {
             if (state is InicializacionDatosExitosa) {
               print("✅ Inicialización completada con éxito, navegando a la pantalla principal");
+              // Mostrar un mensaje breve para confirmar que los datos se cargaron
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Datos de facturación cargados correctamente"),
+                  duration: Duration(seconds: 2),
+                  backgroundColor: Colors.green,
+                ),
+              );
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => RootNavScreen()),

@@ -94,19 +94,45 @@ class InicializacionDatosCubit extends Cubit<InicializacionDatosState> {
       print('🔍 Usando comercioId desde usuario: $comercioId');
     }
 
-    // PASO 1: Intentar cargar datos específicos del comercio
+    // PASO 1: Intentar cargar datos específicos del comercio con múltiples intentos
     print('🔍 Consultando datos de facturación para comercioId: $comercioId');
     List<DatosFacturacionModel> datosList = [];
 
     try {
-      datosList = await dbHelper.getAllDatosFacturacionCommerce(comercioId);
-      if (datosList.isNotEmpty) {
-        // Guardar el comercioId exitoso
-        await prefs.setString('datos_facturacion_comercio_id', comercioId.toString());
-        print('✅ ComercioId exitoso guardado: $comercioId');
+      // MEJORA: Añadimos manejo de errores más robusto y reintentos
+      int intentos = 0;
+      const maxIntentos = 3;
+      bool exito = false;
+      Exception? ultimoError;
+
+      while (intentos < maxIntentos && !exito) {
+        intentos++;
+        try {
+          print('🔄 Intento $intentos de $maxIntentos para cargar datos de facturación');
+          datosList = await dbHelper.getAllDatosFacturacionCommerce(comercioId);
+          if (datosList.isNotEmpty) {
+            // Guardar el comercioId exitoso
+            await prefs.setString('datos_facturacion_comercio_id', comercioId.toString());
+            print('✅ ComercioId exitoso guardado: $comercioId');
+            exito = true;
+            break;
+          } else {
+            print('⚠️ Intento $intentos: No se encontraron datos para comercioId=$comercioId');
+            await Future.delayed(Duration(milliseconds: 500)); // Pequeña pausa entre intentos
+          }
+        } catch (e) {
+          ultimoError = e as Exception;
+          print('⚠️ Error en intento $intentos: $e');
+          await Future.delayed(Duration(milliseconds: 500)); // Pequeña pausa entre intentos
+        }
+      }
+
+      // Si después de todos los intentos no tuvimos éxito, lanzamos el último error
+      if (!exito && ultimoError != null && datosList.isEmpty) {
+        throw ultimoError;
       }
     } catch (e) {
-      print('❌ Error al consultar datos de facturación: $e');
+      print('❌ Error al consultar datos de facturación después de múltiples intentos: $e');
       datosList = []; // Asegurar que la lista esté vacía en caso de error
     }
 

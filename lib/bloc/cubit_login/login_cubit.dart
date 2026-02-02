@@ -116,27 +116,28 @@ class LoginCubit extends Cubit<LoginState> {
 
               // NUEVO FLUJO: SIEMPRE forzar inicialización de datos después de reiniciar la app
               // (No verificamos si están cargados porque podría ser un falso positivo)
+              // SIEMPRE forzar inicialización en reconexión para evitar errores de facturación
               final bool forceDataInitialization = true; // Forzar siempre la inicialización
 
-              print("⚠️ Forzando inicialización de datos después de reiniciar la app");
+              print("⚠️ Forzando inicialización de datos después de reconexión");
 
-              if (forceDataInitialization) {
-                print("🔍 Los datos están en la BD pero no en memoria - redirigiendo a inicialización de datos");
+              // Crear usuario básico para la inicialización
+              final User userBasico = User(username: email, password: savedPassword);
 
-                // Crear usuario básico para la inicialización
-                final User userBasico = User(username: email, password: savedPassword);
+              // Emitir estado para ir a página de inicialización de datos
+              // IMPORTANTE: Cambiamos isPreference=true para indicar que los datos ya están en BD
+              // pero forzamos needsDataInitialization=true para asegurar la carga en memoria
+              emit(LoginState(
+                isLogin: true,
+                userToken: savedToken,
+                isPreference: true, // Los datos están en BD (no requiere sincronización)
+                user: userBasico,
+                needsOnlineAuth: false,
+                needsDataInitialization: true, // FORZAR carga de datos en memoria
+              ));
+              return;
 
-                // Emitir estado para ir a página de inicialización de datos
-                emit(LoginState(
-                  isLogin: true,
-                  userToken: savedToken,
-                  isPreference: false, // No omitir la inicialización
-                  user: userBasico,
-                  needsOnlineAuth: false,
-                  needsDataInitialization: true, // Flag para ir a inicialización
-                ));
-                return;
-              }
+              // Eliminamos el bloque FLUJO ORIGINAL porque SIEMPRE queremos inicializar datos
 
               // FLUJO ORIGINAL: Los datos ya están cargados en memoria
               try {

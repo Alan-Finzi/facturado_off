@@ -423,21 +423,23 @@ class _LoginScreenState extends State<LoginScreen> {
             "hasUser=${loginCubit.state.user != null}, " +
             "hasToken=${loginCubit.state.userToken != null}");
 
-        // Verificar la plataforma actual
-        final platformService = PlatformService();
-        final isMobile = platformService.isAndroid || platformService.isIOS;
+        // Registrar el inicio de sesión exitoso
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('ya_inicio_sesion', true);
 
-        // Log para diagnóstico
-        print("📱 Plataforma: ${platformService.getPlatformName()}, Es móvil: $isMobile");
+        // IMPORTANTE: En cada reconexión, SIEMPRE vamos a forzar la inicialización de datos
+        // sin importar la plataforma o el estado de loginCubit.state.isPreference
+        // Esto garantizará que los datos de facturación siempre estén cargados en memoria
+
+        print("🚨 IMPORTANTE: Forzando inicialización de datos en reconexión para evitar errores de facturación");
         print("🔄 Estado actual: isPreference=${loginCubit.state.isPreference}, needsDataInitialization=${loginCubit.state.needsDataInitialization}");
 
-        // LÓGICA SIMPLIFICADA:
-        // 1. Para sincronización, siempre ir a SynchronizationPage
-        // 2. Para móviles sin sincronización, SIEMPRE ir a InicializacionDatosPage
-        // 3. Para escritorio sin sincronización, ir directamente a RootNavScreen
+        // NUEVO FLUJO SIMPLIFICADO:
+        // 1. Si necesita sincronización (!isPreference), ir a SynchronizationPage
+        // 2. En TODOS los demás casos, SIEMPRE ir a InicializacionDatosPage
 
         if (!loginCubit.state.isPreference) {
-          // Si necesita sincronización, siempre ir a la página de sincronización
+          // Caso 1: Necesita sincronización, ir a SynchronizationPage
           print("➡️ Redirigiendo a la página de sincronización (sincronización requerida)");
           Navigator.pushReplacement(
             context,
@@ -448,9 +450,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           );
-        } else if (isMobile) {
-          // MÓVIL: Siempre forzar inicialización de datos cuando no requiere sincronización
-          print("➡️ Dispositivo móvil: forzando inicialización de datos antes de ir a la pantalla principal");
+        } else {
+          // Caso 2: NO necesita sincronización, SIEMPRE ir a InicializacionDatosPage
+          // Esto es crucial: garantiza que los datos de facturación se carguen en memoria
+          print("➡️ FORZANDO inicialización de datos (carga de datos de facturación en memoria)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -459,13 +462,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 token: loginCubit.state.userToken!,
               ),
             ),
-          );
-        } else {
-          // ESCRITORIO: Ir directamente a la pantalla principal cuando no requiere sincronización
-          print("➡️ Dispositivo de escritorio: yendo directamente a la pantalla principal");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => RootNavScreen()),
           );
         }
       } else {

@@ -29,10 +29,17 @@ class SynchronizationPage extends StatelessWidget {
         child: BlocListener<SynchronizationCubit, SynchronizationState>(
           listener: (context, state) {
             if (state is SynchronizationCompleted) {
-              // Navegamos a RootNavScreen cuando la sincronización está completada
+              // CORREGIDO: Navegamos a InicializacionDatosPage en lugar de RootNavScreen
+              // para cargar los datos desde la BD a memoria antes de mostrar la pantalla principal
+              print("✅ Sincronización completada. Ahora cargando datos en memoria...");
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => RootNavScreen()),
+                MaterialPageRoute(
+                  builder: (context) => InicializacionDatosPage(
+                    user: loginCubit.state.user!,
+                    token: loginCubit.state.userToken!,
+                  ),
+                ),
               );
             } else if (state is SynchronizationFailed) {
               // Mostramos un mensaje de error y volvemos a la pantalla anterior
