@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_synchronization/synchronization_cubit.dart';
+import 'inicializacion_datos_page.dart';
 
 class SynchronizationPage extends StatelessWidget {
   final String token;
