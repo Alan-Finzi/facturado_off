@@ -414,9 +414,39 @@ class _LoginScreenState extends State<LoginScreen> {
       if (loginCubit.state.isLogin) {
         await _saveOrRemoveCredentials(username, password);
 
-        if (loginCubit.state.needsDataInitialization) {
-          // Nuevo flujo: ir a la página de inicialización de datos
-          print("➡️ Redirigiendo a la página de inicialización de datos");
+        // Mostrar un mensaje para depuración (solo visible en la consola)
+        print("⚠️ ESTADO DEL LOGIN: " +
+            "isLogin=${loginCubit.state.isLogin}, " +
+            "isPreference=${loginCubit.state.isPreference}, " +
+            "needsOnlineAuth=${loginCubit.state.needsOnlineAuth}, " +
+            "needsDataInitialization=${loginCubit.state.needsDataInitialization}, " +
+            "hasUser=${loginCubit.state.user != null}, " +
+            "hasToken=${loginCubit.state.userToken != null}");
+
+        // FORZAR la pantalla de inicialización siempre que no sea una sincronización
+        bool shouldForceInitialization = true;
+
+        // Si hay que hacer la sincronización online, no forzamos la inicialización
+        if (!loginCubit.state.isPreference) {
+          shouldForceInitialization = false;
+          print("⚠️ No forzamos inicialización porque se requiere sincronización online");
+        }
+
+        if (shouldForceInitialization) {
+          // FLUJO FORZADO: Mostrar SIEMPRE la página de inicialización (para segundo login)
+          print("⚠️ FORZANDO redirección a la página de inicialización de datos");
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InicializacionDatosPage(
+                user: loginCubit.state.user!,
+                token: loginCubit.state.userToken!,
+              ),
+            ),
+          );
+        } else if (loginCubit.state.needsDataInitialization) {
+          // Nuevo flujo original: ir a la página de inicialización de datos
+          print("➡️ Redirigiendo a la página de inicialización de datos (según estado)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

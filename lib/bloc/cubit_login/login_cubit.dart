@@ -114,11 +114,13 @@ class LoginCubit extends Cubit<LoginState> {
             } else {
               // Datos sincronizados completos, necesitamos verificar si están cargados en memoria
 
-              // NUEVO FLUJO: Verificar si están cargados en memoria
-              final bool areDataLoaded = DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty &&
-                                        User.currencyUser != null;
+              // NUEVO FLUJO: SIEMPRE forzar inicialización de datos después de reiniciar la app
+              // (No verificamos si están cargados porque podría ser un falso positivo)
+              final bool forceDataInitialization = true; // Forzar siempre la inicialización
 
-              if (!areDataLoaded) {
+              print("⚠️ Forzando inicialización de datos después de reiniciar la app");
+
+              if (forceDataInitialization) {
                 print("🔍 Los datos están en la BD pero no en memoria - redirigiendo a inicialización de datos");
 
                 // Crear usuario básico para la inicialización

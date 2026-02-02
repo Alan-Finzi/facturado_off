@@ -51,6 +51,20 @@ class _VentaMainPageState extends State<VentaMainPage> {
 
   // Método para cargar los datos de facturación, con opción de reintento
   Future<void> _cargarDatosFacturacion({bool forzarRecarga = false}) async {
+    // PASO PRELIMINAR: Verificar si ya hay datos cargados en memoria (variable estática)
+    if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty && !forzarRecarga) {
+      print('✅ USANDO datos de facturación ya cargados en memoria: ${DatosFacturacionModel.datosFacturacionCurrent.length} registros');
+
+      if (mounted) {
+        setState(() {
+          datosFacturacion = List<DatosFacturacionModel>.from(DatosFacturacionModel.datosFacturacionCurrent);
+          _datosFacturacionCargados = true;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     // Si ya están cargados y no se fuerza recarga, salir
     if (_datosFacturacionCargados && !forzarRecarga) {
       return;
@@ -71,6 +85,8 @@ class _VentaMainPageState extends State<VentaMainPage> {
           _isLoading = true;
         });
       }
+
+      print('🔍 Intentando cargar datos de facturación desde la base de datos...');
 
       // 2. Intentar obtener primero el comercioId desde SharedPreferences
       final SharedPreferences prefs = await SharedPreferences.getInstance();
