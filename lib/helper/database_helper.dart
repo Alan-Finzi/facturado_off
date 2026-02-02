@@ -1241,6 +1241,7 @@ class DatabaseHelper {
   /// Retorna true si las tablas esenciales ya contienen datos
   Future<bool> isDataSynchronized() async {
     try {
+      print('🔍 INICIO DE VERIFICACIÓN DE SINCRONIZACIÓN DE DATOS');
       final db = await database;
 
       // Verificación simple: ¿Hay datos en la tabla datos_facturacion?
@@ -1262,10 +1263,13 @@ class DatabaseHelper {
         return false;
       }
 
-      // Verificación de las tablas críticas
-      final List<String> criticalTables = ['datos_facturacion', 'product', 'productos_lista_precios'];
+      // Verificación de las tablas críticas - MODIFICADO: Solo requerimos que datos_facturacion tenga datos
+      // El resto de tablas son opcionales para considerar la DB como sincronizada
+      final List<String> criticalTables = ['datos_facturacion'];
+      final List<String> optionalTables = ['product', 'productos_lista_precios'];
       bool allCriticalTablesHaveData = true;
 
+      print('🔍 Verificando tablas CRÍTICAS (requeridas para funcionar):');
       for (final table in criticalTables) {
         try {
           final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
@@ -1275,11 +1279,29 @@ class DatabaseHelper {
             print('⚠️ La tabla crítica $table está vacía');
             allCriticalTablesHaveData = false;
           } else {
-            print('✅ La tabla $table contiene $count registros');
+            print('✅ La tabla CRÍTICA $table contiene $count registros');
           }
         } catch (tableError) {
           print('❌ Error al verificar tabla $table: $tableError');
           allCriticalTablesHaveData = false;
+        }
+      }
+
+      print('🔍 Verificando tablas OPCIONALES (no bloquean el funcionamiento):');
+      for (final table in optionalTables) {
+        try {
+          final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
+          final count = result.first['count'] as int;
+
+          if (count == 0) {
+            print('ℹ️ La tabla opcional $table está vacía - CONTINUANDO DE TODOS MODOS');
+            // No afecta a allCriticalTablesHaveData
+          } else {
+            print('✅ La tabla opcional $table contiene $count registros');
+          }
+        } catch (tableError) {
+          print('ℹ️ Error al verificar tabla opcional $table: $tableError - CONTINUANDO DE TODOS MODOS');
+          // No afecta a allCriticalTablesHaveData
         }
       }
 
@@ -1289,7 +1311,7 @@ class DatabaseHelper {
         final savedComercioId = prefs.getString('datos_facturacion_comercio_id');
 
         if (savedComercioId != null && savedComercioId.isNotEmpty) {
-          print('Verificando datos de facturación para comercioId guardado: $savedComercioId');
+          print('🔍 Verificando datos de facturación para comercioId guardado: $savedComercioId');
 
           final List<Map<String, dynamic>> specificData = await db.query(
             'datos_facturacion',
@@ -1298,7 +1320,7 @@ class DatabaseHelper {
           );
 
           if (specificData.isEmpty) {
-            print('⚠️ No hay datos de facturación para el comercioId guardado: $savedComercioId');
+            print('⚠️ No hay datos de facturación para el comercioId guardado: $savedComercioId - Buscando alternativas');
 
             // Buscar cualquier dato de facturación y actualizar el SharedPreferences
             final List<Map<String, dynamic>> anyData = await db.query('datos_facturacion', limit: 1);
@@ -1307,18 +1329,34 @@ class DatabaseHelper {
               final int anyComercioId = anyData.first['comercio_id'] as int? ?? 0;
               await prefs.setString('datos_facturacion_comercio_id', anyComercioId.toString());
               print('✅ Actualizado comercioId en SharedPreferences: $anyComercioId');
+
+              // IMPORTANTE: No consideramos que falte sincronización si encontramos datos para otro comercioId
+              print('✅ Usando datos de comercioId alternativo - NO es necesaria nueva sincronización');
             }
           } else {
             print('✅ Se encontraron datos de facturación para comercioId: $savedComercioId');
           }
+        } else {
+          print('ℹ️ No hay comercioId guardado en SharedPreferences - Buscando cualquier dato de facturación');
+
+          // Buscar cualquier dato de facturación y guardarlo en SharedPreferences
+          final List<Map<String, dynamic>> anyData = await db.query('datos_facturacion', limit: 1);
+
+          if (anyData.isNotEmpty) {
+            final int anyComercioId = anyData.first['comercio_id'] as int? ?? 0;
+            await prefs.setString('datos_facturacion_comercio_id', anyComercioId.toString());
+            print('✅ Guardado nuevo comercioId en SharedPreferences: $anyComercioId');
+          }
         }
       } catch (e) {
-        print('Error al verificar datos de facturación específicos: $e');
+        print('⚠️ Error al verificar datos de facturación específicos: $e');
+        // No afectamos allCriticalTablesHaveData aquí, solo es un error en la verificación específica
       }
 
+      print('📊 RESULTADO FINAL de verificación de sincronización: ${allCriticalTablesHaveData ? "SINCRONIZADO ✅" : "NO SINCRONIZADO ❌"}');
       return allCriticalTablesHaveData;
     } catch (e) {
-      print('ERROR isDataSynchronized: Error general al verificar sincronización: $e');
+      print('❌ ERROR isDataSynchronized: Error general al verificar sincronización: $e');
       return false;
     }
   }
