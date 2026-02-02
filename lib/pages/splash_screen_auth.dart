@@ -37,46 +37,13 @@ class _SplashScreenAuthState extends State<SplashScreenAuth> {
       // Obtenemos instancia de LoginCubit
       final loginCubit = BlocProvider.of<LoginCubit>(context);
 
-      // Verificar si hay credenciales guardadas
-      final prefs = await SharedPreferences.getInstance();
-      final savedEmail = prefs.getString('remembered_email');
-      final savedPassword = prefs.getString('remembered_password');
-
-      // Si no hay credenciales guardadas, vamos a la pantalla de login
-      if (savedEmail == null || savedPassword == null) {
-        _navigateToLogin();
-        return;
-      }
-
-      // Intentar login automático
+      // MODIFICADO: Siempre vamos a la pantalla de login, pero pre-cargamos credenciales
       setState(() {
-        _statusMessage = 'Iniciando sesión automáticamente...';
+        _statusMessage = 'Preparando pantalla de login...';
       });
 
-      // Intentamos iniciar sesión sin necesidad de proporcionar contraseña
-      // (el flujo interno de login usará la credencial almacenada)
-      await loginCubit.login(savedEmail, null);
-
-      if (loginCubit.state.isLogin) {
-        setState(() {
-          _statusMessage = 'Verificando estado de sincronización...';
-        });
-
-        // Verificar el estado de sincronización y decidir a dónde navegar
-        if (!loginCubit.state.isPreference) {
-          // Si isPreference es false, se requiere sincronización
-          _navigateToSynchronization(savedEmail, loginCubit.state.userToken!);
-        } else if (loginCubit.state.needsDataInitialization) {
-          // Si se necesita inicializar datos en memoria
-          _navigateToInitData(loginCubit.state.user!, loginCubit.state.userToken!);
-        } else {
-          // Todo está listo, ir a la pantalla principal
-          _navigateToMain();
-        }
-      } else {
-        // Si el login falló, ir a la pantalla de login
-        _navigateToLogin();
-      }
+      // Simplemente vamos a la pantalla de login (las credenciales se cargarán allí)
+      _navigateToLogin();
     } catch (e) {
       print('Error en verificación de autenticación: $e');
       _navigateToLogin();
