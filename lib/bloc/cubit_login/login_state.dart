@@ -4,6 +4,7 @@ class LoginState extends Equatable {
  final bool isLogin;        // Usuario ha iniciado sesión correctamente
  final bool isPreference;   // Datos ya sincronizados (omitir sincronización)
  final bool needsOnlineAuth; // Requiere autenticación online (para sincronización explícita)
+ final bool needsDataInitialization; // Requiere inicialización de datos locales
  final User? user;
  final String? userToken;
 
@@ -13,10 +14,11 @@ class LoginState extends Equatable {
    this.userToken,
    required this.isPreference,
    this.needsOnlineAuth = false,
+   this.needsDataInitialization = false,
  });
 
  @override
- List<Object?> get props => [isLogin, user, isPreference, needsOnlineAuth];
+ List<Object?> get props => [isLogin, user, isPreference, needsOnlineAuth, needsDataInitialization];
 
  // Método de copia para facilitar la actualización de estado
  LoginState copyWith({
@@ -24,6 +26,7 @@ class LoginState extends Equatable {
   User? user,
   bool? isPreference,
   bool? needsOnlineAuth,
+  bool? needsDataInitialization,
   String? userToken,
  }) {
   return LoginState(
@@ -32,6 +35,7 @@ class LoginState extends Equatable {
    userToken: userToken ?? this.userToken,
    isPreference: isPreference ?? this.isPreference,
    needsOnlineAuth: needsOnlineAuth ?? this.needsOnlineAuth,
+   needsDataInitialization: needsDataInitialization ?? this.needsDataInitialization,
   );
  }
 }

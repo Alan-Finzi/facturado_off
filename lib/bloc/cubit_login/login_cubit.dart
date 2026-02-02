@@ -112,7 +112,31 @@ class LoginCubit extends Cubit<LoginState> {
                 needsOnlineAuth: false,
               ));
             } else {
-              // Datos sincronizados completos, obtener el usuario completo de la BD
+              // Datos sincronizados completos, necesitamos verificar si están cargados en memoria
+
+              // NUEVO FLUJO: Verificar si están cargados en memoria
+              final bool areDataLoaded = DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty &&
+                                        User.currencyUser != null;
+
+              if (!areDataLoaded) {
+                print("🔍 Los datos están en la BD pero no en memoria - redirigiendo a inicialización de datos");
+
+                // Crear usuario básico para la inicialización
+                final User userBasico = User(username: email, password: savedPassword);
+
+                // Emitir estado para ir a página de inicialización de datos
+                emit(LoginState(
+                  isLogin: true,
+                  userToken: savedToken,
+                  isPreference: false, // No omitir la inicialización
+                  user: userBasico,
+                  needsOnlineAuth: false,
+                  needsDataInitialization: true, // Flag para ir a inicialización
+                ));
+                return;
+              }
+
+              // FLUJO ORIGINAL: Los datos ya están cargados en memoria
               try {
                 // Buscar el usuario completo en la base de datos por email
                 User? userFromDB = await dbHelper.getUserByEmail(email!);

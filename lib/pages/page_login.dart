@@ -10,6 +10,7 @@ import '../util/platform_service.dart';
 import '../widget/platform_adaptive_widget.dart';
 import '../util/constants.dart';
 import '../widget/icon_button_widget.dart';
+import 'inicializacion_datos_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -413,12 +414,28 @@ class _LoginScreenState extends State<LoginScreen> {
       if (loginCubit.state.isLogin) {
         await _saveOrRemoveCredentials(username, password);
 
-        if (loginCubit.state.isPreference) {
+        if (loginCubit.state.needsDataInitialization) {
+          // Nuevo flujo: ir a la página de inicialización de datos
+          print("➡️ Redirigiendo a la página de inicialización de datos");
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InicializacionDatosPage(
+                user: loginCubit.state.user!,
+                token: loginCubit.state.userToken!,
+              ),
+            ),
+          );
+        } else if (loginCubit.state.isPreference) {
+          // Flujo normal: ir a la página principal
+          print("➡️ Redirigiendo a la página principal (RootNavScreen)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => RootNavScreen()),
           );
         } else {
+          // Flujo de sincronización: ir a la página de sincronización
+          print("➡️ Redirigiendo a la página de sincronización");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
