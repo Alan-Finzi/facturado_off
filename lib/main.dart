@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
-import 'package:facturador_offline/pages/page_login.dart';
+import 'package:facturador_offline/pages/splash_screen_auth.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/cubit_lista_precios/lista_precios_cubit.dart';
@@ -193,7 +193,7 @@ class _MyappState extends State<Myapp> {
       debugShowCheckedModeBanner: false,
 
       // Definir el widget inicial adaptado a la plataforma
-      home: const LoginScreen(),
+      home: const SplashScreenAuth(),
 
       // Configuraciones de plataforma adicionales
       builder: (context, child) {
