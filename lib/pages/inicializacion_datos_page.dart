@@ -1,10 +1,10 @@
+import 'package:facturador_offline/pages/root_navegator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/cubit_inicializacion_datos/inicializacion_datos_cubit.dart';
 import '../models/user.dart';
-import '../widget/theme.dart';
-import 'page_root.dart';
+
 
 class InicializacionDatosPage extends StatefulWidget {
   final User user;
@@ -51,14 +51,13 @@ class _InicializacionDatosPageState extends State<InicializacionDatosPage> {
               print("✅ Inicialización completada con éxito, navegando a la pantalla principal");
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => RootPage()),
+                MaterialPageRoute(builder: (context) => RootNavScreen()),
                 (route) => false,
               );
             }
           },
           builder: (context, state) {
             return Container(
-              decoration: ThemeGeneral.scaffoldBox(),
               child: Center(
                 child: SizedBox(
                   width: 300,
