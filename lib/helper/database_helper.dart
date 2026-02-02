@@ -1908,7 +1908,7 @@ class DatabaseHelper {
       )];
     }
   }
-  }
+
 
   Future<List<ProductoConPrecioYStock>> getProductosConPrecioYStockQuery(
       {required int sucursalId,required int listaId}) async {
