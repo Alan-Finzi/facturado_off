@@ -423,49 +423,22 @@ class _LoginScreenState extends State<LoginScreen> {
             "hasUser=${loginCubit.state.user != null}, " +
             "hasToken=${loginCubit.state.userToken != null}");
 
-        // FORZAR la pantalla de inicialización siempre que no sea una sincronización
-        bool shouldForceInitialization = true;
+        // Verificar la plataforma actual
+        final platformService = PlatformService();
+        final isMobile = platformService.isAndroid || platformService.isIOS;
 
-        // Si hay que hacer la sincronización online, no forzamos la inicialización
+        // Log para diagnóstico
+        print("📱 Plataforma: ${platformService.getPlatformName()}, Es móvil: $isMobile");
+        print("🔄 Estado actual: isPreference=${loginCubit.state.isPreference}, needsDataInitialization=${loginCubit.state.needsDataInitialization}");
+
+        // LÓGICA SIMPLIFICADA:
+        // 1. Para sincronización, siempre ir a SynchronizationPage
+        // 2. Para móviles sin sincronización, SIEMPRE ir a InicializacionDatosPage
+        // 3. Para escritorio sin sincronización, ir directamente a RootNavScreen
+
         if (!loginCubit.state.isPreference) {
-          shouldForceInitialization = false;
-          print("⚠️ No forzamos inicialización porque se requiere sincronización online");
-        }
-
-        if (shouldForceInitialization) {
-          // FLUJO FORZADO: Mostrar SIEMPRE la página de inicialización (para segundo login)
-          print("⚠️ FORZANDO redirección a la página de inicialización de datos");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => InicializacionDatosPage(
-                user: loginCubit.state.user!,
-                token: loginCubit.state.userToken!,
-              ),
-            ),
-          );
-        } else if (loginCubit.state.needsDataInitialization) {
-          // Nuevo flujo original: ir a la página de inicialización de datos
-          print("➡️ Redirigiendo a la página de inicialización de datos (según estado)");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => InicializacionDatosPage(
-                user: loginCubit.state.user!,
-                token: loginCubit.state.userToken!,
-              ),
-            ),
-          );
-        } else if (loginCubit.state.isPreference) {
-          // Flujo normal: ir a la página principal
-          print("➡️ Redirigiendo a la página principal (RootNavScreen)");
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => RootNavScreen()),
-          );
-        } else {
-          // Flujo de sincronización: ir a la página de sincronización
-          print("➡️ Redirigiendo a la página de sincronización");
+          // Si necesita sincronización, siempre ir a la página de sincronización
+          print("➡️ Redirigiendo a la página de sincronización (sincronización requerida)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -474,6 +447,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 email: username,
               ),
             ),
+          );
+        } else if (isMobile) {
+          // MÓVIL: Siempre forzar inicialización de datos cuando no requiere sincronización
+          print("➡️ Dispositivo móvil: forzando inicialización de datos antes de ir a la pantalla principal");
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InicializacionDatosPage(
+                user: loginCubit.state.user!,
+                token: loginCubit.state.userToken!,
+              ),
+            ),
+          );
+        } else {
+          // ESCRITORIO: Ir directamente a la pantalla principal cuando no requiere sincronización
+          print("➡️ Dispositivo de escritorio: yendo directamente a la pantalla principal");
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => RootNavScreen()),
           );
         }
       } else {
