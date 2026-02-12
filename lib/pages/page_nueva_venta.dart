@@ -100,94 +100,85 @@ class _VentaMainPageState extends State<VentaMainPage> {
         // y si no encuentra, buscará otros disponibles y actualizará SharedPreferences
         final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(savedComercioId));
 
-        if (mounted) {
-          setState(() {
-            datosFacturacion = datos;
-            _datosFacturacionCargados = true;
-            _isLoading = false;
+        // Si hay datos, usarlos
+        if (datos.isNotEmpty) {
+          // Asegurarnos que también estén en la variable estática
+          if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+            DatosFacturacionModel.datosFacturacionCurrent.addAll(datos);
+          }
 
-            // Si se forzó la recarga y fue exitosa, mostrar mensaje
-            if (forzarRecarga && datos.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Datos de facturación cargados correctamente'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 3),
-                )
-              );
-            }
-          });
+          if (mounted) {
+            setState(() {
+              datosFacturacion = datos;
+              _datosFacturacionCargados = true;
+              _isLoading = false;
+
+              // Si se forzó la recarga y fue exitosa, mostrar mensaje
+              if (forzarRecarga) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Datos de facturación cargados correctamente'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
+                  )
+                );
+              }
+            });
+          }
+          return;
+        } else {
+          print('No se encontraron datos para comercioId: $savedComercioId. Creando dato de emergencia...');
+          // Continuar para crear un dato de emergencia
         }
-        return;
       }
 
-      // 4. Si no hay comercioId guardado, intentar obtenerlo del usuario logueado
+      // 4. Si no hay comercioId guardado o no se encontraron datos, obtenerlo del usuario o crear uno de emergencia
       final loginCubit = context.read<LoginCubit>();
 
-      // Verificar que el usuario exista
-      if (loginCubit.state.user == null) {
-        print('Error: Usuario no disponible para cargar datos de facturación');
-
-        // Usar el método mejorado de DatabaseHelper que siempre devuelve al menos un registro
-        final datosEmergencia = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
-
-        if (mounted) {
-          setState(() {
-            datosFacturacion = datosEmergencia;
-            _datosFacturacionCargados = true;
-            _isLoading = false;
-          });
-        }
-        return;
+      // Obtener comercioId del usuario si está disponible
+      String? comercioId;
+      if (loginCubit.state.user != null && loginCubit.state.user!.comercioId != null) {
+        comercioId = loginCubit.state.user!.comercioId;
       }
 
-      // Obtener y validar el comercioId
-      String? rawComercioId = loginCubit.state.user!.comercioId;
-      String? userId = loginCubit.state.user!.id?.toString();
-
-      // Validación segura de comercioId
-      String comercioId;
-      if (rawComercioId == "1" && userId != null) {
-        comercioId = userId;
-      } else if (rawComercioId != null && rawComercioId.isNotEmpty) {
-        comercioId = rawComercioId;
-      } else if (userId != null) {
-        // Si no hay comercioId, intentar con userId
-        comercioId = userId;
-      } else {
-        // Si no hay ninguno, usar un valor predeterminado
-        comercioId = "0";
-        print('Warning: Usando comercioId por defecto (0)');
+      // Si no hay comercioId, usar un valor por defecto
+      if (comercioId == null || comercioId.isEmpty) {
+        comercioId = "1"; // Valor por defecto
+        print('Usando comercioId por defecto: $comercioId');
       }
 
-      // Guardar el comercioId para futuros usos
+      // Crear dato de emergencia con el comercioId disponible
+      final datoEmergencia = DatosFacturacionModel(
+        id: 999,
+        razonSocial: "Datos de Emergencia",
+        comercioId: int.tryParse(comercioId) ?? 1,
+        condicionIva: CondicionIva.MONOTRIBUTO,
+        cuit: "00000000000",
+        ptoVenta: "1",
+        predeterminado: 1
+      );
+
+      // Guardar en la base de datos para futuras consultas
       try {
+        await DatabaseHelper.instance.insertDatosFacturacion(datoEmergencia);
+
+        // Actualizar SharedPreferences con este comercioId
         await prefs.setString('datos_facturacion_comercio_id', comercioId);
-        print('ComercioId guardado en SharedPreferences: $comercioId');
+
+        print('Dato de emergencia guardado en BD y SharedPreferences con comercioId: $comercioId');
       } catch (e) {
-        print('Error al guardar comercioId: $e');
+        print('Error al guardar dato de emergencia: $e');
       }
 
-      // El método getAllDatosFacturacionCommerce siempre retornará datos
-      final datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.parse(comercioId));
+      // Agregar a la variable estática
+      DatosFacturacionModel.datosFacturacionCurrent.add(datoEmergencia);
 
-      // Guardar los datos obtenidos
+      // Actualizar estado
       if (mounted) {
         setState(() {
-          datosFacturacion = datos;
+          datosFacturacion = [datoEmergencia];
           _datosFacturacionCargados = true;
           _isLoading = false;
-
-          // Si se forzó la recarga y fue exitosa, mostrar mensaje
-          if (forzarRecarga && datos.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Datos de facturación cargados correctamente'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 3),
-              )
-            );
-          }
         });
       }
     } catch (e) {
@@ -195,7 +186,43 @@ class _VentaMainPageState extends State<VentaMainPage> {
 
       // Intentar obtener datos de emergencia directamente
       try {
-        final datosEmergencia = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
+        // Intentar todos los comercioIds posibles para encontrar datos
+        final prefs = await SharedPreferences.getInstance();
+        List<DatosFacturacionModel> datosEmergencia = [];
+
+        // Probar primero con 0 (por defecto)
+        datosEmergencia = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(0);
+
+        // Si no hay datos, probar con cualquier dato disponible
+        if (datosEmergencia.isEmpty) {
+          datosEmergencia = await DatabaseHelper.instance.getAllDatosFacturacion();
+        }
+
+        // Si aún no hay datos, crear uno de emergencia
+        if (datosEmergencia.isEmpty) {
+          final datoEmergencia = DatosFacturacionModel(
+            id: 999,
+            razonSocial: "Datos de Emergencia",
+            comercioId: 1,
+            condicionIva: CondicionIva.MONOTRIBUTO,
+            cuit: "00000000000",
+            ptoVenta: "1",
+            predeterminado: 1
+          );
+
+          // Guardar en BD
+          await DatabaseHelper.instance.insertDatosFacturacion(datoEmergencia);
+
+          // Actualizar comercioId en SharedPreferences
+          await prefs.setString('datos_facturacion_comercio_id', "1");
+
+          datosEmergencia = [datoEmergencia];
+        }
+
+        // Asegurar que los datos estén en la variable estática
+        if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+          DatosFacturacionModel.datosFacturacionCurrent.addAll(datosEmergencia);
+        }
 
         if (mounted) {
           setState(() {
@@ -204,11 +231,15 @@ class _VentaMainPageState extends State<VentaMainPage> {
             _isLoading = false;
           });
 
-          // Mostrar mensaje de error y opciones al usuario
-          _mostrarDialogoError();
+          // Solo mostrar diálogo si sigue habiendo problemas
+          if (datosEmergencia.isEmpty) {
+            _mostrarDialogoError();
+          }
         }
       } catch (criticalError) {
         // Error verdaderamente crítico, no se pudo recuperar
+        print('Error crítico al recuperar datos: $criticalError');
+
         if (mounted) {
           setState(() {
             _datosFacturacionCargados = true; // Marcar como intentado para no repetir
@@ -228,11 +259,10 @@ class _VentaMainPageState extends State<VentaMainPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text('Error de datos'),
+        title: Text('Advertencia'),
         content: Text(
-          'No se pudieron cargar los datos de facturación correctamente.\n\n'
-          'Esto puede deberse a que la base de datos no está sincronizada o hay un problema con los datos.\n\n'
-          'Por favor, elija una de las siguientes opciones:'
+          'Se detectó un problema con los datos de facturación.\n\n'
+          'Puede reintentar la carga, crear datos de emergencia o ir a la pantalla de sincronización.'
         ),
         actions: [
           TextButton(
@@ -242,6 +272,61 @@ class _VentaMainPageState extends State<VentaMainPage> {
               _cargarDatosFacturacion(forzarRecarga: true);
             },
             child: Text('Reintentar'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar diálogo
+
+              // Crear dato de emergencia
+              final datoEmergencia = DatosFacturacionModel(
+                id: 999,
+                razonSocial: "Datos de Emergencia",
+                comercioId: 1,
+                condicionIva: CondicionIva.MONOTRIBUTO,
+                cuit: "00000000000",
+                ptoVenta: "1",
+                predeterminado: 1
+              );
+
+              try {
+                // Guardar en BD
+                await DatabaseHelper.instance.insertDatosFacturacion(datoEmergencia);
+
+                // Guardar en variable estática
+                if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
+                  DatosFacturacionModel.datosFacturacionCurrent.add(datoEmergencia);
+                }
+
+                // Actualizar SharedPreferences
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('datos_facturacion_comercio_id', "1");
+
+                if (mounted) {
+                  setState(() {
+                    datosFacturacion = [datoEmergencia];
+                    _datosFacturacionCargados = true;
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Se crearon datos de emergencia'),
+                      backgroundColor: Colors.green,
+                    )
+                  );
+                }
+              } catch (e) {
+                print('Error al crear datos de emergencia: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al crear datos de emergencia'),
+                      backgroundColor: Colors.red,
+                    )
+                  );
+                }
+              }
+            },
+            child: Text('Usar datos de emergencia'),
           ),
           TextButton(
             onPressed: () {
