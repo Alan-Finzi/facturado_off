@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
-import 'dart:async'; // Para TimeoutException
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 import '../bloc/cubit_login/login_cubit.dart';
 import '../helper/database_helper.dart';
 import '../models/categorias_model.dart';
@@ -43,6 +44,25 @@ class ApiServices{
 
 
   late  String tokenUser = '';
+
+  Future<void> _insertUserBatch(List<User> userBatch) async {
+    final db = await DatabaseHelper.instance.database;
+
+    await db.transaction((txn) async {
+      for (var user in userBatch) {
+        if(user.email == "demo@gmail.com") {
+          user.email = "depositolasgrutas@gmail.com";
+        }
+
+        Map<String, dynamic> userMap = user.toJson();
+        await txn.insert(
+          'users',
+          userMap,
+          conflictAlgorithm: ConflictAlgorithm.replace
+        );
+      }
+    });
+  }
 
   Future<String?> loginUser(String email, String password) async {
     try {
@@ -149,20 +169,19 @@ class ApiServices{
 
         if (response.statusCode == 200) {
         List<dynamic> jsonList = jsonDecode(response.body);
-
         List<User> users = jsonList.map((json) => User.fromJson(json)).toList();
 
-        for (var user in users) {
-          // Preservar la compatibilidad con el caso especial, pero añadir logs
-          if(user.email == "demo@gmail.com") {
-            print('Transformando email demo@gmail.com a depositolasgrutas@gmail.com para compatibilidad');
-            user.email = "depositolasgrutas@gmail.com";
-          }
+        final int batchSize = 50;
+        List<List<User>> userBatches = [];
 
-          // Agregar logs para diagnóstico
-          print('Insertando usuario en base de datos: ${user.email}');
-          await DatabaseHelper.instance.insertUser(user);
+        for (int i = 0; i < users.length; i += batchSize) {
+          final end = (i + batchSize < users.length) ? i + batchSize : users.length;
+          userBatches.add(users.sublist(i, end));
         }
+
+        await Future.wait(
+          userBatches.map((batch) => _insertUserBatch(batch))
+        );
 
         // Buscar el usuario logueado por email
         User? loggedUser;
