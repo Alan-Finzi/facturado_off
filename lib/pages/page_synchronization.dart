@@ -29,7 +29,16 @@ class SynchronizationPage extends StatelessWidget {
         },
         child: BlocListener<SynchronizationCubit, SynchronizationState>(
           listener: (context, state) {
-            if (state is SynchronizationCompleted) {
+            if (state is SynchronizationInitial) {
+              // Mostrar un mensaje cuando inicia la sincronización
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Mantenga la pantalla encendida durante la sincronización para evitar interrupciones'),
+                  duration: Duration(seconds: 5),
+                  backgroundColor: Colors.blue,
+                ),
+              );
+            } else if (state is SynchronizationCompleted) {
               // CORREGIDO: Navegamos a InicializacionDatosPage en lugar de RootNavScreen
               // para cargar los datos desde la BD a memoria antes de mostrar la pantalla principal
               print("✅ Sincronización completada. Ahora cargando datos en memoria...");
@@ -65,6 +74,27 @@ class SynchronizationPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text('Sincronización en progreso...', style: TextStyle(fontSize: 18)),
+                      SizedBox(height: 10),
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lightbulb, color: Colors.amber.shade800),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Mantenga la pantalla encendida para evitar interrupciones en la sincronización',
+                                style: TextStyle(color: Colors.amber.shade800),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       SizedBox(height: 20),
                       LinearProgressIndicator(value: state.progress, minHeight: 8.0),
                       SizedBox(height: 20),
