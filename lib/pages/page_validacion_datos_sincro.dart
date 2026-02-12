@@ -49,31 +49,66 @@ class _ValidacionDatosSincroPageState extends State<ValidacionDatosSincroPage> {
 
       final dbHelper = DatabaseHelper.instance;
 
-      // 1. Validar User.currencyUser
+      // 1. Validar User.currencyUser (enfocándonos en comercioId)
       if (User.currencyUser != null) {
-        _userValid = true;
+        print("✅ User.currencyUser está en memoria");
+
+        // Verificar específicamente si tiene comercioId
+        if (User.currencyUser!.comercioId != null && User.currencyUser!.comercioId!.isNotEmpty) {
+          print("✅ User.currencyUser tiene comercioId: ${User.currencyUser!.comercioId}");
+          _userValid = true;
+        } else {
+          print("⚠️ User.currencyUser no tiene comercioId válido");
+        }
+
+        // Llenar la información de usuario de todos modos
         _userInfo = {
-          'id': User.currencyUser!.id,
-          'username': User.currencyUser!.username,
-          'email': User.currencyUser!.email,
-          'comercioId': User.currencyUser!.comercioId,
-          'sucursal': User.currencyUser!.sucursal,
-          'idListaPrecio': User.currencyUser!.idListaPrecio,
+          'id': User.currencyUser!.id ?? 0,
+          'username': User.currencyUser!.username ?? 'Sin nombre de usuario',
+          'email': User.currencyUser!.email ?? 'Sin email',
+          'comercioId': User.currencyUser!.comercioId ?? 'Sin comercioId',
+          'sucursal': User.currencyUser!.sucursal ?? 0,
+          'idListaPrecio': User.currencyUser!.idListaPrecio ?? 0,
         };
       } else {
+        print("⚠️ User.currencyUser es null, intentando cargar desde DB");
+
         // Intenta cargar desde la base de datos si no está en memoria
-        if (widget.user != null && widget.user!.username != null) {
-          final userFromDB = await dbHelper.getUserByEmail(widget.user!.username!);
-          if (userFromDB != null) {
-            _userValid = true;
-            _userInfo = {
-              'id': userFromDB.id,
-              'username': userFromDB.username,
-              'email': userFromDB.email,
-              'comercioId': userFromDB.comercioId,
-              'sucursal': userFromDB.sucursal,
-              'idListaPrecio': userFromDB.idListaPrecio,
-            };
+        String? emailOrUsername = null;
+
+        if (widget.user != null) {
+          emailOrUsername = widget.user!.email ?? widget.user!.username;
+
+          if (emailOrUsername != null) {
+            print("🔍 Buscando usuario por: $emailOrUsername");
+            final userFromDB = await dbHelper.getUserByEmail(emailOrUsername);
+
+            if (userFromDB != null) {
+              print("✅ Usuario encontrado en BD");
+
+              // Verificar comercioId
+              if (userFromDB.comercioId != null && userFromDB.comercioId!.isNotEmpty) {
+                print("✅ Usuario de BD tiene comercioId: ${userFromDB.comercioId}");
+                _userValid = true;
+
+                // Establecer como usuario actual
+                User.setCurrencyUser(userFromDB);
+              } else {
+                print("⚠️ Usuario de BD no tiene comercioId válido");
+              }
+
+              // Llenar la información de todos modos
+              _userInfo = {
+                'id': userFromDB.id ?? 0,
+                'username': userFromDB.username ?? 'Sin nombre de usuario',
+                'email': userFromDB.email ?? 'Sin email',
+                'comercioId': userFromDB.comercioId ?? 'Sin comercioId',
+                'sucursal': userFromDB.sucursal ?? 0,
+                'idListaPrecio': userFromDB.idListaPrecio ?? 0,
+              };
+            } else {
+              print("❌ No se encontró el usuario en la BD");
+            }
           }
         }
       }
@@ -220,14 +255,35 @@ class _ValidacionDatosSincroPageState extends State<ValidacionDatosSincroPage> {
   }
 
   void _continuarAplicacion() {
-    if (_userValid && _facturacionValid) {
-      // Si todo está validado correctamente, navegar a la aplicación principal
+    // Verificar específicamente si hay un comercioId válido, sea en el usuario o en los datos de facturación
+    bool tieneComercioIdValido = false;
+
+    // Verificar comercioId en el usuario
+    if (User.currencyUser?.comercioId != null && User.currencyUser!.comercioId!.isNotEmpty) {
+      print("✅ User.currencyUser tiene comercioId válido: ${User.currencyUser!.comercioId}");
+      tieneComercioIdValido = true;
+    }
+
+    // Verificar comercioId en los datos de facturación
+    if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty &&
+        DatosFacturacionModel.datosFacturacionCurrent.first.comercioId != null) {
+      print("✅ DatosFacturacionModel tiene comercioId válido: ${DatosFacturacionModel.datosFacturacionCurrent.first.comercioId}");
+      tieneComercioIdValido = true;
+    }
+
+    // Si tiene comercioId válido o al menos los datos de facturación son válidos, continuar
+    if (tieneComercioIdValido || _facturacionValid) {
+      print("✅ Validación exitosa: tieneComercioIdValido=$tieneComercioIdValido, facturacionValid=$_facturacionValid");
+
+      // Navegar a la aplicación principal
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => RootNavScreen()),
       );
     } else {
-      // Si falta algún dato, ir a la página de sincronización
+      print("❌ Validación fallida: tieneComercioIdValido=$tieneComercioIdValido, facturacionValid=$_facturacionValid");
+
+      // Si falta el comercioId, ir a la página de sincronización
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
