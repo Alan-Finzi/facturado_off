@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:async';
-import 'package:screen/screen.dart';
+import 'package:wakelock/wakelock.dart';
 import '../../helper/database_helper.dart';
 import '../cubit_login/login_cubit.dart';
 
@@ -20,10 +20,11 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
     try {
       // Mantener la pantalla encendida durante la sincronización
       try {
-        await Screen.keepOn(true);
-        print('✅ Screen.keepOn activado: La pantalla se mantendrá encendida durante la sincronización');
+        // En versión 0.2.1, Wakelock.enable() no devuelve un Future
+        Wakelock.enable();
+        print('✅ Wakelock activado: La pantalla se mantendrá encendida durante la sincronización');
       } catch (e) {
-        print('❌ Error al activar Screen.keepOn: $e');
+        print('❌ Error al activar Wakelock: $e');
         // Continuar aunque falle - la funcionalidad principal no debe verse afectada
       }
 
@@ -68,18 +69,19 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
       // Permitir que la pantalla se apague nuevamente
       try {
-        await Screen.keepOn(false);
-        print('✅ Screen.keepOn desactivado: La pantalla puede apagarse normalmente');
+        // En versión 0.2.1, Wakelock.disable() no devuelve un Future
+        Wakelock.disable();
+        print('✅ Wakelock desactivado: La pantalla puede apagarse normalmente');
       } catch (e) {
-        print('❌ Error al desactivar Screen.keepOn: $e');
+        print('❌ Error al desactivar Wakelock: $e');
       }
     } catch (error) {
-      // Asegurarse de desactivar Screen.keepOn incluso en caso de error
+      // Asegurarse de desactivar Wakelock incluso en caso de error
       try {
-        await Screen.keepOn(false);
-        print('✅ Screen.keepOn desactivado después de error');
+        Wakelock.disable();
+        print('✅ Wakelock desactivado después de error');
       } catch (e) {
-        print('❌ Error al desactivar Screen.keepOn: $e');
+        print('❌ Error al desactivar Wakelock: $e');
       }
 
       emit(SynchronizationFailed(errorMessage: "Error al sincronizar: ${error.toString()}"));
