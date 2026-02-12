@@ -11,6 +11,7 @@ import '../widget/platform_adaptive_widget.dart';
 import '../util/constants.dart';
 import '../widget/icon_button_widget.dart';
 import 'inicializacion_datos_page.dart';
+import 'page_validacion_datos_sincro.dart'; // Importar la nueva página
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -434,12 +435,24 @@ class _LoginScreenState extends State<LoginScreen> {
         print("🚨 IMPORTANTE: Forzando inicialización de datos en reconexión para evitar errores de facturación");
         print("🔄 Estado actual: isPreference=${loginCubit.state.isPreference}, needsDataInitialization=${loginCubit.state.needsDataInitialization}");
 
-        // NUEVO FLUJO SIMPLIFICADO:
+        // FLUJO MEJORADO:
         // 1. Si necesita sincronización (!isPreference), ir a SynchronizationPage
-        // 2. En TODOS los demás casos, SIEMPRE ir a InicializacionDatosPage
+        // 2. Si es primer login (is_first_login=true), ir a SynchronizationPage como primer login
+        // 3. Si no es primer login (is_first_login=false), ir a ValidacionDatosSincroPage
 
-        if (!loginCubit.state.isPreference) {
-          // Caso 1: Necesita sincronización, ir a SynchronizationPage
+        // Obtener el estado de primer login desde SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final bool isPrimerLogin = prefs.getBool('is_first_login') ?? true; // Por defecto es primer login
+
+        if (!loginCubit.state.isPreference || isPrimerLogin) {
+          // Caso 1 y 2: Necesita sincronización o es primer login, ir a SynchronizationPage
+
+          // Si es primer login, cambiar la bandera para futuros inicios de sesión
+          if (isPrimerLogin) {
+            await prefs.setBool('is_first_login', false);
+            print("🔄 Primer inicio de sesión detectado - La bandera ha sido actualizada");
+          }
+
           print("➡️ Redirigiendo a la página de sincronización (sincronización requerida)");
           Navigator.pushReplacement(
             context,
@@ -451,13 +464,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else {
-          // Caso 2: NO necesita sincronización, SIEMPRE ir a InicializacionDatosPage
-          // Esto es crucial: garantiza que los datos de facturación se carguen en memoria
-          print("➡️ FORZANDO inicialización de datos (carga de datos de facturación en memoria)");
+          // Caso 3: No es primer login y no necesita sincronización, validar datos sincronizados
+          print("➡️ Validando datos sincronizados (login subsiguiente)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => InicializacionDatosPage(
+              builder: (context) => ValidacionDatosSincroPage(
                 user: loginCubit.state.user!,
                 token: loginCubit.state.userToken!,
               ),

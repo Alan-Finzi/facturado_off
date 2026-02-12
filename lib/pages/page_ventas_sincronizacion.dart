@@ -6,6 +6,7 @@ import 'package:facturador_offline/pages/page_login.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helper/database_helper.dart';
 import '../helper/sales_database_helper.dart';
@@ -24,6 +25,9 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> wit
   final SalesDatabaseHelper _salesHelper = SalesDatabaseHelper();
   final SalesSyncHelper _syncHelper = SalesSyncHelper();
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Variable para controlar si se está reiniciando la sincronización
+  bool _isResettingSync = false;
 
   // Control de pestañas para alternar entre sincronización de ventas y datos maestros
   late TabController _tabController;
@@ -406,6 +410,104 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> wit
     );
   }
 
+  // Método para reiniciar la sincronización
+  Future<void> _reiniciarSincronizacion() async {
+    if (!_isInternetConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No hay conexión a internet. Intente nuevamente cuando esté conectado.')),
+      );
+      return;
+    }
+
+    try {
+      setState(() {
+        _isResettingSync = true;
+      });
+
+      // Mostrar diálogo de confirmación
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Reiniciar Sincronización'),
+          content: Text('Esta acción marcará la aplicación como "primer login" para forzar una sincronización completa en el próximo inicio de sesión. ¿Desea continuar?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Reiniciar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmar == true) {
+        // Marcar como primer login para forzar sincronización
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_first_login', true);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sincronización reiniciada. En el próximo inicio de sesión se realizará una sincronización completa.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+
+        // Opcional: Podríamos ofrecer cerrar sesión inmediatamente para forzar la sincronización
+        final quiereSalir = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('¿Cerrar sesión ahora?'),
+            content: Text('¿Desea cerrar sesión ahora para realizar la sincronización al volver a ingresar?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Más tarde'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Cerrar sesión'),
+              ),
+            ],
+          ),
+        );
+
+        if (quiereSalir == true && context.mounted) {
+          // Cerrar sesión y volver a la pantalla de login
+          final loginCubit = context.read<LoginCubit>();
+          loginCubit.logout();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+            (route) => false
+          );
+        }
+      }
+    } catch (e) {
+      log.e('PageVentasSincronizacion', 'Error al reiniciar sincronización', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al reiniciar sincronización: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResettingSync = false;
+        });
+      }
+    }
+  }
+
   // Solicitar sincronización de datos maestros
   void _solicitarSincronizacionDatosMaestros() {
     final loginCubit = context.read<LoginCubit>();
@@ -483,11 +585,27 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> wit
             tooltip: 'Sincronizar ventas',
             child: Icon(_isLoading ? Icons.hourglass_top : Icons.sync),
           )
-        : FloatingActionButton(
-            onPressed: (_isVerifyingDb || !_isInternetConnected) ? null : _solicitarSincronizacionDatosMaestros,
-            backgroundColor: _isInternetConnected ? Colors.blue : Colors.grey,
-            tooltip: 'Sincronizar datos maestros',
-            child: Icon(_isVerifyingDb ? Icons.hourglass_top : Icons.sync),
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Botón para reiniciar sincronización (primer botón)
+              FloatingActionButton.small(
+                onPressed: (_isVerifyingDb || !_isInternetConnected) ? null : _reiniciarSincronizacion,
+                backgroundColor: _isInternetConnected ? Colors.orange : Colors.grey,
+                tooltip: 'Reiniciar sincronización',
+                heroTag: 'btn_reiniciar_sync',
+                child: Icon(Icons.restart_alt),
+              ),
+              SizedBox(height: 10),
+              // Botón para solicitar sincronización (botón principal)
+              FloatingActionButton(
+                onPressed: (_isVerifyingDb || !_isInternetConnected) ? null : _solicitarSincronizacionDatosMaestros,
+                backgroundColor: _isInternetConnected ? Colors.blue : Colors.grey,
+                tooltip: 'Sincronizar datos maestros',
+                heroTag: 'btn_sync_datos',
+                child: Icon(_isVerifyingDb ? Icons.hourglass_top : Icons.sync),
+              ),
+            ],
           ),
       body: TabBarView(
         controller: _tabController,

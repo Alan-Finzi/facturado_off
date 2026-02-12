@@ -4,6 +4,7 @@ import 'package:facturador_offline/bloc/cubit_lista_precios/lista_precios_cubit.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/database_seeder.dart';
 import '../util/logger.dart';
@@ -97,6 +98,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
             
             SizedBox(height: 40.0),
             
+
             // Botón para cargar datos de ejemplo
             ElevatedButton(
               style: ElevatedButton.styleFrom(

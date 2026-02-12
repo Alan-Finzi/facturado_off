@@ -7,6 +7,7 @@ import 'package:facturador_offline/pages/page_home.dart';
 import 'package:facturador_offline/pages/page_nueva_venta.dart';
 import 'package:facturador_offline/pages/page_venta_mobile.dart'; // Importar la versión móvil
 import 'package:facturador_offline/pages/page_productos.dart';
+import 'package:facturador_offline/pages/page_user_info.dart'; // Importar la nueva pantalla
 import 'package:facturador_offline/pages/page_ventas_sincronizacion.dart';
 import 'package:facturador_offline/pages/pege_connection.dart';
 import 'package:facturador_offline/util/platform_service.dart'; // Importar servicio de plataforma
