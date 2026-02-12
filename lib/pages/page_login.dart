@@ -441,15 +441,15 @@ class _LoginScreenState extends State<LoginScreen> {
         // 3. Si no es primer login (is_first_login=false), ir a ValidacionDatosSincroPage
 
         // Obtener el estado de primer login desde SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        final bool isPrimerLogin = prefs.getBool('is_first_login') ?? true; // Por defecto es primer login
+        final sharedPrefs = await SharedPreferences.getInstance();
+        final bool isPrimerLogin = sharedPrefs.getBool('is_first_login') ?? true; // Por defecto es primer login
 
         if (!loginCubit.state.isPreference || isPrimerLogin) {
           // Caso 1 y 2: Necesita sincronización o es primer login, ir a SynchronizationPage
 
           // Si es primer login, cambiar la bandera para futuros inicios de sesión
           if (isPrimerLogin) {
-            await prefs.setBool('is_first_login', false);
+            await sharedPrefs.setBool('is_first_login', false);
             print("🔄 Primer inicio de sesión detectado - La bandera ha sido actualizada");
           }
 

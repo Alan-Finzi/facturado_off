@@ -10,6 +10,7 @@ import '../helper/database_helper.dart';
 import '../bloc/cubit_login/login_cubit.dart';
 import 'root_navegator.dart';
 import 'inicializacion_datos_page.dart';
+import 'page_synchronization.dart';
 
 class ValidacionDatosSincroPage extends StatefulWidget {
   final String? token;
