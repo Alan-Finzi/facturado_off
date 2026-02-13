@@ -5,7 +5,6 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:async';
-import 'package:wakelock/wakelock.dart';
 import '../../helper/database_helper.dart';
 import '../cubit_login/login_cubit.dart';
 
@@ -18,15 +17,8 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
   Future<void> startSynchronization(String token, String email, LoginCubit loginCubit) async {
     try {
-      // Mantener la pantalla encendida durante la sincronización
-      try {
-        // En versión 0.2.1, Wakelock.enable() no devuelve un Future
-        Wakelock.enable();
-        print('✅ Wakelock activado: La pantalla se mantendrá encendida durante la sincronización');
-      } catch (e) {
-        print('❌ Error al activar Wakelock: $e');
-        // Continuar aunque falle - la funcionalidad principal no debe verse afectada
-      }
+      // La aplicación confía en la configuración del dispositivo para mantener la pantalla encendida
+      // Se muestra un mensaje al usuario en la interfaz
 
       emit(SynchronizationInProgress(progress: 0.0, currentTask: "Iniciando sincronización"));
 
@@ -66,23 +58,7 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
       // Emitimos el estado de sincronización completada
       emit(SynchronizationCompleted());
-
-      // Permitir que la pantalla se apague nuevamente
-      try {
-        // En versión 0.2.1, Wakelock.disable() no devuelve un Future
-        Wakelock.disable();
-        print('✅ Wakelock desactivado: La pantalla puede apagarse normalmente');
-      } catch (e) {
-        print('❌ Error al desactivar Wakelock: $e');
-      }
     } catch (error) {
-      // Asegurarse de desactivar Wakelock incluso en caso de error
-      try {
-        Wakelock.disable();
-        print('✅ Wakelock desactivado después de error');
-      } catch (e) {
-        print('❌ Error al desactivar Wakelock: $e');
-      }
 
       emit(SynchronizationFailed(errorMessage: "Error al sincronizar: ${error.toString()}"));
     }

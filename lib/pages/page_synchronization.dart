@@ -13,6 +13,42 @@ class SynchronizationPage extends StatelessWidget {
 
   SynchronizationPage({required this.token, required this.email});
 
+  // Método para mostrar el diálogo de configuración de pantalla
+  void _mostrarDialogoConfiguracionPantalla(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('Configuración importante'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Para evitar interrupciones durante la sincronización, es necesario que configure su dispositivo para mantener la pantalla encendida.'),
+            SizedBox(height: 16),
+            Text('Pasos a seguir:', style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('1. Abra Ajustes/Configuración de su dispositivo'),
+            Text('2. Vaya a Pantalla/Display'),
+            Text('3. Busque "Tiempo de espera de pantalla" o "Suspender después de"'),
+            Text('4. Seleccione un tiempo más largo (10-30 minutos)'),
+            SizedBox(height: 16),
+            Text('Una vez completada la sincronización, puede restaurar su configuración original.',
+              style: TextStyle(fontStyle: FontStyle.italic)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loginCubit = BlocProvider.of<LoginCubit>(context);
@@ -30,14 +66,8 @@ class SynchronizationPage extends StatelessWidget {
         child: BlocListener<SynchronizationCubit, SynchronizationState>(
           listener: (context, state) {
             if (state is SynchronizationInitial) {
-              // Mostrar un mensaje cuando inicia la sincronización
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Mantenga la pantalla encendida durante la sincronización para evitar interrupciones'),
-                  duration: Duration(seconds: 5),
-                  backgroundColor: Colors.blue,
-                ),
-              );
+              // Mostrar el diálogo de configuración
+              _mostrarDialogoConfiguracionPantalla(context);
             } else if (state is SynchronizationCompleted) {
               // CORREGIDO: Navegamos a InicializacionDatosPage en lugar de RootNavScreen
               // para cargar los datos desde la BD a memoria antes de mostrar la pantalla principal

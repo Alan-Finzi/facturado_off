@@ -52,7 +52,6 @@ dependencies:
   shared_preferences: ^2.3.2
   sqflite_common_ffi: ^2.3.4
   sqflite: ^2.4.0
-  wakelock: 0.2.1
   sqlite3: ^2.4.7
   searchfield: ^1.1.7
   diacritic: ^0.1.3
