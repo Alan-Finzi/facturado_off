@@ -2,6 +2,7 @@ import 'package:facturador_offline/pages/page_login.dart';
 import 'package:facturador_offline/pages/root_navegator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:app_settings/app_settings.dart';
 
 import '../bloc/cubit_login/login_cubit.dart';
 import '../bloc/cubit_synchronization/synchronization_cubit.dart';
@@ -19,30 +20,74 @@ class SynchronizationPage extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text('Configuración importante'),
+        title: Text('¡Importante! Mantenga la pantalla encendida'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Para evitar interrupciones durante la sincronización, es necesario que configure su dispositivo para mantener la pantalla encendida.'),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'La sincronización puede tardar varios minutos. Si la pantalla se apaga durante el proceso, la sincronización podría interrumpirse.',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             SizedBox(height: 16),
-            Text('Pasos a seguir:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Para evitar interrupciones:'),
             SizedBox(height: 8),
-            Text('1. Abra Ajustes/Configuración de su dispositivo'),
-            Text('2. Vaya a Pantalla/Display'),
-            Text('3. Busque "Tiempo de espera de pantalla" o "Suspender después de"'),
-            Text('4. Seleccione un tiempo más largo (10-30 minutos)'),
+            Text('• Mantenga la aplicación abierta'),
+            Text('• No bloquee su dispositivo'),
+            Text('• Aumente el tiempo de espera de la pantalla'),
             SizedBox(height: 16),
-            Text('Una vez completada la sincronización, puede restaurar su configuración original.',
+            Text('Puede modificar el tiempo de espera en:'),
+            Text('Configuración → Pantalla → Tiempo de espera', style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text('Presione el botón "Ir a Configuración" para acceder rápidamente.',
               style: TextStyle(fontStyle: FontStyle.italic)),
           ],
         ),
         actions: [
+          // Botón para abrir configuración de pantalla
+          ElevatedButton.icon(
+            icon: Icon(Icons.settings),
+            label: Text('Ir a Configuración'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              try {
+                // Intentar abrir la configuración de pantalla
+                AppSettings.openDisplaySettings();
+              } catch (e) {
+                print('Error al abrir configuración: $e');
+                // Si falla, mostrar un mensaje
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('No se pudo abrir la configuración. Por favor, hágalo manualmente.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
             },
-            child: Text('Entendido'),
+            child: Text('Continuar'),
           ),
         ],
       ),
@@ -114,15 +159,33 @@ class SynchronizationPage extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.lightbulb, color: Colors.amber.shade800),
+                            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Mantenga la pantalla encendida para evitar interrupciones en la sincronización',
-                                style: TextStyle(color: Colors.amber.shade800),
+                                'NO BLOQUEE SU DISPOSITIVO. La sincronización se interrumpirá si la pantalla se apaga.',
+                                style: TextStyle(
+                                  color: Colors.amber.shade900,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      TextButton.icon(
+                        onPressed: () {
+                          try {
+                            AppSettings.openDisplaySettings();
+                          } catch (e) {
+                            print('Error al abrir configuración: $e');
+                          }
+                        },
+                        icon: Icon(Icons.settings),
+                        label: Text('Cambiar tiempo de espera de pantalla'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
                         ),
                       ),
                       SizedBox(height: 20),
