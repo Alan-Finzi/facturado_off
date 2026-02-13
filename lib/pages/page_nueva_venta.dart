@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:collection/collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_lista_precios/lista_precios_state.dart';
@@ -973,14 +974,19 @@ class _VentaMainPageState extends State<VentaMainPage> {
       final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
       final loginCubit = context.read<LoginCubit>();
 
+      print('⚠️ Debug: Iniciando guardado de venta...');
+
       // Datos del usuario actual
       final userId = loginCubit.state.user?.id;
       final comercioId = loginCubit.state.user?.comercioId != null
           ? int.tryParse(loginCubit.state.user!.comercioId!) ?? 0
           : 0;
 
+      print('⚠️ Debug: User ID: $userId, Comercio ID: $comercioId');
+
       // Productos seleccionados
       final productos = productosCubit.state.productosSeleccionados;
+      print('⚠️ Debug: Número de productos seleccionados: ${productos.length}');
 
       // === LÓGICA EXACTA DEL RESUMENTABLA ===
 
@@ -1023,8 +1029,11 @@ class _VentaMainPageState extends State<VentaMainPage> {
       // Calcular total final con todos los componentes
       final total = subtotal - montoDescuento + totalIva + recargo;
 
+      print('⚠️ Debug: Subtotal: $subtotal, IVA: $totalIva, Recargo: $recargo, Total: $total');
+
       // Cliente
       final cliente = clienteCubit.state.clienteSeleccionado;
+      print('⚠️ Debug: Cliente seleccionado: ${cliente?.nombre ?? "Sin cliente"}');
 
       // Método de pago
       PaymentMethod? metodoPago;
@@ -1050,20 +1059,32 @@ class _VentaMainPageState extends State<VentaMainPage> {
         }
       }
 
+      print('⚠️ Debug: Método de pago: $metodoPagoNombre');
+
       // Datos de facturación
       final datosFacturacion = productosCubit.state.datosFacturacionModel?.isNotEmpty == true
           ? productosCubit.state.datosFacturacionModel!.first
           : null;
+
+      print('⚠️ Debug: Datos facturación: ${datosFacturacion?.razonSocial ?? "Sin datos"}');
 
       // Canal de venta y caja
       final canalVenta = productosCubit.state.canalVenta ?? 'Mostrador';
       final cajaId = 1; // Valor por defecto, idealmente sería configurable
 
       // Domicilio de entrega
-      // Obtenemos los datos de envío actualizados
-      String? domicilioEntrega = null;
+      // Mejoramos la serialización del mapa para el domicilio de entrega
+      String? domicilioEntrega;
       if (_datosEnvio != null && _datosEnvio!.isNotEmpty) {
-        domicilioEntrega = _datosEnvio.toString();
+        try {
+          // Convertir a JSON en lugar de usar toString() directamente
+          domicilioEntrega = jsonEncode(_datosEnvio);
+          print('⚠️ Debug: Domicilio serializado correctamente');
+        } catch (e) {
+          print('⚠️ Error al serializar domicilio: $e');
+          // En caso de error, usar una versión simplificada
+          domicilioEntrega = _datosEnvio.toString();
+        }
       }
 
       // Crear el objeto de venta
@@ -1091,6 +1112,8 @@ class _VentaMainPageState extends State<VentaMainPage> {
         observaciones: null, // Aquí podríamos agregar observaciones si la UI lo permite
       );
 
+      print('⚠️ Debug: Objeto de venta creado correctamente');
+
       // Crear detalles de venta para cada producto
       final detalles = productos.map((producto) {
         final porcentajeIva = (producto.iva ?? 0.0) > 0
@@ -1103,7 +1126,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
           codigoProducto: producto.producto?.barcode,
           nombreProducto: producto.datum?.nombre ?? producto.producto?.name ?? 'Producto sin nombre',
           descripcion: null,
-          cantidad: 1.0, // Por defecto 1, pero debería ser configurable
+          cantidad: producto.cantidad ?? 1.0, // Usar la cantidad correcta desde el producto
           precioUnitario: producto.precioLista ?? 0.0,
           porcentajeIva: porcentajeIva,
           descuento: 0.0, // No manejamos descuentos individuales por ahora
@@ -1117,43 +1140,138 @@ class _VentaMainPageState extends State<VentaMainPage> {
       // Asignar los detalles a la venta
       final ventaConDetalles = sale.copyWith(detalles: detalles);
 
+      print('⚠️ Debug: Intentando guardar venta en base de datos...');
+
       // Guardar la venta en la base de datos utilizando SalesDatabaseHelper
       final salesDatabaseHelper = SalesDatabaseHelper();
       final ventaId = await salesDatabaseHelper.saveSale(ventaConDetalles);
 
-      // Mostrar mensaje de éxito
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Venta #$ventaId guardada exitosamente'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
+      print('✅ Debug: Venta guardada exitosamente con ID: $ventaId');
 
-        // Navegar a la página de sincronización de ventas
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => PageVentasSincronizacion(),
+      // Mostrar popup de éxito
+      if (mounted) {
+        // Ocultar indicador de carga
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Mostrar popup de éxito
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 30),
+                SizedBox(width: 10),
+                Text('¡Venta Guardada con Éxito!'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('La venta ha sido guardada correctamente.'),
+                SizedBox(height: 10),
+                Text('Número de venta: #$ventaId', style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 5),
+                Text('Total: \$${total.toStringAsFixed(2)}'),
+                SizedBox(height: 5),
+                Text('Cliente: ${cliente?.nombre ?? "Consumidor final"}'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Cerrar el diálogo
+
+                  // Navegar a la página de sincronización de ventas
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PageVentasSincronizacion()),
+                  );
+                },
+                child: Text('Ver ventas pendientes'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Cerrar el diálogo
+
+                  // Navegar a la página de sincronización de ventas
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PageVentasSincronizacion()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: Text('Aceptar'),
+              ),
+            ],
           ),
         );
       }
     } catch (e) {
-      // Mostrar mensaje de error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar la venta: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      print('Error al guardar venta: $e');
-    } finally {
+      print('❌ Error crítico al guardar venta: $e');
+
+      // Ocultar indicador de carga
       if (mounted) {
         setState(() {
-          _isLoading = false; // Ocultar indicador de carga
+          _isLoading = false;
         });
+
+        // Mostrar popup de error
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 30),
+                SizedBox(width: 10),
+                Text('Error al Guardar la Venta'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('No se pudo guardar la venta debido a un error:'),
+                SizedBox(height: 10),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Text(
+                    e.toString(),
+                    style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text('Por favor, inténtelo nuevamente o contacte al soporte técnico.')
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Cerrar el diálogo
+                },
+                child: Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Cerrar el diálogo
+                  // Intentar guardar nuevamente
+                  _guardarVentaEnBaseDeDatos(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: Text('Reintentar'),
+              ),
+            ],
+          ),
+        );
       }
     }
   }
