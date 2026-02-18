@@ -70,7 +70,7 @@ class SynchronizationPage extends StatelessWidget {
             onPressed: () {
               try {
                 // Intentar abrir la configuración de pantalla
-                AppSettings.openDisplaySettings();
+                AppSettings.openAppSettings ();
               } catch (e) {
                 print('Error al abrir configuración: $e');
                 // Si falla, mostrar un mensaje
@@ -177,7 +177,7 @@ class SynchronizationPage extends StatelessWidget {
                       TextButton.icon(
                         onPressed: () {
                           try {
-                            AppSettings.openDisplaySettings();
+                            AppSettings.openAppSettings();
                           } catch (e) {
                             print('Error al abrir configuración: $e');
                           }
