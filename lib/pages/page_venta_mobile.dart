@@ -13,7 +13,7 @@ import '../models/payment_method.dart';
 import '../models/payment_provider.dart';
 import '../models/Producto_precio_stock.dart';
 import '../util/platform_service.dart';
-import '../widget/venta_mobile/venta_mobile_page.dart'; // Importar la nueva implementación modular
+import '../pages/page_venta_mobile_widget.dart'; // Importar el widget de la página de ventas
 
 /// Página principal de venta optimizada para dispositivos móviles
 /// Esta página implementa un diseño responsive que se adapta a pantallas pequeñas
@@ -226,7 +226,7 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
     // Si los datos de facturación están cargados, mostrar la página principal
     if (_datosFacturacionCargados) {
       // Usar la nueva implementación modular
-      return const VentaMobilePage();
+      return const PageVentaMobileWidget();
     } else {
       // Si aún no se han cargado los datos, mostrar un mensaje de error
       return Scaffold(

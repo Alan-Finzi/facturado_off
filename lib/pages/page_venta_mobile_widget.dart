@@ -27,14 +27,14 @@ import 'dart:convert';
 
 /// Página principal de venta para dispositivos móviles con enfoque modular.
 /// Esta implementación utiliza widgets desacoplados donde la UI está separada de la lógica.
-class VentaMobilePage extends StatefulWidget {
-  const VentaMobilePage({Key? key}) : super(key: key);
+class PageVentaMobileWidget extends StatefulWidget {
+  const PageVentaMobileWidget({Key? key}) : super(key: key);
 
   @override
-  State<VentaMobilePage> createState() => _VentaMobilePageState();
+  State<PageVentaMobileWidget> createState() => _PageVentaMobileWidgetState();
 }
 
-class _VentaMobilePageState extends State<VentaMobilePage> {
+class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
   // Estado local
   String _deliveryType = 'Entregado';
   bool _datosFacturacionCargados = false;
