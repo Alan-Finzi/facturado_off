@@ -66,11 +66,14 @@ class DatabaseHelper {
   }
 
   /// Elimina la base de datos existente para comenzar desde cero
-  /// Puede ser útil durante pruebas o cuando hay cambios importantes de esquema
+  /// Usado cuando cambia el usuario o hay cambios importantes de esquema
   Future<void> deleteDatabaseIfExists() async {
     try {
+      print('🧹 INICIANDO LIMPIEZA COMPLETA DE BASE DE DATOS LOCAL');
+
       // Cerrar la base de datos si está abierta
       if (_database != null) {
+        print('Cerrando conexión de base de datos activa');
         await _database!.close();
         _database = null;
       }
@@ -80,18 +83,23 @@ class DatabaseHelper {
       bool exists = await databaseExists(path);
 
       if (exists) {
-        print('Eliminando base de datos existente en: $path');
+        print('Eliminando archivo de base de datos existente en: $path');
         await deleteDatabase(path);
-        print('Base de datos eliminada correctamente');
+        print('Archivo de base de datos eliminado correctamente');
       } else {
-        print('No existe base de datos para eliminar en: $path');
+        print('No existe archivo de base de datos para eliminar en: $path');
       }
 
-      // Limpiar caché
+      // Limpiar referencias en memoria para modelos estáticos
+      User.currencyUser = null;
+
+      // Limpiar caché de consultas
       _queryCache.clear();
       _cacheTimestamps.clear();
+
+      print('✅ LIMPIEZA COMPLETA DE BASE DE DATOS FINALIZADA');
     } catch (e) {
-      print('Error al eliminar la base de datos: $e');
+      print('❌ ERROR al eliminar la base de datos: $e');
     }
   }
 

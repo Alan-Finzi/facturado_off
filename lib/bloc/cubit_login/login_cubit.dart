@@ -64,6 +64,30 @@ class LoginCubit extends Cubit<LoginState> {
     print('Password: ${password != null ? "proporcionada" : "no proporcionada"}');
     print('Solicitud de sincronización: ${isSyncRequest ? "SÍ" : "NO"}');
 
+    // Verificar si el usuario es diferente al último usuario activo
+    final lastActiveUserEmail = await User.getLastActiveUserEmail();
+    final isUserChanged = lastActiveUserEmail != null && lastActiveUserEmail != email;
+
+    // Variable para controlar si forzamos la sincronización
+    bool forceSync = false;
+
+    if (isUserChanged) {
+      print('⚠️ CAMBIO DE USUARIO DETECTADO');
+      print('Usuario anterior: $lastActiveUserEmail');
+      print('Usuario actual: $email');
+      print('Limpiando base de datos local para el nuevo usuario...');
+
+      // Limpiar la base de datos cuando cambia el usuario
+      await dbHelper.deleteDatabaseIfExists();
+
+      print('✅ Base de datos local limpiada correctamente para el nuevo usuario');
+
+      // Forzar sincronización para el nuevo usuario independientemente de otros factores
+      forceSync = true;
+    } else {
+      print('✅ Mismo usuario que la sesión anterior o primer inicio de sesión');
+    }
+
     try {
       // Validación de email o password vacíos
       if ((email?.isEmpty ?? true) || (password?.isEmpty ?? true && !isOfflineLogin)) {
@@ -206,8 +230,9 @@ class LoginCubit extends Cubit<LoginState> {
         final hasData = await dbHelper.isDataSynchronized();
         print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-        if (isSyncRequest) {
-          // Para solicitud de sincronización explícita: siempre mostrar pantalla de sincronización
+        if (isSyncRequest || forceSync) {
+          // Sincronización forzada por solicitud explícita o por cambio de usuario
+          final reason = forceSync ? "cambio de usuario" : "solicitud explícita";
           emit(LoginState(
             isLogin: true,
             userToken: token,
@@ -215,7 +240,7 @@ class LoginCubit extends Cubit<LoginState> {
             user: User(username: email, password: password),
             needsOnlineAuth: false, // Ya no necesitamos auth
           ));
-          print("✅ Login exitoso para sincronización solicitada. Mostrando pantalla de sincronización.");
+          print("✅ Login exitoso. Forzando sincronización por $reason.");
         } else {
           // Para login normal:
           if (!hasData) {
@@ -337,14 +362,15 @@ class LoginCubit extends Cubit<LoginState> {
           // Buscar el usuario completo en la base de datos
           User? userFromDB = await dbHelper.getUserByEmail(email!);
 
-          if (!hasData) {
-            print("⚠️ Datos sincronizados incompletos o faltantes - forzando sincronización");
+          if (!hasData || forceSync) {
+            final reason = forceSync ? "cambio de usuario" : "datos faltantes";
+            print("⚠️ Forzando sincronización por $reason");
 
             // Emitir estado, usando el usuario completo si está disponible
             emit(LoginState(
               isLogin: true,
               userToken: userCredentials['token'],
-              isPreference: false, // Forzar sincronización cuando faltan datos
+              isPreference: false, // Forzar sincronización
               user: userFromDB ?? User(username: email, password: userCredentials['password']),
               needsOnlineAuth: false,
             ));

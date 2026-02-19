@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 class User {
   static User? currencyUser; // Propiedad estática para almacenar el usuario actual
   final int? id;
@@ -55,6 +57,33 @@ class User {
   // Método para actualizar el currencyUser
   static void setCurrencyUser(User user) {
     currencyUser = user;
+
+    // También guardar el email del usuario activo en SharedPreferences
+    _saveLastActiveUser(user.email ?? '');
+  }
+
+  // Método para guardar el último usuario activo
+  static Future<void> _saveLastActiveUser(String email) async {
+    try {
+      if (email.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_active_user_email', email);
+        print('Último usuario activo guardado: $email');
+      }
+    } catch (e) {
+      print('Error al guardar último usuario activo: $e');
+    }
+  }
+
+  // Método para obtener el último usuario activo
+  static Future<String?> getLastActiveUserEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('last_active_user_email');
+    } catch (e) {
+      print('Error al obtener último usuario activo: $e');
+      return null;
+    }
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
