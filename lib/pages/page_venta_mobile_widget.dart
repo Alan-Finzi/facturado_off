@@ -318,24 +318,21 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
                 },
               ),
 
-                    // Resumen de la venta con totales
-                    ResumenVentaWidget(
-                      subtotal: subtotal,
-                      descuento: montoDescuento,
-                      porcentajeDescuento: descuentoGeneral,
-                      iva: iva,
-                      total: total + (total * _recargoMetodoPago / 100), // Incluir recargo del método de pago
-                      deuda: total + (total * _recargoMetodoPago / 100), // La deuda inicialmente es igual al total con recargo
-                    ),
+              // Resumen de la venta con totales
+              ResumenVentaWidget(
+                subtotal: subtotal,
+                descuento: montoDescuento,
+                porcentajeDescuento: descuentoGeneral,
+                iva: iva,
+                total: total + (total * _recargoMetodoPago / 100), // Incluir recargo del método de pago
+                deuda: total + (total * _recargoMetodoPago / 100), // La deuda inicialmente es igual al total con recargo
+              ),
 
-                    // Acciones finales (botones y deuda)
-                    AccionesVentaWidget(
-                      deuda: total, // La deuda inicialmente es igual al total
-                      onCancelar: () => _showCancelDialog(context),
-                      onGuardar: () => _confirmarVenta(context),
-                    ),
-                  ],
-                ),
+              // Acciones finales (botones y deuda)
+              AccionesVentaWidget(
+                deuda: total, // La deuda inicialmente es igual al total
+                onCancelar: () => _showCancelDialog(context),
+                onGuardar: () => _confirmarVenta(context),
               ),
             ],
 

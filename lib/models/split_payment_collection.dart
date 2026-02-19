@@ -92,6 +92,11 @@ class SplitPaymentCollection {
   /// Obtiene la cantidad de items en la colección
   int get itemCount => items.length;
 
+  /// Calcula el total pagado sin incluir recargos
+  double getTotalWithoutRecargo() {
+    return items.fold(0.0, (sum, item) => sum + item.amount);
+  }
+
   /// Genera un ID único para un nuevo item
   String generateUniqueId() {
     final random = Random();

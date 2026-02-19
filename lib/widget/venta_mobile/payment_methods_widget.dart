@@ -659,7 +659,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
 
     if (isPartial) {
       // Cambiar a pago dividido
-      cubit.setPartialPayment(true);
+      cubit.setPaymentType(true);
 
       // Agregar primer item si no hay
       final state = cubit.state;
@@ -668,7 +668,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
       }
     } else {
       // Cambiar a pago total
-      cubit.setPartialPayment(false);
+      cubit.setPaymentType(false);
 
       // Restaurar monto de entrada al total
       _updateInputAmount(widget.totalVenta);
