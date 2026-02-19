@@ -22,8 +22,15 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
 
       emit(SynchronizationInProgress(progress: 0.0, currentTask: "Iniciando sincronización"));
 
+      // Obtener datos de usuario primero para tener acceso al comercio_id actual
       await apiServices.fetchUsersData(token, email, loginCubit);
       emit(const SynchronizationInProgress(progress: 0.1, currentTask: "Sincronización de Usuarios"));
+
+      // Verificar si hubo un cambio de comercio para limpiar datos relacionados
+      final String? currentComercioId = loginCubit.state.user?.comercioId;
+      if (currentComercioId != null) {
+        emit(const SynchronizationInProgress(progress: 0.15, currentTask: "Preparando base de datos"));
+      }
 
       await apiServices.fetchProductosIvas(token);
       emit(const SynchronizationInProgress(progress: 0.2, currentTask: "Sincronización Productos Ivas"));
@@ -31,6 +38,7 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
       await apiServices.fetchDatosFacturacion(token);
       emit(const SynchronizationInProgress(progress: 0.3, currentTask: "Sincronización Datos Facturación"));
 
+      // fetchVariaciones ahora verificará si hay cambio de comercio y limpiará la base de datos si es necesario
       await apiServices.fetchVariaciones(token); // Esta llamada obtiene todos los productos con su stock y precios
       emit(const SynchronizationInProgress(progress: 0.5, currentTask: "Sincronización de Productos"));
 

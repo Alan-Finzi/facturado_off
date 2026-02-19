@@ -601,6 +601,28 @@ class DatabaseHelper {
       // Continuamos a pesar del error para crear otras tablas
     }
   }
+  /// Elimina todos los productos y datos relacionados de la base de datos
+  /// Este método debe llamarse antes de sincronizar productos cuando se cambia de comercio
+  Future<void> clearProductsData() async {
+    try {
+      print('Limpiando datos de productos anteriores...');
+      final db = await database;
+
+      // Eliminar datos de todas las tablas relacionadas con productos
+      await db.delete('producto_response');
+      await db.delete('product');
+      await db.delete('stock');
+      await db.delete('lista_precio');
+      await db.delete('variacion');
+      await db.delete('producto_data');
+
+      print('Datos de productos eliminados correctamente');
+    } catch (e) {
+      print('Error al limpiar datos de productos: $e');
+      throw Exception('Error al limpiar datos de productos: $e');
+    }
+  }
+
   Future<void> insertProductoResponse(ProductoResponse productoResponse) async {
     try {
       final db = await database;

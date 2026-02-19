@@ -15,6 +15,7 @@ import 'package:facturador_offline/widget/venta_mobile/datos_venta_widget.dart';
 import 'package:facturador_offline/widget/venta_mobile/producto_item_widget.dart';
 import 'package:facturador_offline/widget/venta_mobile/resumen_venta_widget.dart';
 import 'package:facturador_offline/widget/venta_mobile/selector_entrega_widget.dart';
+import 'package:facturador_offline/widget/venta_mobile/payment_methods_widget.dart';
 import 'package:facturador_offline/widget/venta_mobile/venta_header.dart';
 import 'package:facturador_offline/widget/buscar_cliente.dart';
 import 'package:facturador_offline/widget/buscar_productos.dart';
@@ -36,9 +37,10 @@ class PageVentaMobileWidget extends StatefulWidget {
 
 class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
   // Estado local
-  String _deliveryType = 'Entregado';
+  String _deliveryType = 'Retiro por sucursal'; // Cambiado para coincidir con nuevas opciones
   bool _datosFacturacionCargados = false;
   Map<String, dynamic>? _datosEnvio; // Para almacenar datos de envío
+  double _recargoMetodoPago = 0.0; // Para almacenar el recargo del método de pago seleccionado
   final TextEditingController _notaInternaController = TextEditingController();
   final TextEditingController _observacionesController = TextEditingController();
 
@@ -132,12 +134,18 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
             // Selector de tipo de entrega
             SelectorEntregaWidget(
               value: _deliveryType,
+              cliente: clienteCubit.state.clienteSeleccionado,
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
                     _deliveryType = value;
                   });
                 }
+              },
+              onEnvioDataChanged: (datos) {
+                setState(() {
+                  _datosEnvio = datos;
+                });
               },
             ),
 
@@ -299,41 +307,16 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
               ),
               const SizedBox(height: 16),
 
-              // Tipo de pago
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(4),
-                  color: Colors.grey.shade50,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Tipo de Pago', style: TextStyle(fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(4),
-                        color: Colors.white,
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: 'Total',
-                          icon: const Icon(Icons.keyboard_arrow_down),
-                          isExpanded: true,
-                          items: ['Total', 'Cuenta corriente / Pago Dividido']
-                              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                              .toList(),
-                          onChanged: (value) {
-                            // Actualizar tipo de pago
-                          },
-                        ),
-                      ),
-                    ),
+              // Métodos de pago - Implementación mejorada
+              PaymentMethodsWidget(
+                totalVenta: total,
+                onPaymentTypeChanged: (isPartialPayment, recargo) {
+                  setState(() {
+                    // Actualizar recargo si es necesario
+                    _recargoMetodoPago = recargo;
+                  });
+                },
+              ),
 
                     // Resumen de la venta con totales
                     ResumenVentaWidget(
@@ -341,8 +324,8 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
                       descuento: montoDescuento,
                       porcentajeDescuento: descuentoGeneral,
                       iva: iva,
-                      total: total,
-                      deuda: total, // La deuda inicialmente es igual al total
+                      total: total + (total * _recargoMetodoPago / 100), // Incluir recargo del método de pago
+                      deuda: total + (total * _recargoMetodoPago / 100), // La deuda inicialmente es igual al total con recargo
                     ),
 
                     // Acciones finales (botones y deuda)

@@ -251,6 +251,17 @@ class ApiServices{
 // Determinar si se usa sucursal o comercioId
       final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId!) : comercioId!;
 
+// Lógica para detectar cambio de comercio
+      final oldComercioId = await _getLastUsedComercioId();
+      if (oldComercioId != null && oldComercioId != idBusqueda) {
+        print('Cambio de comercio detectado: $oldComercioId -> $idBusqueda');
+        // Si hay un cambio de comercio, limpiamos la base de datos
+        await DatabaseHelper.instance.clearProductsData();
+      }
+
+      // Guardar el comercio actual para futuras comparaciones
+      await _saveCurrentComercioId(idBusqueda);
+
 // Construir la URL con el parámetro de comercio_id
       final Uri apiUrl = Uri.parse('${apiUrlProductosVer}?comercio_id=$idBusqueda');
       print('Obteniendo productos desde: $apiUrl');
@@ -578,6 +589,30 @@ class ApiServices{
       }
     } catch (e) {
       print('Error en debug de provider: $e');
+    }
+  }
+
+  /// Guarda el ID de comercio actual en SharedPreferences
+  Future<void> _saveCurrentComercioId(String comercioId) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_used_comercio_id', comercioId);
+      print('ID de comercio guardado: $comercioId');
+    } catch (e) {
+      print('Error al guardar ID de comercio: $e');
+    }
+  }
+
+  /// Recupera el último ID de comercio utilizado
+  Future<String?> _getLastUsedComercioId() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? lastComercioId = prefs.getString('last_used_comercio_id');
+      print('Último ID de comercio utilizado: $lastComercioId');
+      return lastComercioId;
+    } catch (e) {
+      print('Error al recuperar último ID de comercio: $e');
+      return null;
     }
   }
 }
