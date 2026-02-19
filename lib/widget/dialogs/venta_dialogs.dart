@@ -41,7 +41,7 @@ class VentaDialogs {
                 Expanded(
                   child: Text(producto['nombre'] ?? 'Producto sin nombre'),
                 ),
-                Text('\\$${(producto['precio'] as num).toStringAsFixed(2)}'),
+                Text('\\${(producto['precio'] as num).toStringAsFixed(2)}'),
               ],
             ),
           )),
@@ -52,7 +52,7 @@ class VentaDialogs {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Subtotal:', style: TextStyle(fontSize: 14)),
-              Text('\\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
+              Text('\\${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
             ],
           ),
           if (descuentoGeneral > 0)
@@ -60,14 +60,14 @@ class VentaDialogs {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Descuento (${descuentoGeneral.round()}%):', style: const TextStyle(fontSize: 14)),
-                Text('- \\$${montoDescuento.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
+                Text('- \\${montoDescuento.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
               ],
             ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('IVA:', style: TextStyle(fontSize: 14)),
-              Text('\\$${iva.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
+              Text('\\${iva.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
             ],
           ),
           const SizedBox(height: 8),
@@ -75,7 +75,7 @@ class VentaDialogs {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('TOTAL:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('\\$${total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('\\${total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
         ],
@@ -206,7 +206,7 @@ class VentaDialogs {
         const SizedBox(height: 10),
         Text('Número de venta: #$ventaId', style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 5),
-        Text('Total: \\$${total.toStringAsFixed(2)}'),
+        Text('Total: \\${total.toStringAsFixed(2)}'),
         const SizedBox(height: 5),
         Text('Cliente: $nombreCliente'),
       ],
