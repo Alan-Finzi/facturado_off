@@ -531,10 +531,29 @@ class _LoginScreenState extends State<LoginScreen> {
           await loginCubit.login(username, null);
 
           if (loginCubit.state.isLogin) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => RootNavScreen()),
-            );
+            final fallbackPrefs = await SharedPreferences.getInstance();
+            final bool isPrimerLoginFallback = fallbackPrefs.getBool('is_first_login') ?? true;
+            if (!loginCubit.state.isPreference || isPrimerLoginFallback) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SynchronizationPage(
+                    token: loginCubit.state.userToken!,
+                    email: username,
+                  ),
+                ),
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ValidacionDatosSincroPage(
+                    user: loginCubit.state.user!,
+                    token: loginCubit.state.userToken!,
+                  ),
+                ),
+              );
+            }
           }
         }
       } catch (fallbackError) {

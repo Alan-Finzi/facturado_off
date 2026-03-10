@@ -58,6 +58,9 @@ class LoginCubit extends Cubit<LoginState> {
     // Log para diagnóstico
     final isOfflineLogin = password == null;
     final isSyncRequest = state.needsOnlineAuth;
+    // Variable para controlar si forzamos la sincronización - DECLARADA AL INICIO
+    bool forceSync = false;
+
     print('=== INICIO PROCESO DE LOGIN ===');
     print('Modo: ${isOfflineLogin ? "OFFLINE (credenciales guardadas)" : "ONLINE (API)"}');
     print('Email: ${email ?? "no proporcionado"}');
@@ -66,10 +69,9 @@ class LoginCubit extends Cubit<LoginState> {
 
     // Verificar si el usuario es diferente al último usuario activo
     final lastActiveUserEmail = await User.getLastActiveUserEmail();
+    print('⚠️ Último usuario activo: ${lastActiveUserEmail ?? "NINGUNO (primer inicio)"}');
+    print('⚠️ Usuario actual: ${email ?? "NINGUNO"}');
     final isUserChanged = lastActiveUserEmail != null && lastActiveUserEmail != email;
-
-    // Variable para controlar si forzamos la sincronización
-    bool forceSync = false;
 
     if (isUserChanged) {
       print('⚠️ CAMBIO DE USUARIO DETECTADO');
@@ -84,6 +86,11 @@ class LoginCubit extends Cubit<LoginState> {
 
       // Forzar sincronización para el nuevo usuario independientemente de otros factores
       forceSync = true;
+
+      // También marcar como primer inicio para este usuario
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_first_login', true);
+      print('✅ Marcado como primer inicio para el nuevo usuario');
     } else {
       print('✅ Mismo usuario que la sesión anterior o primer inicio de sesión');
     }
@@ -136,77 +143,34 @@ class LoginCubit extends Cubit<LoginState> {
                 needsOnlineAuth: false,
               ));
             } else {
-              // Datos sincronizados completos, necesitamos verificar si están cargados en memoria
+              // Datos sincronizados en BD: cargar usuario completo desde DB antes de emitir
+              print("⚠️ Datos encontrados en BD - cargando usuario completo para reconexión");
 
-              // NUEVO FLUJO: SIEMPRE forzar inicialización de datos después de reiniciar la app
-              // (No verificamos si están cargados porque podría ser un falso positivo)
-              // SIEMPRE forzar inicialización en reconexión para evitar errores de facturación
-              final bool forceDataInitialization = true; // Forzar siempre la inicialización
-
-              print("⚠️ Forzando inicialización de datos después de reconexión");
-
-              // Crear usuario básico para la inicialización
-              final User userBasico = User(username: email, password: savedPassword);
-
-              // Emitir estado para ir a página de inicialización de datos
-              // IMPORTANTE: Cambiamos isPreference=true para indicar que los datos ya están en BD
-              // pero forzamos needsDataInitialization=true para asegurar la carga en memoria
-              emit(LoginState(
-                isLogin: true,
-                userToken: savedToken,
-                isPreference: true, // Los datos están en BD (no requiere sincronización)
-                user: userBasico,
-                needsOnlineAuth: false,
-                needsDataInitialization: true, // FORZAR carga de datos en memoria
-              ));
-              return;
-
-              // Eliminamos el bloque FLUJO ORIGINAL porque SIEMPRE queremos inicializar datos
-
-              // FLUJO ORIGINAL: Los datos ya están cargados en memoria
+              User userParaEmitir;
               try {
-                // Buscar el usuario completo en la base de datos por email
                 User? userFromDB = await dbHelper.getUserByEmail(email!);
-
                 if (userFromDB != null) {
-                  // Establecer el usuario actual en memoria para toda la sesión
                   User.setCurrencyUser(userFromDB);
-                  print("✅ Usuario cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
-
-                  // Cargar los demás modelos currency
-                  await dbHelper.loadAllCurrencyModels(userFromDB);
-                  print("✅ Datos currency adicionales cargados para login offline");
-
-                  // Emitir estado con el usuario completo
-                  emit(LoginState(
-                    isLogin: true,
-                    userToken: savedToken,
-                    isPreference: true, // Omitir sincronización
-                    user: userFromDB, // Usuario completo con todos sus campos
-                    needsOnlineAuth: false,
-                  ));
+                  userParaEmitir = userFromDB;
+                  print("✅ Usuario completo cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
                 } else {
-                  print("⚠️ No se encontró el usuario en la BD, usando usuario básico");
-                  // Emitir estado con usuario básico
-                  emit(LoginState(
-                    isLogin: true,
-                    userToken: savedToken,
-                    isPreference: true, // Omitir sincronización
-                    user: User(username: email, password: savedPassword),
-                    needsOnlineAuth: false,
-                  ));
+                  userParaEmitir = User(username: email, password: savedPassword);
+                  print("⚠️ No se encontró usuario en BD, usando usuario básico");
                 }
               } catch (e) {
                 print("❌ Error al cargar usuario desde BD: $e");
-                // Si falla, usar el usuario básico
-                emit(LoginState(
-                  isLogin: true,
-                  userToken: savedToken,
-                  isPreference: true, // Omitir sincronización
-                  user: User(username: email, password: savedPassword),
-                  needsOnlineAuth: false,
-                ));
+                userParaEmitir = User(username: email, password: savedPassword);
               }
+
+              emit(LoginState(
+                isLogin: true,
+                userToken: savedToken,
+                isPreference: true,
+                user: userParaEmitir,
+                needsOnlineAuth: false,
+                needsDataInitialization: true,
+              ));
+              return;
             }
             return;
           }
@@ -230,42 +194,69 @@ class LoginCubit extends Cubit<LoginState> {
         final hasData = await dbHelper.isDataSynchronized();
         print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
 
-        if (isSyncRequest || forceSync) {
-          // Sincronización forzada por solicitud explícita o por cambio de usuario
-          final reason = forceSync ? "cambio de usuario" : "solicitud explícita";
+        print("⚠️ ESTADO DE SINCRONIZACIÓN: forceSync=$forceSync, isSyncRequest=$isSyncRequest, hasData=$hasData");
+
+        if (forceSync) {
+          // CASO 1: Cambio de usuario detectado - SIEMPRE forzar sincronización
+          print("⚠️ CAMBIO DE USUARIO: Forzando sincronización completa");
           emit(LoginState(
             isLogin: true,
             userToken: token,
             isPreference: false, // Forzar sincronización
             user: User(username: email, password: password),
-            needsOnlineAuth: false, // Ya no necesitamos auth
+            needsOnlineAuth: false,
           ));
-          print("✅ Login exitoso. Forzando sincronización por $reason.");
+          print("✅ Login exitoso. Forzando sincronización por cambio de usuario.");
+        } else if (isSyncRequest) {
+          // CASO 2: Solicitud explícita de sincronización
+          print("⚠️ SOLICITUD DE SINCRONIZACIÓN: Forzando sincronización por solicitud explícita");
+          emit(LoginState(
+            isLogin: true,
+            userToken: token,
+            isPreference: false, // Forzar sincronización
+            user: User(username: email, password: password),
+            needsOnlineAuth: false,
+          ));
+          print("✅ Login exitoso. Forzando sincronización por solicitud explícita.");
+        } else if (!hasData) {
+          // CASO 3: Datos faltantes - forzar sincronización
+          print("⚠️ DATOS FALTANTES: Forzando sincronización por datos incompletos");
+          emit(LoginState(
+            isLogin: true,
+            userToken: token,
+            isPreference: false, // Forzar sincronización
+            user: User(username: email, password: password),
+            needsOnlineAuth: false,
+          ));
+          print("✅ Login completado. Forzando sincronización por datos faltantes.");
         } else {
-          // Para login normal:
-          if (!hasData) {
-            print("⚠️ Datos sincronizados incompletos o faltantes - forzando sincronización");
-            // Forzar la sincronización cuando detectamos datos faltantes
-            emit(LoginState(
-              isLogin: true,
-              userToken: token,
-              isPreference: false, // Forzar sincronización
-              user: User(username: email, password: password),
-              needsOnlineAuth: false,
-            ));
-            print("✅ Login completado. Forzando sincronización por datos faltantes.");
-          } else {
-            // Datos sincronizados completos, continuar normalmente
-            emit(LoginState(
-              isLogin: true,
-              userToken: token,
-              isPreference: true, // Omitir sincronización
-              user: User(username: email, password: password),
-              needsOnlineAuth: false,
-            ));
-            print("✅ Login completado con éxito. Modo: ONLINE");
-            print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+          // CASO 4: Login normal con datos existentes - cargar usuario completo desde BD
+          print("✅ LOGIN NORMAL: Datos encontrados, omitiendo sincronización");
+          User userCaso4;
+          try {
+            User? userFromDB = await dbHelper.getUserByEmail(email!);
+            if (userFromDB != null) {
+              User.setCurrencyUser(userFromDB);
+              userCaso4 = userFromDB;
+              print("✅ Usuario completo cargado desde BD para CASO 4: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})");
+            } else {
+              userCaso4 = User(username: email, password: password);
+              print("⚠️ CASO 4: No se encontró usuario en BD, usando usuario básico");
+            }
+          } catch (e) {
+            print("❌ CASO 4: Error al cargar usuario desde BD: $e");
+            userCaso4 = User(username: email, password: password);
           }
+          emit(LoginState(
+            isLogin: true,
+            userToken: token,
+            isPreference: true,
+            user: userCaso4,
+            needsOnlineAuth: false,
+          ));
+          print("✅ Login completado con éxito. Modo: ONLINE");
+          print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
+        }
         }
       } else {
         // Fallo en la autenticación API

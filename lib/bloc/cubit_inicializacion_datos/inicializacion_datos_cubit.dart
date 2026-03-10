@@ -21,7 +21,7 @@ class InicializacionDatosCubit extends Cubit<InicializacionDatosState> {
       emit(InicializacionDatosEnProgreso(mensaje: "Cargando información de usuario...", progreso: 0.2));
       User? userCompleto;
       try {
-        userCompleto = await dbHelper.getUserByEmail(user.username!);
+        userCompleto = await dbHelper.getUserByEmail(user.email ?? user.username!);
         if (userCompleto == null) {
           print('❌ No se encontró el usuario en la BD, usando el básico');
           userCompleto = user;
