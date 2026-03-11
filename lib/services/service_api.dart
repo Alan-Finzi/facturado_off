@@ -158,7 +158,11 @@ class ApiServices{
   Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
       final Uri apiUrl = Uri.parse(apiUrlUser);
-      print('Obteniendo datos de usuario desde: $apiUrl');
+      print('=== fetchUsersData REQUEST ===');
+      print('URL: $apiUrl');
+      print('Token: $token');
+      print('Email buscado: $email');
+      print('==============================');
 
       // Crear un cliente con timeout explícito
       final client = http.Client();
@@ -177,6 +181,11 @@ class ApiServices{
             throw TimeoutException('La solicitud de usuarios ha tardado demasiado');
           },
         );
+
+        print('=== fetchUsersData RESPONSE ===');
+        print('Status code: ${response.statusCode}');
+        print('Body: ${response.body}');
+        print('===============================');
 
         if (response.statusCode == 200) {
         List<dynamic> jsonList = jsonDecode(response.body);
