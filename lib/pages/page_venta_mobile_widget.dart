@@ -92,8 +92,8 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
         child: VentaHeader(
           logo: SizedBox(
             width: 120,
-            child: Image.network(
-              'https://flamincoapp.com.ar/wp-content/uploads/2021/09/logo-flaminco-rojo.png',
+            child: Image.asset(
+              'assets/images/app_icon2.png',
               fit: BoxFit.contain,
             ),
           ),

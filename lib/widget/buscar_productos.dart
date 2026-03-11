@@ -187,6 +187,7 @@ class BuscarProductoWidget extends StatefulWidget {
 }
 
 class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
+  final GlobalKey _searchFieldKey = GlobalKey();
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   List<SearchFieldListItem<String>> productoSugerencias = [];
@@ -261,6 +262,7 @@ class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SearchField(
+            key: _searchFieldKey,
             controller: _controller,
             focusNode: _focusNode,
             suggestions: productoSugerencias,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 
 class CardImageColor extends StatelessWidget {
@@ -18,20 +17,14 @@ class CardImageColor extends StatelessWidget {
         return Card(
             child:  Stack(
                 children: [
-                    CachedNetworkImage(
-                        imageUrl: _imageUrl,
-                        imageBuilder: (context, imageProvider) => Container(
-                            decoration: BoxDecoration(
-                                 color: Colors.black,
-                                image: DecorationImage(
-
-                                    image: imageProvider,
-                                    fit: BoxFit.cover,
-                                ),
+                    Container(
+                        decoration: BoxDecoration(
+                            color: Colors.black,
+                            image: DecorationImage(
+                                image: AssetImage('assets/images/app_icon2.png'),
+                                fit: BoxFit.cover,
                             ),
                         ),
-                        placeholder: (context, url) => const Center(child: CircularProgressIndicator(backgroundColor: Colors.purpleAccent,)),
-                        errorWidget: (context, url, error) => const Icon(Icons.error),
                     ),
                     Align(
                         alignment: Alignment.bottomCenter,
@@ -69,11 +62,11 @@ class CardImageListColor extends StatelessWidget {
         return Card(
             child: Stack(
                 children: [
-                    Image.network(
-                        _imageUrl,
+                    Image.asset(
+                        'assets/images/app_icon2.png',
                         fit: BoxFit.cover,
-                        width: 150, // Ajusta el ancho según tus necesidades
-                        height: 200, // Ajusta la altura según tus necesidades
+                        width: 150,
+                        height: 200,
                     ),
                     Align(
                         alignment: Alignment.bottomCenter,

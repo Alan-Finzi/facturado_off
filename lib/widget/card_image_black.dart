@@ -30,7 +30,7 @@ class CardImageBlack extends StatelessWidget {
                     image:  DecorationImage(
                         fit: BoxFit.cover,
                         colorFilter:  const ColorFilter.mode(Colors.white, BlendMode.saturation),
-                        image:  NetworkImage(_imageUrl,),
+                        image: AssetImage('assets/images/app_icon2.png'),
                     ),
                 ),
             ),

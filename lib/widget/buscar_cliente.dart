@@ -34,6 +34,7 @@ class BuscarClienteWidget extends StatefulWidget {
 }
 
 class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
+  final GlobalKey _searchFieldKey = GlobalKey();
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   List<SearchFieldListItem<String>> clienteSugerencias = [];
@@ -102,6 +103,7 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
 
             // Campo de búsqueda de cliente
             SearchField(
+              key: _searchFieldKey,
               controller: _controller,
               focusNode: _focusNode,
               suggestions: clienteSugerencias,

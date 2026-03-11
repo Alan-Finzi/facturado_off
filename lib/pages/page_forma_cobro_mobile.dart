@@ -59,8 +59,8 @@ class _FormaCobroPageMobileState extends State<FormaCobroPageMobile> {
         elevation: 0,
         title: SizedBox(
           width: 150,
-          child: Image.network(
-            'https://flamincoapp.com.ar/wp-content/uploads/2021/09/logo-flaminco-rojo.png',
+          child: Image.asset(
+            'assets/images/app_icon2.png',
             fit: BoxFit.contain,
           ),
         ),

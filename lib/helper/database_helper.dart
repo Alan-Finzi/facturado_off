@@ -1295,8 +1295,8 @@ class DatabaseHelper {
 
       // Verificación de las tablas críticas - MODIFICADO: Solo requerimos que datos_facturacion tenga datos
       // El resto de tablas son opcionales para considerar la DB como sincronizada
-      final List<String> criticalTables = ['datos_facturacion'];
-      final List<String> optionalTables = ['product', 'productos_lista_precios'];
+      final List<String> criticalTables = ['datos_facturacion', 'product'];
+      final List<String> optionalTables = ['productos_lista_precios'];
       bool allCriticalTablesHaveData = true;
 
       print('🔍 Verificando tablas CRÍTICAS (requeridas para funcionar):');
