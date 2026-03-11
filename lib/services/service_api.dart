@@ -206,9 +206,17 @@ class ApiServices{
             print('Usuario encontrado con email: $email');
           }
         } catch (e) {
-          print('Error: No se encontró ningún usuario con el email: $email');
-          print('Usuarios disponibles: ${users.map((u) => u.email).toList()}');
-          throw Exception('Usuario "$email" no encontrado en la respuesta de la API de usuarios');
+          // No encontrado en la lista — usar el usuario del login API si está disponible
+          // (el login SIEMPRE autentica al usuario, por lo que currencyUser ya debería estar seteado)
+          print('⚠️ "$email" no encontrado en lista. Usuarios disponibles: ${users.map((u) => u.email).toList()}');
+          if (User.currencyUser != null) {
+            loggedUser = User.currencyUser!;
+            print('✅ Usando usuario del login API como fallback: ${loggedUser.username} (comercioId: ${loggedUser.comercioId})');
+            // Asegurarse de que esté en la BD
+            await _insertUserBatch([loggedUser]);
+          } else {
+            throw Exception('Usuario "$email" no encontrado en la API y no hay datos del login disponibles');
+          }
         }
 
         // Primero setear en memoria, luego emitir el estado del cubit
@@ -231,8 +239,8 @@ class ApiServices{
         client.close();
       }
     } catch (e) {
-      print('Error de solicitud HTTP: $e');
-      return null;
+      print('Error en fetchUsersData: $e');
+      rethrow; // propagar para que SynchronizationCubit emita SynchronizationFailed
     }
   }
 
