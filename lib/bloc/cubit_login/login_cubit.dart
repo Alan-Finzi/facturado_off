@@ -257,7 +257,7 @@ class LoginCubit extends Cubit<LoginState> {
           print("✅ Login completado con éxito. Modo: ONLINE");
           print("✅ Base de datos ya contiene datos. Se omitirá la sincronización.");
         }
-        }
+
       } else {
         // Fallo en la autenticación API
         if (isSyncRequest) {

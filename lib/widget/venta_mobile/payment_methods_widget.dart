@@ -188,7 +188,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
             TextField(
               controller: _inputAmountController,
               decoration: InputDecoration(
-                prefixText: '$ ',
+                prefixText: ' ',
                 border: const OutlineInputBorder(),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 errorText: !isInputValid ? 'El monto debe ser igual o mayor al total' : null,
@@ -891,7 +891,7 @@ class _SplitPaymentDialogState extends State<_SplitPaymentDialog> {
             TextField(
               controller: _amountController,
               decoration: const InputDecoration(
-                prefixText: '$ ',
+                prefixText: ' ',
                 border: OutlineInputBorder(),
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
