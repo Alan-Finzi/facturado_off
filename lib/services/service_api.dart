@@ -136,16 +136,16 @@ class ApiServices{
       final String? comercioId = User.currencyUser?.comercioId;
       final String? sucursalId = User.currencyUser?.id.toString();
 
-      // Determinar cuál ID usar (con fallback a 362 si no hay usuario actual)
-      final String idBusqueda;
+      // Construir la URL: si no conocemos el comercio aún (primer login),
+      // llamamos sin filtro para que el token autentique y devuelva los datos correctos
+      final Uri apiUrl;
       if (comercioId != null) {
-        idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+        final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+        apiUrl = Uri.parse('${apiUrlUser}?comercio_id=$idBusqueda');
       } else {
-        idBusqueda = "362"; // Valor por defecto para compatibilidad
+        apiUrl = Uri.parse(apiUrlUser);
+        print('comercioId no disponible todavía, consultando usuarios sin filtro de comercio');
       }
-
-      // Construir la URL con el parámetro de comercio_id
-      final Uri apiUrl = Uri.parse('${apiUrlUser}?comercio_id=$idBusqueda');
 
       print('Obteniendo datos de usuario desde: $apiUrl');
 
@@ -248,63 +248,57 @@ class ApiServices{
       final String? comercioId = User.currencyUser?.comercioId;
       final String? sucursalId = User.currencyUser?.id.toString();
 
-// Determinar si se usa sucursal o comercioId
-      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId!) : comercioId!;
+      if (comercioId == null) {
+        throw Exception('No se pudo determinar el comercio_id del usuario para sincronizar productos');
+      }
 
-// Lógica para detectar cambio de comercio
+      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+
+      // Lógica para detectar cambio de comercio
       final oldComercioId = await _getLastUsedComercioId();
       if (oldComercioId != null && oldComercioId != idBusqueda) {
         print('Cambio de comercio detectado: $oldComercioId -> $idBusqueda');
-        // Si hay un cambio de comercio, limpiamos la base de datos
         await DatabaseHelper.instance.clearProductsData();
       }
 
       // Guardar el comercio actual para futuras comparaciones
       await _saveCurrentComercioId(idBusqueda);
 
-// Construir la URL con el parámetro de comercio_id
-      final Uri apiUrl = Uri.parse('${apiUrlProductosVer}?comercio_id=$idBusqueda');
-      print('Obteniendo productos desde: $apiUrl');
-
+      // Obtener todas las páginas de productos
+      while (hasMorePages) {
+        final Uri apiUrl = Uri.parse('${apiUrlProductosVer}?comercio_id=$idBusqueda&page=$currentPage');
+        print('Obteniendo productos página $currentPage desde: $apiUrl');
 
         final response = await http.get(
-          apiUrl, // URL ya contiene los parámetros necesarios
+          apiUrl,
           headers: {
-            'Authorization': 'Bearer $token', // Pasamos el token en el header
-            'Content-Type': 'application/json', // Opcional según la API
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
           },
-        );
+        ).timeout(const Duration(seconds: 60));
 
         if (response.statusCode == 200) {
-          // Decodificar los datos de la respuesta
           final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-          // Procesar los datos de la página actual
           final ProductoResponse productoResponse = ProductoResponse.fromJson(responseData);
 
-          // Validamos si alguno de los elementos en `data` cumple con la condición
+          try {
+            await DatabaseHelper.instance.insertProductoResponse(productoResponse);
+            print('Página $currentPage insertada: ${productoResponse.data?.length ?? 0} productos');
+          } catch (e) {
+            print('Error al insertar ProductoResponse página $currentPage: $e');
+          }
 
-            try {
-              // Insertamos en la base de datos
-              await DatabaseHelper.instance.insertProductoResponse(productoResponse);
-              print("Inserción completada exitosamente.");
-
-            } catch (e) {
-              // Capturamos y mostramos cualquier error durante la inserción
-              print("Error al insertar ProductoResponse: $e");
-            }
-
-
-          // Verifica si hay más páginas
           hasMorePages = responseData['next_page_url'] != null;
-          currentPage++; // Incrementa para la próxima página
+          currentPage++;
         } else {
-          // Manejo de errores
           throw Exception('Error al cargar los datos de la API. Código: ${response.statusCode}');
         }
+      }
 
+      print('Sincronización de productos completada. Total páginas: ${currentPage - 1}');
     } catch (e) {
       print('Error al procesar las variaciones: $e');
+      rethrow;
     }
   }
 
@@ -316,13 +310,11 @@ class ApiServices{
       final String? comercioId = User.currencyUser?.comercioId;
       final String? sucursalId = User.currencyUser?.id.toString();
 
-      // Determinar cuál ID usar (con fallback a 362 si no hay usuario actual)
-      final String idBusqueda;
-      if (comercioId != null) {
-        idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
-      } else {
-        idBusqueda = "362"; // Valor por defecto para compatibilidad
+      // comercioId debe estar disponible en este punto (fetchUsersData ya lo estableció)
+      if (comercioId == null) {
+        throw Exception('No se pudo determinar el comercio_id para obtener clientes');
       }
+      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
 
       // Construir la URL con ambos parámetros de comercio_id y casa_central_id
       final Uri apiUrl = Uri.parse('${apiUrlClienteMostrador}?comercio_id=$idBusqueda&casa_central_id=$idBusqueda');
@@ -490,14 +482,11 @@ class ApiServices{
         final String? comercioIdStr = User.currencyUser?.comercioId;
         final String? sucursalId = User.currencyUser?.id.toString();
 
-        // Determinar cuál ID usar con fallback a 362
-        final String idBusquedaStr;
-        if (comercioIdStr != null) {
-          idBusquedaStr = (comercioIdStr == "1") ? (sucursalId ?? comercioIdStr) : comercioIdStr;
-        } else {
-          idBusquedaStr = "362"; // Valor por defecto para compatibilidad
+        // comercioId debe estar disponible en este punto (fetchUsersData ya lo estableció)
+        if (comercioIdStr == null) {
+          throw Exception('No se pudo determinar el comercio_id para obtener métodos de pago');
         }
-
+        final String idBusquedaStr = (comercioIdStr == "1") ? (sucursalId ?? comercioIdStr) : comercioIdStr;
         idBusqueda = int.parse(idBusquedaStr);
       }
 

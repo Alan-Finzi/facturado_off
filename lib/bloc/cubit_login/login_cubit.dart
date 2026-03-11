@@ -81,6 +81,7 @@ class LoginCubit extends Cubit<LoginState> {
 
       // Limpiar la base de datos cuando cambia el usuario
       await dbHelper.deleteDatabaseIfExists();
+      User.currencyUser = null; // Limpiar usuario en memoria para evitar filtro incorrecto de comercio
 
       print('✅ Base de datos local limpiada correctamente para el nuevo usuario');
 
