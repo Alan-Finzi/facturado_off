@@ -125,6 +125,16 @@ class ApiServices{
             print('No se pudo parsear el usuario del login response: $e');
           }
 
+          print('=== userFromResponse ===');
+          print('userFromResponse: $userFromResponse');
+          if (userFromResponse != null) {
+            print('  username: ${userFromResponse.username}');
+            print('  email: ${userFromResponse.email}');
+            print('  comercioId: ${userFromResponse.comercioId}');
+            print('  id: ${userFromResponse.id}');
+          }
+          print('=======================');
+
           return {'token': token, 'user': userFromResponse};
         } else {
           // Manejar errores de respuesta
