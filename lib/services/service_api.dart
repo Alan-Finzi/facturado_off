@@ -105,6 +105,9 @@ class ApiServices{
         if (response.statusCode == 200) {
           print('Login exitoso. Procesando respuesta...');
           Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+          print('=== RESPUESTA COMPLETA DE LOGIN API ===');
+          print(jsonResponse.toString());
+          print('=======================================');
 
           final String? token = jsonResponse['token'] as String?;
           if (token == null) return null;
@@ -144,10 +147,17 @@ class ApiServices{
 
   Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
-      // El comercioId NO se conoce antes de esta llamada: viene de la respuesta de la API.
-      // Llamamos siempre sin filtro; el Bearer token autentica y la API devuelve
-      // los usuarios del comercio correspondiente al usuario logueado.
-      final Uri apiUrl = Uri.parse(apiUrlUser);
+      // El comercioId viene del login API (ya seteado en User.currencyUser por login_cubit).
+      // La API de usuarios requiere el filtro comercio_id para devolver resultados.
+      final String? comercioId = User.currencyUser?.comercioId;
+      final String? sucursalId = User.currencyUser?.id?.toString();
+
+      if (comercioId == null) {
+        throw Exception('comercioId no disponible para fetchUsersData: el login API no devolvió datos del usuario');
+      }
+
+      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+      final Uri apiUrl = Uri.parse('$apiUrlUser?comercio_id=$idBusqueda');
       print('Obteniendo datos de usuario desde: $apiUrl');
 
       // Crear un cliente con timeout explícito
