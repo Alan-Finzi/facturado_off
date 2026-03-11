@@ -157,17 +157,7 @@ class ApiServices{
 
   Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
-      // El comercioId viene del login API (ya seteado en User.currencyUser por login_cubit).
-      // La API de usuarios requiere el filtro comercio_id para devolver resultados.
-      final String? comercioId = User.currencyUser?.comercioId;
-      final String? sucursalId = User.currencyUser?.id?.toString();
-
-      if (comercioId == null) {
-        throw Exception('comercioId no disponible para fetchUsersData: el login API no devolvió datos del usuario');
-      }
-
-      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
-      final Uri apiUrl = Uri.parse('$apiUrlUser?comercio_id=$idBusqueda');
+      final Uri apiUrl = Uri.parse(apiUrlUser);
       print('Obteniendo datos de usuario desde: $apiUrl');
 
       // Crear un cliente con timeout explícito
