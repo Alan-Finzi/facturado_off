@@ -184,18 +184,30 @@ class LoginCubit extends Cubit<LoginState> {
       }
 
       // Llamar a la API (login online obligatorio para sincronización explícita)
-      final token = await apiServices.loginUser(email!, password!);
+      final loginResult = await apiServices.loginUser(email!, password!);
 
-      if (token != null) {
+      if (loginResult != null) {
+        final token = loginResult['token'] as String;
+        final User? userFromLogin = loginResult['user'] as User?;
+
         // Autenticación exitosa: Guardamos credenciales y emitimos el estado
         print("✅ Login API exitoso. Token obtenido: ${token.substring(0, 10)}...");
         await _saveCredentials(email!, password!, token);
         print("✅ Credenciales guardadas localmente para uso futuro");
 
+        // Si la API devolvió el usuario completo, establecerlo de inmediato en memoria.
+        // Esto permite que fetchUsersData use el comercioId correcto durante la sync.
+        if (userFromLogin != null) {
+          User.setCurrencyUser(userFromLogin);
+          print("✅ Usuario establecido desde login API: ${userFromLogin.username} (comercioId: ${userFromLogin.comercioId})");
+        }
+
         final hasData = await dbHelper.isDataSynchronized();
         print("Verificando datos sincronizados: ${hasData ? "DATOS ENCONTRADOS" : "SIN DATOS"}");
-
         print("⚠️ ESTADO DE SINCRONIZACIÓN: forceSync=$forceSync, isSyncRequest=$isSyncRequest, hasData=$hasData");
+
+        // Usuario a incluir en el estado de sync: el del login (con todos los campos) o el básico
+        final userParaSync = userFromLogin ?? User(username: email, password: password);
 
         if (forceSync) {
           // CASO 1: Cambio de usuario detectado - SIEMPRE forzar sincronización
@@ -203,8 +215,8 @@ class LoginCubit extends Cubit<LoginState> {
           emit(LoginState(
             isLogin: true,
             userToken: token,
-            isPreference: false, // Forzar sincronización
-            user: User(username: email, password: password),
+            isPreference: false,
+            user: userParaSync,
             needsOnlineAuth: false,
           ));
           print("✅ Login exitoso. Forzando sincronización por cambio de usuario.");
@@ -214,8 +226,8 @@ class LoginCubit extends Cubit<LoginState> {
           emit(LoginState(
             isLogin: true,
             userToken: token,
-            isPreference: false, // Forzar sincronización
-            user: User(username: email, password: password),
+            isPreference: false,
+            user: userParaSync,
             needsOnlineAuth: false,
           ));
           print("✅ Login exitoso. Forzando sincronización por solicitud explícita.");
@@ -225,8 +237,8 @@ class LoginCubit extends Cubit<LoginState> {
           emit(LoginState(
             isLogin: true,
             userToken: token,
-            isPreference: false, // Forzar sincronización
-            user: User(username: email, password: password),
+            isPreference: false,
+            user: userParaSync,
             needsOnlineAuth: false,
           ));
           print("✅ Login completado. Forzando sincronización por datos faltantes.");

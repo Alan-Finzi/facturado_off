@@ -94,7 +94,7 @@ class User {
       nombreUsuario: json['nombre_usuario'],
       apellidoUsuario: json['apellido_usuario'],
       name: json['name'],
-      idListaPrecio:json['lista_defecto'],
+      idListaPrecio: json['lista_defecto'] ?? json['id_lista_precio'],
       sucursal: json['sucursal'],
       email: json['email'],
       profile: json['profile'],

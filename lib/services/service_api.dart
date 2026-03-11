@@ -64,7 +64,7 @@ class ApiServices{
     });
   }
 
-  Future<String?> loginUser(String email, String password) async {
+  Future<Map<String, dynamic>?> loginUser(String email, String password) async {
     try {
       // Crear la URL para el endpoint de login
       final Uri url = Uri.parse(apiUrlLogin);
@@ -104,13 +104,25 @@ class ApiServices{
 
         if (response.statusCode == 200) {
           print('Login exitoso. Procesando respuesta...');
-          // Parsear la respuesta JSON
           Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-          tokenUser = jsonResponse['token'];
+          final String? token = jsonResponse['token'] as String?;
+          if (token == null) return null;
+          tokenUser = token;
           print('Token obtenido correctamente');
-          // Retornar el token de la respuesta
-          return jsonResponse['token'];
+
+          // Intentar extraer datos del usuario si la API los devuelve en el login
+          User? userFromResponse;
+          try {
+            if (jsonResponse.containsKey('user') && jsonResponse['user'] is Map<String, dynamic>) {
+              userFromResponse = User.fromJson(jsonResponse['user'] as Map<String, dynamic>);
+              print('Usuario recibido del login: ${userFromResponse.username} (comercioId: ${userFromResponse.comercioId})');
+            }
+          } catch (e) {
+            print('No se pudo parsear el usuario del login response: $e');
+          }
+
+          return {'token': token, 'user': userFromResponse};
         } else {
           // Manejar errores de respuesta
           print('Error al hacer login: ${response.statusCode}');
@@ -132,21 +144,10 @@ class ApiServices{
 
   Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
-      // Intentar obtener el ID de comercio del usuario actual si está disponible
-      final String? comercioId = User.currencyUser?.comercioId;
-      final String? sucursalId = User.currencyUser?.id.toString();
-
-      // Construir la URL: si no conocemos el comercio aún (primer login),
-      // llamamos sin filtro para que el token autentique y devuelva los datos correctos
-      final Uri apiUrl;
-      if (comercioId != null) {
-        final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
-        apiUrl = Uri.parse('${apiUrlUser}?comercio_id=$idBusqueda');
-      } else {
-        apiUrl = Uri.parse(apiUrlUser);
-        print('comercioId no disponible todavía, consultando usuarios sin filtro de comercio');
-      }
-
+      // El comercioId NO se conoce antes de esta llamada: viene de la respuesta de la API.
+      // Llamamos siempre sin filtro; el Bearer token autentica y la API devuelve
+      // los usuarios del comercio correspondiente al usuario logueado.
+      final Uri apiUrl = Uri.parse(apiUrlUser);
       print('Obteniendo datos de usuario desde: $apiUrl');
 
       // Crear un cliente con timeout explícito
