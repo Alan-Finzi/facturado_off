@@ -138,7 +138,8 @@ class _ValidacionDatosSincroPageState extends State<ValidacionDatosSincroPage> {
             _facturacionValid = true;
             print('✅ Se encontraron ${datosFacturacion.length} registros en la base de datos');
 
-            // IMPORTANTE: Cargamos estos datos en la variable estática para uso futuro
+            // Cargar en memoria (mismo patrón que currencyUser: limpiar antes de setear)
+            DatosFacturacionModel.datosFacturacionCurrent.clear();
             DatosFacturacionModel.datosFacturacionCurrent.addAll(datosFacturacion);
 
             for (var dato in datosFacturacion) {
@@ -164,7 +165,8 @@ class _ValidacionDatosSincroPageState extends State<ValidacionDatosSincroPage> {
                 _facturacionValid = true;
                 print('✅ Usando datos alternativos de facturación');
 
-                // IMPORTANTE: Cargar estos datos en la variable estática
+                // Cargar en memoria (mismo patrón: limpiar antes de setear)
+                DatosFacturacionModel.datosFacturacionCurrent.clear();
                 DatosFacturacionModel.datosFacturacionCurrent.addAll(allFacturacionData);
 
                 for (var dato in allFacturacionData) {

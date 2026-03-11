@@ -1085,15 +1085,16 @@ class DatabaseHelper {
           final SharedPreferences prefs = await SharedPreferences.getInstance();
           final String? savedComercioId = prefs.getString('datos_facturacion_comercio_id');
 
-          // Determinar el comercioId a usar (preferimos el guardado en SharedPreferences)
+          // Fuente autoritativa: el usuario (ya está en memoria como User.currencyUser)
+          // SharedPreferences es fallback, pero solo si no es el valor erróneo "0"
           int comercioId = 0;
 
-          if (savedComercioId != null && savedComercioId.isNotEmpty) {
-            comercioId = int.tryParse(savedComercioId) ?? 0;
-            print('Usando comercioId desde SharedPreferences: $comercioId');
-          } else if (user.comercioId != null) {
+          if (user.comercioId != null && user.comercioId!.isNotEmpty) {
             comercioId = int.tryParse(user.comercioId!) ?? 0;
             print('Usando comercioId desde usuario: $comercioId');
+          } else if (savedComercioId != null && savedComercioId.isNotEmpty && savedComercioId != '0') {
+            comercioId = int.tryParse(savedComercioId) ?? 0;
+            print('Usando comercioId desde SharedPreferences: $comercioId');
           }
 
           // Cargar datos de facturación

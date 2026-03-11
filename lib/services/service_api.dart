@@ -207,10 +207,12 @@ class ApiServices{
           }
         } catch (e) {
           print('Error: No se encontró ningún usuario con el email: $email');
-          print('Detalles del error: $e');
           print('Usuarios disponibles: ${users.map((u) => u.email).toList()}');
-          return null;
+          throw Exception('Usuario "$email" no encontrado en la respuesta de la API de usuarios');
         }
+
+        // Primero setear en memoria, luego emitir el estado del cubit
+        User.setCurrencyUser(loggedUser);
 
         loginCubit.emit(LoginState(
           isLogin: true,
@@ -218,8 +220,6 @@ class ApiServices{
           user: loggedUser,
           isPreference: false,
         ));
-
-        User.setCurrencyUser(loggedUser);
 
         return users;
       } else {
@@ -431,8 +431,7 @@ class ApiServices{
       } else if (userId != null) {
         idComercioToUse = userId;
       } else {
-        idComercioToUse = "0";
-        print('Warning: Usando comercioId por defecto (0)');
+        throw Exception('No se pudo determinar el comercio_id para datos de facturación: User.currencyUser no tiene comercioId ni id');
       }
 
       // Guardar el comercioId en SharedPreferences para uso futuro
