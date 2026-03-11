@@ -4,8 +4,6 @@ import 'package:facturador_offline/models/producto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:searchfield/searchfield.dart';
-
 
 import '../bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import '../bloc/cubit_login/login_cubit.dart';
@@ -187,10 +185,9 @@ class BuscarProductoWidget extends StatefulWidget {
 }
 
 class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
-  final GlobalKey _searchFieldKey = GlobalKey();
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-  List<SearchFieldListItem<String>> productoSugerencias = [];
+  TextEditingController? _fieldController;
+  FocusNode? _fieldFocusNode;
+  List<Datum> _productos = [];
 
   @override
   void initState() {
@@ -213,95 +210,78 @@ class _BuscarProductoWidgetState extends State<BuscarProductoWidget> {
     );
   }
 
-  /// Carga las sugerencias de productos basadas en la consulta del usuario
-  /// Optimizado para listas grandes con un límite de resultados
-  /// @param query Texto de búsqueda ingresado por el usuario
-  /// @param productos Datos de productos disponibles
-  void cargarSugerencias(String query, ProductoResponse? productos) {
-    if (productos == null || productos.data == null) {
-      productoSugerencias = [];
-      setState(() {});
-      return;
-    }
-
-    final keywords = query.toLowerCase().split(' ');
-    
-    // Limitar la cantidad de resultados para mejor rendimiento
-    const int maxResults = 50;
-    
-    // Implementar búsqueda optimizada
-    int count = 0;
-    productoSugerencias = productos.data!
-        .where((dato) {
-      // Si ya encontramos suficientes resultados, dejar de buscar
-      if (count >= maxResults) return false;
-          
-      final textoProducto = '${dato.nombre ?? ''} ${dato.barcode ?? ''}'.toLowerCase();
-      final match = keywords.every((keyword) => textoProducto.contains(keyword));
-      if (match) count++;
-      return match;
-    })
-        .map((dato) => SearchFieldListItem<String>(
-      dato.nombre ?? 'Sin nombre',
-      item: dato.barcode ?? 'Sin código',
-    ))
-        .toList();
-
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<ProductosMaestroCubit, ProductosMaestroState>(
       listener: (context, state) {
-        if (state.productoResponse != null) {
-          cargarSugerencias(_controller.text, state.productoResponse);
+        if (state.productoResponse?.data != null) {
+          setState(() => _productos = state.productoResponse!.data!);
         }
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SearchField(
-            key: _searchFieldKey,
-            controller: _controller,
-            focusNode: _focusNode,
-            suggestions: productoSugerencias,
-            suggestionState: Suggestion.expand,
-            textInputAction: TextInputAction.done,
-            searchInputDecoration: SearchInputDecoration(
-              labelText: 'Buscar producto por nombre o código de barras',
-              prefixIcon: Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: Icon(Icons.clear),
-                onPressed: () {
-                  _controller.clear();
-                  _focusNode.unfocus();
-                  setState(() => productoSugerencias = []);
-                },
-              ),
-            ),
-            maxSuggestionsInViewPort: 5,
-            itemHeight: 50,
-            onSearchTextChanged: (query) {
-              final productosState = context.read<ProductosMaestroCubit>().state;
-              cargarSugerencias(query, productosState.productoResponse);
+          Autocomplete<Datum>(
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              final query = textEditingValue.text.toLowerCase();
+              if (query.isEmpty) return const Iterable<Datum>.empty();
+              int count = 0;
+              return _productos.where((d) {
+                if (count >= 50) return false;
+                final texto = '${d.nombre ?? ''} ${d.barcode ?? ''}'.toLowerCase();
+                final match = query.split(' ').every((kw) => texto.contains(kw));
+                if (match) count++;
+                return match;
+              });
             },
-            onSuggestionTap: (producto) {
-              final productosState = context.read<ProductosMaestroCubit>().state;
-              final productoResponse = productosState.productoResponse;
-
-              if (productoResponse?.data == null) return;
-
-              final selectedDatum = productoResponse!.data!.firstWhere(
-                    (d) => d.barcode == producto.item,
-                orElse: () => Datum(),
+            displayStringForOption: (d) => d.nombre ?? '',
+            onSelected: (datum) {
+              final resp = {'productoSeleccionado': datum};
+              context.read<ProductosCubit>().agregarProducto(resp);
+              _fieldController?.clear();
+            },
+            fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+              _fieldController = textEditingController;
+              _fieldFocusNode = focusNode;
+              return TextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  labelText: 'Buscar producto por nombre o código de barras',
+                  prefixIcon: Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.clear),
+                    onPressed: () {
+                      textEditingController.clear();
+                      focusNode.unfocus();
+                    },
+                  ),
+                ),
               );
-
-              final resp = {'productoSeleccionado': selectedDatum};
-               context.read<ProductosCubit>().agregarProducto(resp);
-
-              _controller.clear();
-              setState(() => productoSugerencias = []);
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: 250),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      itemBuilder: (context, index) {
+                        final d = options.elementAt(index);
+                        return ListTile(
+                          title: Text(d.nombre ?? ''),
+                          subtitle: Text(d.barcode ?? ''),
+                          onTap: () => onSelected(d),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
             },
           ),
           SizedBox(height: 16),
