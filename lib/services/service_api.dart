@@ -157,10 +157,20 @@ class ApiServices{
 
   Future<List<User>?> fetchUsersData(String token, String email, LoginCubit loginCubit) async {
     try {
-      final Uri apiUrl = Uri.parse(apiUrlUser);
+      // comercioId y sucursal vienen del login API (seteados en User.currencyUser por login_cubit)
+      final String? comercioId = User.currencyUser?.comercioId;
+      final String? sucursalId = User.currencyUser?.sucursal?.toString() ?? User.currencyUser?.id?.toString();
+
+      if (comercioId == null) {
+        throw Exception('comercioId no disponible: el login API no devolvió datos del usuario');
+      }
+
+      final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
+      final Uri apiUrl = Uri.parse('$apiUrlUser?comercio_id=$idBusqueda');
+
       print('=== fetchUsersData REQUEST ===');
       print('URL: $apiUrl');
-      print('Token: $token');
+      print('comercioId: $comercioId | sucursalId: $sucursalId | idBusqueda: $idBusqueda');
       print('Email buscado: $email');
       print('==============================');
 
