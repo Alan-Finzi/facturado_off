@@ -77,31 +77,37 @@ class _ResumenTablaState extends State<ResumenTabla> {
                 try {
                     // Intentar encontrar el proveedor seleccionado
                     final providerIndex = loadedState.providers.indexWhere(
-                        (p) => p.id == loadedState.selectedProviderId
+                            (p) => p.id == loadedState.selectedProviderId
                     );
 
                     if (providerIndex >= 0) {
-                        final selectedProvider = loadedState.providers[providerIndex];
+                        final selectedProvider = loadedState
+                            .providers[providerIndex];
 
                         // Intentar encontrar el método seleccionado
-                        if (selectedProvider.metodosPago != null && selectedProvider.metodosPago!.isNotEmpty) {
-                            final methodIndex = selectedProvider.metodosPago!.indexWhere(
-                                (m) => m.id == loadedState.selectedMethodId
+                        if (selectedProvider.metodosPago != null &&
+                            selectedProvider.metodosPago!.isNotEmpty) {
+                            final methodIndex = selectedProvider.metodosPago!
+                                .indexWhere(
+                                    (m) => m.id == loadedState.selectedMethodId
                             );
 
                             if (methodIndex >= 0) {
-                                final selectedMethod = selectedProvider.metodosPago![methodIndex];
+                                final selectedMethod = selectedProvider
+                                    .metodosPago![methodIndex];
                                 recargoRate = selectedMethod.recargo;
 
                                 // Solo calcular el recargo si hay un subtotal válido
                                 if (loadedState.subtotalAmount > 0) {
                                     // Cálculo directo del monto de recargo
-                                    finalRecargoAmount = (loadedState.subtotalAmount * recargoRate) / 100;
-
+                                    finalRecargoAmount =
+                                        (loadedState.subtotalAmount *
+                                            recargoRate) / 100;
                                 }
+                            }
                         }
-                } catch (e) {
-                }
+                    }
+                } catch (e) {}
             }
 
             // Solo actualizar si hay cambios o se fuerza la actualización

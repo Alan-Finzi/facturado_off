@@ -1396,6 +1396,7 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
                         
                         if (listaDelCliente.nombre != null) {
                           listaPrecioNombre = listaDelCliente.nombre!;
+                        }
                       } catch (e) {
                         // ignore
                       }
