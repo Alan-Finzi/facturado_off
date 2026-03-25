@@ -35,7 +35,6 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
         ));
       }
     } catch (e) {
-      print('Error en precarga de proveedores de pago: $e');
       // No emitir error para evitar interrumpir el flujo
     }
   }
@@ -249,70 +248,25 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
       final currentState = state as PaymentMethodsLoaded;
 
       try {
-        // Depurar los datos iniciales
-        print('== CALCULANDO RECARGO ==');
-        print('Subtotal para recargo: \$${currentState.subtotalAmount.toStringAsFixed(2)}');
-        print('Proveedor ID: ${currentState.selectedProviderId}');
-        print('Método ID: ${currentState.selectedMethodId}');
-
-        // Verificar si tenemos proveedor y método seleccionados
         if (currentState.selectedProviderId == null || currentState.selectedMethodId == null) {
-          print('No hay proveedor o método seleccionado');
           return 0.0;
         }
 
-        // Obtener método seleccionado de forma segura
-        PaymentMethod? selectedMethod = _getSelectedMethod(currentState);
+        final PaymentMethod? selectedMethod = _getSelectedMethod(currentState);
+        if (selectedMethod == null) return 0.0;
 
-        if (selectedMethod != null) {
-          print('Método encontrado: ${selectedMethod.nombre} con tasa de recargo: ${selectedMethod.recargo}%');
-        } else {
-          print('No se encontró un método de pago válido');
-          return 0.0;
-        }
+        if (currentState.subtotalAmount <= 0) return 0.0;
 
-        // Validar que tengamos un subtotal válido
-        if (currentState.subtotalAmount <= 0) {
-          print('Subtotal inválido o cero: ${currentState.subtotalAmount}');
-          return 0.0;
-        }
-
-        // Calcular recargo con protección para valores inválidos
         final recargo = selectedMethod.recargo;
-        if (recargo.isNaN || recargo.isInfinite) {
-          print('Error: Valor de recargo inválido (${selectedMethod.recargo})');
-          return 0.0;
-        }
+        if (recargo.isNaN || recargo.isInfinite) return 0.0;
 
-        // Calcular monto de recargo con valor limpio
         final recargoAmount = (currentState.subtotalAmount * recargo) / 100;
-        print('Cálculo de recargo: ${currentState.subtotalAmount} * ${recargo}% / 100 = $recargoAmount');
+        if (recargoAmount.isNaN || recargoAmount.isInfinite || recargoAmount < 0) return 0.0;
 
-        // Verificar que el resultado es válido
-        if (recargoAmount.isNaN || recargoAmount.isInfinite || recargoAmount < 0) {
-          print('Error: Cálculo de recargo inválido: $recargoAmount');
-          return 0.0;
-        }
-
-        // Devolver valor redondeado a 2 decimales para consistencia
-        final roundedValue = double.parse(recargoAmount.toStringAsFixed(2));
-        print('Recargo final (redondeado): \$${roundedValue.toStringAsFixed(2)}');
-
-        // Verificar si el recargo es mayor a cero antes de aplicarlo
-        if (roundedValue > 0) {
-          print('RECARGO APLICADO: \$${roundedValue.toStringAsFixed(2)} (${recargo}%)');
-        } else {
-          print('Recargo es cero, no se aplica');
-        }
-
-        return roundedValue;
+        return double.parse(recargoAmount.toStringAsFixed(2));
       } catch (e) {
-        print('Error al calcular recargo: $e');
-        print('StackTrace: ${StackTrace.current}');
-        // Fallar silenciosamente con valor por defecto
+        return 0.0;
       }
-    } else {
-      print('Estado no es PaymentMethodsLoaded: ${state.runtimeType}');
     }
 
     return 0.0;

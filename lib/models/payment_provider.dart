@@ -63,8 +63,7 @@ class PaymentProvider {
             .map((metodo) => PaymentMethod.fromJson(metodo, providerId: json['id'] ?? 0))
             .toList();
       } catch (e) {
-        print('Error al procesar metodos_pago: $e para provider ID: ${json['id']}');
-        metodos = []; // Evitar que sea null
+        metodos = [];
       }
     } else {
       metodos = []; // Inicializar con lista vacía en lugar de null
@@ -82,7 +81,6 @@ class PaymentProvider {
       }
     } catch (_) {
       id = 0;
-      print('Error al parsear ID de provider: ${json['id']}');
     }
 
     // Parsear creador_id como entero
@@ -95,7 +93,7 @@ class PaymentProvider {
           creadorId = int.tryParse(json['creador_id']);
         }
       } catch (e) {
-        print('Error al parsear creador_id: ${json['creador_id']}');
+        // ignore
       }
     }
 
@@ -109,7 +107,7 @@ class PaymentProvider {
           comercioId = int.tryParse(json['comercio_id']);
         }
       } catch (e) {
-        print('Error al parsear comercio_id: ${json['comercio_id']}');
+        // ignore
       }
     }
 

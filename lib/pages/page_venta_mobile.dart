@@ -62,7 +62,6 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
 
       // 1. Verificar si ya hay datos cargados en memoria (variable estática)
       if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty) {
-        print('✅ Usando datos de facturación ya cargados en memoria: ${DatosFacturacionModel.datosFacturacionCurrent.length} registros');
 
         if (mounted) {
           setState(() {
@@ -86,7 +85,6 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
         comercioId = (loginCubit.state.user!.comercioId == "1")
             ? loginCubit.state.user!.id.toString()
             : loginCubit.state.user!.comercioId!;
-        print('🔍 Usando comercioId desde usuario: $comercioId');
       }
 
       // Si no hay comercioId del usuario, intentar desde SharedPreferences
@@ -95,10 +93,8 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
         final savedComercioId = prefs.getString('datos_facturacion_comercio_id');
         if (savedComercioId != null && savedComercioId.isNotEmpty) {
           comercioId = savedComercioId;
-          print('🔍 Usando comercioId desde SharedPreferences: $comercioId');
         } else {
-          comercioId = "1"; // Valor por defecto
-          print('⚠️ Usando comercioId por defecto: 1');
+          comercioId = "1";
         }
       }
 
@@ -107,27 +103,20 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
 
       try {
         datos = await DatabaseHelper.instance.getAllDatosFacturacionCommerce(int.tryParse(comercioId) ?? 0);
-        print('📊 Se encontraron ${datos.length} registros para comercioId=$comercioId');
       } catch (dbError) {
-        print('❌ Error al buscar datos para comercioId=$comercioId: $dbError');
       }
 
       // 4. Si no hay datos específicos, intentar con cualquier dato disponible
       if (datos.isEmpty) {
-        print('⚠️ No se encontraron datos específicos. Buscando cualquier dato de facturación...');
         try {
           datos = await DatabaseHelper.instance.getAllDatosFacturacion();
-          if (datos.isNotEmpty) {
-            print('✅ Se encontraron ${datos.length} datos alternativos');
-          }
         } catch (allError) {
-          print('❌ Error al buscar todos los datos: $allError');
+          // ignore
         }
       }
 
       // 5. Si aún no hay datos, crear dato de emergencia
       if (datos.isEmpty) {
-        print('⚠️ No hay datos disponibles. Creando dato de emergencia...');
         final datoEmergencia = DatosFacturacionModel(
           id: 999,
           razonSocial: "Datos de Emergencia",
@@ -140,13 +129,12 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
 
         try {
           await DatabaseHelper.instance.insertDatosFacturacion(datoEmergencia);
-          print('✅ Dato de emergencia guardado en BD');
 
           // Actualizar SharedPreferences con este comercioId
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('datos_facturacion_comercio_id', comercioId);
         } catch (saveError) {
-          print('❌ Error al guardar dato de emergencia: $saveError');
+          // ignore
         }
 
         datos = [datoEmergencia];
@@ -155,7 +143,6 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
       // 6. Asegurarse de que los datos estén en la variable estática
       if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty && datos.isNotEmpty) {
         DatosFacturacionModel.datosFacturacionCurrent.addAll(datos);
-        print('✅ ${datos.length} datos cargados en variable estática');
       }
 
       // 7. Actualizar estado
@@ -172,7 +159,6 @@ class _VentaMainPageMobileState extends State<VentaMainPageMobile> {
         }
       }
     } catch (e) {
-      print('Error crítico al cargar datos de facturación: $e');
 
       // Intento final de recuperación
       try {

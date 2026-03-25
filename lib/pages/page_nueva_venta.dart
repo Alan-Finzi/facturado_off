@@ -54,7 +54,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
   Future<void> _cargarDatosFacturacion({bool forzarRecarga = false}) async {
     // PASO PRELIMINAR: Verificar si ya hay datos cargados en memoria (variable estática)
     if (DatosFacturacionModel.datosFacturacionCurrent.isNotEmpty && !forzarRecarga) {
-      print('✅ USANDO datos de facturación ya cargados en memoria: ${DatosFacturacionModel.datosFacturacionCurrent.length} registros');
 
       if (mounted) {
         setState(() {
@@ -87,7 +86,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
         });
       }
 
-      print('🔍 Intentando cargar datos de facturación desde la base de datos...');
 
       // 2. Intentar obtener primero el comercioId desde SharedPreferences
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -95,7 +93,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
 
       // 3. Si hay un comercioId guardado en SharedPreferences, usarlo directamente
       if (savedComercioId != null && savedComercioId.isNotEmpty) {
-        print('Usando comercioId desde SharedPreferences: $savedComercioId');
 
         // El método getAllDatosFacturacionCommerce buscará datos para este comercioId
         // y si no encuentra, buscará otros disponibles y actualizará SharedPreferences
@@ -128,7 +125,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
           }
           return;
         } else {
-          print('No se encontraron datos para comercioId: $savedComercioId. Creando dato de emergencia...');
           // Continuar para crear un dato de emergencia
         }
       }
@@ -144,8 +140,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
 
       // Si no hay comercioId, usar un valor por defecto
       if (comercioId == null || comercioId.isEmpty) {
-        comercioId = "1"; // Valor por defecto
-        print('Usando comercioId por defecto: $comercioId');
+        comercioId = "1";
       }
 
       // Crear dato de emergencia con el comercioId disponible
@@ -166,9 +161,8 @@ class _VentaMainPageState extends State<VentaMainPage> {
         // Actualizar SharedPreferences con este comercioId
         await prefs.setString('datos_facturacion_comercio_id', comercioId);
 
-        print('Dato de emergencia guardado en BD y SharedPreferences con comercioId: $comercioId');
       } catch (e) {
-        print('Error al guardar dato de emergencia: $e');
+        // ignore
       }
 
       // Agregar a la variable estática
@@ -183,7 +177,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
         });
       }
     } catch (e) {
-      print('Error crítico al cargar datos de facturación: $e');
 
       // Intentar obtener datos de emergencia directamente
       try {
@@ -239,7 +232,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
         }
       } catch (criticalError) {
         // Error verdaderamente crítico, no se pudo recuperar
-        print('Error crítico al recuperar datos: $criticalError');
 
         if (mounted) {
           setState(() {
@@ -316,7 +308,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
                   );
                 }
               } catch (e) {
-                print('Error al crear datos de emergencia: $e');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -974,7 +965,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
       final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
       final loginCubit = context.read<LoginCubit>();
 
-      print('⚠️ Debug: Iniciando guardado de venta...');
 
       // Datos del usuario actual
       final userId = loginCubit.state.user?.id;
@@ -982,11 +972,9 @@ class _VentaMainPageState extends State<VentaMainPage> {
           ? int.tryParse(loginCubit.state.user!.comercioId!) ?? 0
           : 0;
 
-      print('⚠️ Debug: User ID: $userId, Comercio ID: $comercioId');
 
       // Productos seleccionados
       final productos = productosCubit.state.productosSeleccionados;
-      print('⚠️ Debug: Número de productos seleccionados: ${productos.length}');
 
       // === LÓGICA EXACTA DEL RESUMENTABLA ===
 
@@ -1029,11 +1017,9 @@ class _VentaMainPageState extends State<VentaMainPage> {
       // Calcular total final con todos los componentes
       final total = subtotal - montoDescuento + totalIva + recargo;
 
-      print('⚠️ Debug: Subtotal: $subtotal, IVA: $totalIva, Recargo: $recargo, Total: $total');
 
       // Cliente
       final cliente = clienteCubit.state.clienteSeleccionado;
-      print('⚠️ Debug: Cliente seleccionado: ${cliente?.nombre ?? "Sin cliente"}');
 
       // Método de pago
       PaymentMethod? metodoPago;
@@ -1059,14 +1045,12 @@ class _VentaMainPageState extends State<VentaMainPage> {
         }
       }
 
-      print('⚠️ Debug: Método de pago: $metodoPagoNombre');
 
       // Datos de facturación
       final datosFacturacion = productosCubit.state.datosFacturacionModel?.isNotEmpty == true
           ? productosCubit.state.datosFacturacionModel!.first
           : null;
 
-      print('⚠️ Debug: Datos facturación: ${datosFacturacion?.razonSocial ?? "Sin datos"}');
 
       // Canal de venta y caja
       final canalVenta = productosCubit.state.canalVenta ?? 'Mostrador';
@@ -1079,9 +1063,7 @@ class _VentaMainPageState extends State<VentaMainPage> {
         try {
           // Convertir a JSON en lugar de usar toString() directamente
           domicilioEntrega = jsonEncode(_datosEnvio);
-          print('⚠️ Debug: Domicilio serializado correctamente');
         } catch (e) {
-          print('⚠️ Error al serializar domicilio: $e');
           // En caso de error, usar una versión simplificada
           domicilioEntrega = _datosEnvio.toString();
         }
@@ -1112,7 +1094,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
         observaciones: null, // Aquí podríamos agregar observaciones si la UI lo permite
       );
 
-      print('⚠️ Debug: Objeto de venta creado correctamente');
 
       // Crear detalles de venta para cada producto
       final detalles = productos.map((producto) {
@@ -1140,13 +1121,11 @@ class _VentaMainPageState extends State<VentaMainPage> {
       // Asignar los detalles a la venta
       final ventaConDetalles = sale.copyWith(detalles: detalles);
 
-      print('⚠️ Debug: Intentando guardar venta en base de datos...');
 
       // Guardar la venta en la base de datos utilizando SalesDatabaseHelper
       final salesDatabaseHelper = SalesDatabaseHelper();
       final ventaId = await salesDatabaseHelper.saveSale(ventaConDetalles);
 
-      print('✅ Debug: Venta guardada exitosamente con ID: $ventaId');
 
       // Mostrar popup de éxito
       if (mounted) {
@@ -1211,7 +1190,6 @@ class _VentaMainPageState extends State<VentaMainPage> {
         );
       }
     } catch (e) {
-      print('❌ Error crítico al guardar venta: $e');
 
       // Ocultar indicador de carga
       if (mounted) {
@@ -1310,7 +1288,6 @@ class dropButtonDatosFact extends StatelessWidget {
 
             context.read<ProductosCubit>().updateDatosFacturacion([selectedFactura]);
 
-            print("Seleccionado: ${selectedFactura.razonSocial} - ${selectedFactura.condicionIva}");
           }
         },
         items: datosFacturacion.map((factura) {
@@ -1419,10 +1396,8 @@ class _NuevaVentaPageState extends State<NuevaVentaPage> {
                         
                         if (listaDelCliente.nombre != null) {
                           listaPrecioNombre = listaDelCliente.nombre!;
-                          print('Mostrando lista: ${listaDelCliente.nombre} (ID: ${listaDelCliente.id})');
-                        }
                       } catch (e) {
-                        print('Lista de precio no encontrada: $e');
+                        // ignore
                       }
                     }
                     

@@ -72,7 +72,6 @@ class SynchronizationPage extends StatelessWidget {
                 // Intentar abrir la configuración de pantalla
                 AppSettings.openAppSettings ();
               } catch (e) {
-                print('Error al abrir configuración: $e');
                 // Si falla, mostrar un mensaje
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -98,14 +97,12 @@ class SynchronizationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final loginCubit = BlocProvider.of<LoginCubit>(context);
 
-    print("Construyendo SynchronizationPage");
     return Scaffold(
       appBar: AppBar(
         title: Text('Sincronización'),
       ),
       body: BlocProvider(
         create: (context) {
-          print("Iniciando SynchronizationCubit");
           return SynchronizationCubit()..startSynchronization(token, email, loginCubit);
         },
         child: BlocListener<SynchronizationCubit, SynchronizationState>(
@@ -116,7 +113,6 @@ class SynchronizationPage extends StatelessWidget {
             } else if (state is SynchronizationCompleted) {
               // CORREGIDO: Navegamos a InicializacionDatosPage en lugar de RootNavScreen
               // para cargar los datos desde la BD a memoria antes de mostrar la pantalla principal
-              print("✅ Sincronización completada. Ahora cargando datos en memoria...");
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -179,8 +175,7 @@ class SynchronizationPage extends StatelessWidget {
                           try {
                             AppSettings.openAppSettings();
                           } catch (e) {
-                            print('Error al abrir configuración: $e');
-                          }
+                                      }
                         },
                         icon: Icon(Icons.settings),
                         label: Text('Cambiar tiempo de espera de pantalla'),

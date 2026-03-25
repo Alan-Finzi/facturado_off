@@ -166,9 +166,6 @@ class PlatformService {
       }
     }
 
-    // Log platform details for diagnostics
-    print('Plataforma: ${getPlatformName()}');
-    print('Version: ${await getPlatformVersion()}');
   }
 
   /// Retorna un nombre descriptivo de la plataforma actual para diagnóstico

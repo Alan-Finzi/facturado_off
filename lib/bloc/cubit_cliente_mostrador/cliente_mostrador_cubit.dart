@@ -66,7 +66,7 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
       // Actualizar solo la lista filtrada, manteniendo el resto del estado
       emit(state.copyWith(filteredClientes: filteredClientes));
     } catch (e) {
-      print("Error al buscar cliente: $e");
+      // ignore
     }
   }
   /// Selecciona un cliente y actualiza el estado de búsqueda
@@ -90,7 +90,7 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
       await userRepository.updateCliente(cliente);
       await getClientesBD(); // Refresca la lista de clientes después de la actualización
     } catch (e) {
-      print("Error al actualizar cliente: $e");
+      // ignore
     }
   }
 
@@ -112,8 +112,7 @@ class ClientesMostradorCubit extends Cubit<ClientesMostradorState> {
       // Deseleccionar el cliente después de la eliminación
       deseleccionarCliente();
     } catch (e) {
-      print("Error al eliminar cliente: $e");
-      // Aquí podrías manejar el error de manera más detallada, como emitir un estado con un mensaje de error si es necesario.
+      // ignore
     }
   }
 

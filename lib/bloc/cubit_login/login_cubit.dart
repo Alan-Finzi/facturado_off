@@ -45,8 +45,6 @@ class LoginCubit extends Cubit<LoginState> {
 
       // Guardar la lista actualizada de usuarios
       await prefs.setString('users', jsonEncode(users));
-    } else {
-      print("El usuario ya existe.");
     }
   }
 
@@ -61,15 +59,9 @@ class LoginCubit extends Cubit<LoginState> {
     final apiServices = ApiServices();
     final bool isSyncRequest = state.needsOnlineAuth;
 
-    print('=== INICIO PROCESO DE LOGIN ===');
-    print('Email: $email');
-    print('Solicitud de sincronización: ${isSyncRequest ? "SÍ" : "NO"}');
-
     try {
       final String? lastActiveUserEmail = await User.getLastActiveUserEmail();
       final bool isSameUser = (lastActiveUserEmail == email);
-      print('Último usuario activo: ${lastActiveUserEmail ?? "NINGUNO"}');
-      print('Mismo usuario: ${isSameUser ? "SÍ" : "NO"}');
 
       // ─── PATH A: Mismo usuario, sin sync explícita ──────────────────────────
       // Email coincide con el guardado en preferencias → cargar desde BD directamente
@@ -83,7 +75,6 @@ class LoginCubit extends Cubit<LoginState> {
           final User? userFromDB = await dbHelper.getUserByEmail(email!);
           if (userFromDB != null) {
             User.setCurrencyUser(userFromDB);
-            print('✅ PATH A: Usuario cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})');
             final bool hasData = await dbHelper.isDataSynchronized();
             emit(LoginState(
               isLogin: true,
@@ -95,27 +86,24 @@ class LoginCubit extends Cubit<LoginState> {
             ));
             return;
           }
-          print('⚠️ PATH A: Usuario no encontrado en BD → continuando con PATH B');
+          // Usuario no encontrado en BD → continuar con PATH B;
         }
       }
 
       // ─── PATH B: Nuevo usuario, primer login, sync explícita o sin datos ────
       // Si el usuario cambió, limpiar la BD del usuario anterior
       if (lastActiveUserEmail != null && lastActiveUserEmail != email) {
-        print('⚠️ CAMBIO DE USUARIO: Limpiando BD ($lastActiveUserEmail → $email)');
         await dbHelper.deleteDatabaseIfExists();
         User.currencyUser = null;
       }
 
       // Sin password → modo offline con token guardado
       if (password?.isEmpty ?? true) {
-        print('⚠️ Sin password → intento offline');
         await _loginConTokenGuardado(email!, dbHelper);
         return;
       }
 
       // Llamar a la API de login para obtener el token
-      print('🔄 PATH B: Llamando a la API de login...');
       final loginResult = await apiServices.loginUser(email!, password!);
 
       if (loginResult != null) {
@@ -127,12 +115,8 @@ class LoginCubit extends Cubit<LoginState> {
         // (será confirmado/reemplazado por fetchUsersData durante la sync)
         if (userFromLogin != null) {
           User.setCurrencyUser(userFromLogin);
-          print('✅ Usuario provisional desde login API: ${userFromLogin.username} (comercioId: ${userFromLogin.comercioId})');
         }
 
-        print('✅ Login API exitoso. Iniciando sincronización...');
-        // Siempre sincronizar en PATH B: fetchUsersData completará User.currencyUser
-        // con los datos completos del usuario y actualizará el estado del cubit
         emit(LoginState(
           isLogin: true,
           userToken: token,
@@ -141,11 +125,9 @@ class LoginCubit extends Cubit<LoginState> {
           needsOnlineAuth: false,
         ));
       } else {
-        print('❌ Login API falló → intento offline');
         await _loginConTokenGuardado(email, dbHelper);
       }
     } catch (e) {
-      print('❌ Error durante el login: $e');
       await _loginConTokenGuardado(email ?? '', dbHelper);
     }
   }
@@ -161,7 +143,6 @@ class LoginCubit extends Cubit<LoginState> {
       final User? userFromDB = await dbHelper.getUserByEmail(email);
       if (userFromDB != null) {
         User.setCurrencyUser(userFromDB);
-        print('✅ Offline: Usuario cargado desde BD: ${userFromDB.username} (comercioId: ${userFromDB.comercioId})');
       }
       emit(LoginState(
         isLogin: true,
@@ -171,10 +152,8 @@ class LoginCubit extends Cubit<LoginState> {
         needsOnlineAuth: false,
         needsDataInitialization: hasData,
       ));
-      print('✅ Login offline completado. hasData=$hasData');
     } else {
       emit(const LoginState(isLogin: false, userToken: null, isPreference: false, needsOnlineAuth: false));
-      print('❌ Sin token guardado. Acceso denegado.');
     }
   }
 

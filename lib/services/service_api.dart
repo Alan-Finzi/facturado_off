@@ -69,17 +69,11 @@ class ApiServices{
       // Crear la URL para el endpoint de login
       final Uri url = Uri.parse(apiUrlLogin);
 
-      print('Intentando login en: $url');
-      print('Email: $email');
-      print('Plataforma: ${Platform.operatingSystem}');
-
       // Crear el cuerpo de la solicitud (JSON)
       final Map<String, String> body = {
         'email': email,
         'password': password,
       };
-
-      print('Enviando solicitud de login...');
 
       // Crear un cliente con timeout explícito
       final client = http.Client();
@@ -94,63 +88,37 @@ class ApiServices{
         ).timeout(
           const Duration(seconds: 30), // Timeout de 30 segundos para móviles y desktop
           onTimeout: () {
-            print('Timeout en solicitud de login después de 30 segundos');
             client.close();
             throw TimeoutException('La solicitud de login ha tardado demasiado');
           },
         );
 
-        print('Respuesta recibida. Código: ${response.statusCode}');
-
         if (response.statusCode == 200) {
-          print('Login exitoso. Procesando respuesta...');
           Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-          print('=== RESPUESTA COMPLETA DE LOGIN API ===');
-          print(jsonResponse.toString());
-          print('=======================================');
 
           final String? token = jsonResponse['token'] as String?;
           if (token == null) return null;
           tokenUser = token;
-          print('Token obtenido correctamente');
 
           // Intentar extraer datos del usuario si la API los devuelve en el login
           User? userFromResponse;
           try {
             if (jsonResponse.containsKey('user') && jsonResponse['user'] is Map<String, dynamic>) {
               userFromResponse = User.fromJson(jsonResponse['user'] as Map<String, dynamic>);
-              print('Usuario recibido del login: ${userFromResponse.username} (comercioId: ${userFromResponse.comercioId})');
             }
           } catch (e) {
-            print('No se pudo parsear el usuario del login response: $e');
+            // Usuario no pudo parsearse del login response
           }
-
-          print('=== userFromResponse ===');
-          print('userFromResponse: $userFromResponse');
-          if (userFromResponse != null) {
-            print('  username: ${userFromResponse.username}');
-            print('  email: ${userFromResponse.email}');
-            print('  comercioId: ${userFromResponse.comercioId}');
-            print('  id: ${userFromResponse.id}');
-          }
-          print('=======================');
 
           return {'token': token, 'user': userFromResponse};
         } else {
-          // Manejar errores de respuesta
-          print('Error al hacer login: ${response.statusCode}');
-          print('Cuerpo de respuesta: ${response.body}');
           return null;
         }
       } finally {
         // Siempre cerrar el cliente
         client.close();
       }
-    } catch (e, stackTrace) {
-      // Manejar errores de la solicitud con más detalles
-      print('Error de solicitud HTTP en login: $e');
-      print('Stack trace: $stackTrace');
-      print('Plataforma: ${Platform.operatingSystem}');
+    } catch (e) {
       return null;
     }
   }
@@ -168,12 +136,6 @@ class ApiServices{
       final String idBusqueda = (comercioId == "1") ? (sucursalId ?? comercioId) : comercioId;
       final Uri apiUrl = Uri.parse('$apiUrlUser?comercio_id=$idBusqueda');
 
-      print('=== fetchUsersData REQUEST ===');
-      print('URL: $apiUrl');
-      print('comercioId: $comercioId | sucursalId: $sucursalId | idBusqueda: $idBusqueda');
-      print('Email buscado: $email');
-      print('==============================');
-
       // Crear un cliente con timeout explícito
       final client = http.Client();
       try {
@@ -186,16 +148,10 @@ class ApiServices{
         ).timeout(
           const Duration(seconds: 30), // Timeout de 30 segundos
           onTimeout: () {
-            print('Timeout en fetchUsersData después de 30 segundos');
             client.close();
             throw TimeoutException('La solicitud de usuarios ha tardado demasiado');
           },
         );
-
-        print('=== fetchUsersData RESPONSE ===');
-        print('Status code: ${response.statusCode}');
-        print('Body: ${response.body}');
-        print('===============================');
 
         if (response.statusCode == 200) {
         List<dynamic> jsonList = jsonDecode(response.body);
@@ -219,29 +175,18 @@ class ApiServices{
           // Usar el email proporcionado, con una consideración especial
           // para el caso demo si la lista de usuarios contiene la dirección hardcodeada
           if (email == "demo@gmail.com") {
-            // Intentar primero con depositolasgrutas@gmail.com para mantener compatibilidad
             try {
               loggedUser = users.firstWhere((user) =>
                 user.email == "depositolasgrutas@gmail.com");
-              print('Usuario encontrado con email depositolasgrutas@gmail.com');
             } catch (e) {
-              // Si no existe, intentar con el email original
               loggedUser = users.firstWhere((user) => user.email == email);
-              print('Usuario encontrado con email original: $email');
             }
           } else {
-            // Para cualquier otro email, buscar directamente
             loggedUser = users.firstWhere((user) => user.email == email);
-            print('Usuario encontrado con email: $email');
           }
         } catch (e) {
-          // No encontrado en la lista — usar el usuario del login API si está disponible
-          // (el login SIEMPRE autentica al usuario, por lo que currencyUser ya debería estar seteado)
-          print('⚠️ "$email" no encontrado en lista. Usuarios disponibles: ${users.map((u) => u.email).toList()}');
           if (User.currencyUser != null) {
             loggedUser = User.currencyUser!;
-            print('✅ Usando usuario del login API como fallback: ${loggedUser.username} (comercioId: ${loggedUser.comercioId})');
-            // Asegurarse de que esté en la BD
             await _insertUserBatch([loggedUser]);
           } else {
             throw Exception('Usuario "$email" no encontrado en la API y no hay datos del login disponibles');
@@ -260,7 +205,6 @@ class ApiServices{
 
         return users;
       } else {
-        print('Error al obtener los datos de los usuarios: ${response.statusCode}');
         return null;
       }
       } finally {
@@ -268,8 +212,7 @@ class ApiServices{
         client.close();
       }
     } catch (e) {
-      print('Error en fetchUsersData: $e');
-      rethrow; // propagar para que SynchronizationCubit emita SynchronizationFailed
+      rethrow;
     }
   }
 
@@ -295,17 +238,14 @@ class ApiServices{
       // Lógica para detectar cambio de comercio
       final oldComercioId = await _getLastUsedComercioId();
       if (oldComercioId != null && oldComercioId != idBusqueda) {
-        print('Cambio de comercio detectado: $oldComercioId -> $idBusqueda');
         await DatabaseHelper.instance.clearProductsData();
       }
 
       // Guardar el comercio actual para futuras comparaciones
       await _saveCurrentComercioId(idBusqueda);
 
-      // Obtener todas las páginas de productos
       while (hasMorePages) {
         final Uri apiUrl = Uri.parse('${apiUrlProductosVer}?comercio_id=$idBusqueda&page=$currentPage');
-        print('Obteniendo productos página $currentPage desde: $apiUrl');
 
         final response = await http.get(
           apiUrl,
@@ -321,9 +261,8 @@ class ApiServices{
 
           try {
             await DatabaseHelper.instance.insertProductoResponse(productoResponse);
-            print('Página $currentPage insertada: ${productoResponse.data?.length ?? 0} productos');
           } catch (e) {
-            print('Error al insertar ProductoResponse página $currentPage: $e');
+            // Error al insertar página de productos
           }
 
           hasMorePages = responseData['next_page_url'] != null;
@@ -333,9 +272,7 @@ class ApiServices{
         }
       }
 
-      print('Sincronización de productos completada. Total páginas: ${currentPage - 1}');
     } catch (e) {
-      print('Error al procesar las variaciones: $e');
       rethrow;
     }
   }
@@ -369,7 +306,6 @@ class ApiServices{
         ).timeout(
           const Duration(seconds: 30), // Timeout de 30 segundos
           onTimeout: () {
-            print('Timeout en fetchClientesMostrador después de 30 segundos');
             client.close();
             throw TimeoutException('La solicitud de clientes ha tardado demasiado');
           },
@@ -384,9 +320,7 @@ class ApiServices{
           await DatabaseHelper.instance.insertCliente(cliente);
         }
         
-        print('Clientes sincronizados: ${clientes.length}');
       } else {
-        print('Error al cargar clientes: ${response.statusCode}');
         throw Exception('Error al cargar los datos de cliente mostrador');
       }
       } finally {
@@ -394,7 +328,6 @@ class ApiServices{
         client.close();
       }
     } catch (e) {
-      print('Error en fetchClientesMostrador: $e');
       rethrow;
     }
   }
@@ -471,10 +404,8 @@ class ApiServices{
         throw Exception('No se pudo determinar el comercio_id para datos de facturación: User.currencyUser no tiene comercioId ni id');
       }
 
-      // Guardar el comercioId en SharedPreferences para uso futuro
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('datos_facturacion_comercio_id', idComercioToUse);
-      print('ComercioId guardado en SharedPreferences: $idComercioToUse');
 
       final response = await http.get(
         Uri.parse(apiUrlDatosFacturacion),
@@ -496,7 +427,6 @@ class ApiServices{
         throw Exception('Error al cargar los datos de facturación. Código: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error en fetchDatosFacturacion: $e');
       throw Exception('Error al cargar los datos de facturación.');
     }
   }
@@ -530,9 +460,6 @@ class ApiServices{
       // Construir la URL con el parámetro comercio_id
       final Uri url = Uri.parse('$apiUrlMetodosPago?comercio_id=$idBusqueda');
 
-      // Mostrar mensaje de progreso
-      print('Obteniendo métodos de pago desde: $url');
-
       // Realizar la consulta a la API
       final response = await http.get(
         url,
@@ -544,100 +471,46 @@ class ApiServices{
 
       // Verificar si la respuesta fue exitosa (código 200)
       if (response.statusCode == 200) {
-        // Decodificar el JSON de la respuesta
         final responseBody = response.body;
 
-        // Log para diagnóstico
-        print('Respuesta de API de métodos de pago recibida: ${responseBody.length} caracteres');
-
-        // Intentar decodificar el JSON
         List<dynamic> providersJson;
         try {
           providersJson = jsonDecode(responseBody) as List<dynamic>;
-
-          // Validación extra para diagnóstico
-          print('JSON decodificado correctamente. Items: ${providersJson.length}');
-
-          // Mostrar estructura del primer elemento para diagnóstico
-          if (providersJson.isNotEmpty) {
-            _debugPaymentProvider(providersJson[0]);
-          }
         } catch (e) {
-          print('Error al decodificar JSON: $e');
-          print('Primeros 100 caracteres de la respuesta: ${responseBody.substring(0, min(100, responseBody.length))}');
           throw Exception('Error al procesar la respuesta de métodos de pago: ${e.toString()}');
         }
 
-        // Insertar cada proveedor en la base de datos
-        // Este proceso incrementará el progreso de sincronización en 1% por cada proveedor
         for (var providerJson in providersJson) {
           try {
             await DatabaseHelper.instance.insertPaymentProvider(providerJson);
           } catch (e) {
-            print('Error al insertar proveedor: $e');
-            print('Datos del proveedor con error: $providerJson');
+            // Error al insertar proveedor individual
           }
         }
-
-        print('Sincronización de métodos de pago completada (+${providersJson.length}%)');
       } else {
-        // Manejo de errores de la API
-        print('Error HTTP: ${response.statusCode} - ${response.reasonPhrase}');
-        print('Body de respuesta: ${response.body}');
         throw Exception('Error al cargar los métodos de pago. Código: ${response.statusCode}');
       }
     } catch (e) {
-      // Capturar cualquier excepción durante el proceso
-      print('Error en fetchMetodosPago: $e');
-      // Propagar el error para que el llamador pueda manejarlo
       throw Exception('Error al cargar los métodos de pago: ${e.toString()}');
     }
   }
 
-  /// Método de diagnóstico para imprimir la estructura de un proveedor de pago
-  void _debugPaymentProvider(dynamic provider) {
-    try {
-      print('=== Debug de PaymentProvider ===');
-      print('ID: ${provider['id']} (${provider['id'].runtimeType})');
-      print('Nombre: ${provider['nombre']} (${provider['nombre'].runtimeType})');
+  void _debugPaymentProvider(dynamic provider) {}
 
-      if (provider['metodos_pago'] != null) {
-        print('Métodos de pago: ${(provider['metodos_pago'] as List).length}');
-
-        if ((provider['metodos_pago'] as List).isNotEmpty) {
-          final metodo = (provider['metodos_pago'] as List)[0];
-          print('Primer método - ID: ${metodo['id']} (${metodo['id'].runtimeType})');
-          print('Primer método - Nombre: ${metodo['nombre']} (${metodo['nombre'].runtimeType})');
-          print('Primer método - Recargo: ${metodo['recargo']} (${metodo['recargo'].runtimeType})');
-        }
-      } else {
-        print('No tiene métodos de pago');
-      }
-    } catch (e) {
-      print('Error en debug de provider: $e');
-    }
-  }
-
-  /// Guarda el ID de comercio actual en SharedPreferences
   Future<void> _saveCurrentComercioId(String comercioId) async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_used_comercio_id', comercioId);
-      print('ID de comercio guardado: $comercioId');
     } catch (e) {
-      print('Error al guardar ID de comercio: $e');
+      // Error al guardar comercioId
     }
   }
 
-  /// Recupera el último ID de comercio utilizado
   Future<String?> _getLastUsedComercioId() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final String? lastComercioId = prefs.getString('last_used_comercio_id');
-      print('Último ID de comercio utilizado: $lastComercioId');
-      return lastComercioId;
+      return prefs.getString('last_used_comercio_id');
     } catch (e) {
-      print('Error al recuperar último ID de comercio: $e');
       return null;
     }
   }

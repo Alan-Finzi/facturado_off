@@ -32,7 +32,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
             final PaymentMethodsCubit? paymentMethodsCubit = _getPaymentMethodsCubit(context);
             if (paymentMethodsCubit != null) {
                 // Verificación de identidad de instancia - diagnóstico
-                print('💰 ResumenTabla: PaymentMethodsCubit instance ID: ${paymentMethodsCubit.hashCode}');
 
                 // Suscribirse directamente al stream de estados del Cubit
                 _stateSubscription = paymentMethodsCubit.stream.listen((state) {
@@ -99,23 +98,9 @@ class _ResumenTablaState extends State<ResumenTabla> {
                                     // Cálculo directo del monto de recargo
                                     finalRecargoAmount = (loadedState.subtotalAmount * recargoRate) / 100;
 
-                                    print('💰 CÁLCULO DIRECTO DEL RECARGO:');
-                                    print('   Subtotal: ${loadedState.subtotalAmount.toStringAsFixed(2)}');
-                                    print('   Tasa de recargo: ${recargoRate.toStringAsFixed(1)}%');
-                                    print('   Monto de recargo: ${finalRecargoAmount.toStringAsFixed(2)}');
                                 }
-                            } else {
-                                print('⚠️ Método de pago no encontrado: ${loadedState.selectedMethodId}');
-                            }
-                        } else {
-                            print('⚠️ Proveedor no tiene métodos: ${loadedState.selectedProviderId}');
                         }
-                    } else {
-                        print('⚠️ Proveedor no encontrado: ${loadedState.selectedProviderId}');
-                    }
                 } catch (e) {
-                    print('🔴 Error al buscar método de pago: $e');
-                    print('StackTrace: ${StackTrace.current}');
                 }
             }
 
@@ -132,15 +117,8 @@ class _ResumenTablaState extends State<ResumenTabla> {
                 }
 
                 if (_recargoAmount > 0) {
-                    print('✅ ResumenTabla: Recargo actualizado a ${_recargoAmount.toStringAsFixed(2)} (${_recargoRate.toStringAsFixed(1)}%)');
-                } else if (_recargoRate > 0) {
-                    print('⚠️ ResumenTabla: Recargo en 0 a pesar de tener tasa ${_recargoRate.toStringAsFixed(1)}%');
-                } else {
-                    print('ℹ️ ResumenTabla: Sin recargo (0%)');
-                }
             }
         } catch (e) {
-            print('🔴 Error general en _updateRecargoFromPaymentMethod: $e');
         }
     }
 
@@ -399,7 +377,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
                 }
             }
         } catch (e) {
-            print('Error al obtener monto para cuenta corriente: $e');
         }
 
         // Agregar espaciador y fila de total

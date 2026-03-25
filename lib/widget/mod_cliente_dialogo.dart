@@ -167,7 +167,6 @@ class _Mod_baja_clienteState extends State<Mod_baja_cliente> {
       );
       Navigator.of(context).pop();
     } catch (e) {
-      print('Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al actualizar cliente')),
       );
@@ -183,7 +182,6 @@ class _Mod_baja_clienteState extends State<Mod_baja_cliente> {
       );
       Navigator.of(context).pop();
     } catch (e) {
-      print('Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al eliminar cliente')),
       );

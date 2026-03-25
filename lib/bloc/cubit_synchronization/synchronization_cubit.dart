@@ -1,9 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:facturador_offline/services/service_api.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 import 'dart:async';
 import '../../helper/database_helper.dart';
 import '../cubit_login/login_cubit.dart';
@@ -53,18 +50,10 @@ class SynchronizationCubit extends Cubit<SynchronizationState> {
         emit(const SynchronizationInProgress(progress: 0.8, currentTask: "Sincronización Métodos de Pago"));
         await apiServices.fetchMetodosPago(token);
       } catch (e) {
-        // Si falla la obtención de métodos de pago, registrar pero continuar con la sincronización
-        print('Error al sincronizar métodos de pago: $e');
+        // Si falla la obtención de métodos de pago, continuar con la sincronización
       }
 
       emit(SynchronizationInProgress(progress: 1, currentTask: "Sincronización completada"));
-      final directory = await getApplicationDocumentsDirectory();
-      final path = join(directory.path, 'flaminco_appv14_DB.db');
-      print('------------------------------');
-      print(path.toString());
-      print('--------------------------------');
-
-      // Emitimos el estado de sincronización completada
       emit(SynchronizationCompleted());
     } catch (error) {
 

@@ -61,8 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final platformService = PlatformService();
-
     // Usar diseño responsive basado en la plataforma
     return PlatformAdaptiveWidget(
       // Versión móvil (Android/iOS)
@@ -370,14 +368,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
 
-    // Obtener información de plataforma para diagnóstico
-    final platformService = PlatformService();
-    print('Intento de login en plataforma: ${platformService.getPlatformName()}');
-
     final username = emailController.text.isNotEmpty ? emailController.text : null;
     final password = passwordController.text.isNotEmpty ? passwordController.text : null;
-
-    print('Iniciando login con email: ${username ?? "vacío"}');
 
     if (username == null || password == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -415,25 +407,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (loginCubit.state.isLogin) {
         await _saveOrRemoveCredentials(username, password);
 
-        // Mostrar un mensaje para depuración (solo visible en la consola)
-        print("⚠️ ESTADO DEL LOGIN: " +
-            "isLogin=${loginCubit.state.isLogin}, " +
-            "isPreference=${loginCubit.state.isPreference}, " +
-            "needsOnlineAuth=${loginCubit.state.needsOnlineAuth}, " +
-            "needsDataInitialization=${loginCubit.state.needsDataInitialization}, " +
-            "hasUser=${loginCubit.state.user != null}, " +
-            "hasToken=${loginCubit.state.userToken != null}");
-
         // Registrar el inicio de sesión exitoso
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('ya_inicio_sesion', true);
-
-        // IMPORTANTE: En cada reconexión, SIEMPRE vamos a forzar la inicialización de datos
-        // sin importar la plataforma o el estado de loginCubit.state.isPreference
-        // Esto garantizará que los datos de facturación siempre estén cargados en memoria
-
-        print("🚨 IMPORTANTE: Forzando inicialización de datos en reconexión para evitar errores de facturación");
-        print("🔄 Estado actual: isPreference=${loginCubit.state.isPreference}, needsDataInitialization=${loginCubit.state.needsDataInitialization}");
 
         // FLUJO MEJORADO:
         // 1. Si necesita sincronización (!isPreference), ir a SynchronizationPage
@@ -450,10 +426,7 @@ class _LoginScreenState extends State<LoginScreen> {
           // Si es primer login, cambiar la bandera para futuros inicios de sesión
           if (isPrimerLogin) {
             await sharedPrefs.setBool('is_first_login', false);
-            print("🔄 Primer inicio de sesión detectado - La bandera ha sido actualizada");
           }
-
-          print("➡️ Redirigiendo a la página de sincronización (sincronización requerida)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -464,8 +437,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else {
-          // Caso 3: No es primer login y no necesita sincronización, validar datos sincronizados
-          print("➡️ Validando datos sincronizados (login subsiguiente)");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -511,8 +482,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-      print('Error en login: $e');
-
       // Intentar conectar offline si hay credenciales guardadas previamente
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -557,7 +526,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       } catch (fallbackError) {
-        print('Error en intento de login offline: $fallbackError');
+        // ignore
       }
     }
   }

@@ -317,11 +317,6 @@ class _ModBajaClienteState extends State<ModBajaCliente> {
                     // Guardamos en la base de datos
                     await DatabaseHelper.instance.updateCliente(cliente);
 
-                    print("cliente modificado");
-                    print(cliente.idCliente);
-                    print(cliente.modificado);
-
-                    print(cliente.toString());
                     // Cerramos el diálogo
                     Navigator.pop(context, true);
                   },

@@ -35,11 +35,6 @@ void main() async {
     // Configuración para desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-  } else if (Platform.isAndroid || Platform.isIOS) {
-    // Configuración para móviles (SQLite ya está incluido por defecto)
-    print('Inicializando SQLite para ${Platform.operatingSystem}');
-    // No es necesario ninguna configuración adicional para móviles, pero
-    // es bueno registrar la información para depuración
   }
 
   // Inicializar preferencias compartidas

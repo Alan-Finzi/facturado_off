@@ -75,12 +75,10 @@ class ClientesMostrador {
             montoMaximo = raw.toDouble();
           } else if (raw is String) {
             montoMaximo = double.tryParse(raw) ?? 0.0;
-          } else {
-            print('Tipo inesperado en "monto_maximo_cuenta_corriente" del cliente ${json['id_cliente']}: ${raw.runtimeType}');
           }
         }
       } catch (e) {
-        print('Error en campo "monto_maximo_cuenta_corriente" del cliente ${json['id_cliente']}: $e');
+        // ignore
       }
 
       double saldoInicial = 0.0;
@@ -89,7 +87,7 @@ class ClientesMostrador {
             ? double.tryParse(json['saldo_inicial_cuenta_corriente'].toString()) ?? 0.0
             : 0.0;
       } catch (e) {
-        print('Error en campo "saldo_inicial_cuenta_corriente" del cliente ${json['id_cliente']}: $e');
+        // ignore
       }
 
       DateTime? fechaInicial;
@@ -98,7 +96,7 @@ class ClientesMostrador {
             ? DateTime.parse(json['fecha_inicial_cuenta_corriente'])
             : null;
       } catch (e) {
-        print('Error en campo "fecha_inicial_cuenta_corriente" del cliente ${json['id_cliente']}: $e');
+        // ignore
       }
 
       return ClientesMostrador(
@@ -133,7 +131,6 @@ class ClientesMostrador {
         activo: json['activo'] ?? 1,
       );
     } catch (e) {
-      print('Error general al deserializar cliente con ID: ${json['id_cliente']}, error: $e');
       rethrow;
     }
   }

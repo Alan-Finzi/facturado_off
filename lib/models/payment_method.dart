@@ -97,7 +97,6 @@ class PaymentMethod {
       // Intentar parsear a double
       return double.tryParse(cleanValue) ?? 0.0;
     } catch (_) {
-      print('Error al parsear recargo: $value');
       return 0.0;
     }
   }

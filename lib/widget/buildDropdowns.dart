@@ -148,7 +148,6 @@ class VentaDropdownsWidget extends StatelessWidget {
 
             // Intentar registrar el error (método silencioso que no debe fallar)
             try {
-                print("ERROR CRÍTICO: datosFacturacion está vacío en _buildDropdowns a pesar de todas las protecciones.");
             } catch (_) {}
         }
 
@@ -163,7 +162,6 @@ class VentaDropdownsWidget extends StatelessWidget {
                 DatosFacturacionModel.datosFacturacionCurrent.clear();
                 DatosFacturacionModel.datosFacturacionCurrent.addAll(state.datosFacturacionModel!);
             } catch (e) {
-                print("Error al actualizar datosFacturacionCurrent desde estado: $e");
             }
         } else if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
             // Si no hay datos en el estado ni en la variable estática,
@@ -174,8 +172,7 @@ class VentaDropdownsWidget extends StatelessWidget {
                     // Y guardarlo también en el estado
                     productosCubit.updateDatosFacturacion([datosFacturacion.first]);
                 } catch (e) {
-                    print("Error al guardar primer dato de facturación: $e");
-                }
+                    }
             } else {
                 // Este caso no debería ocurrir por la verificación inicial, pero por si acaso:
                 // Si no hay datos de facturación, crear uno temporal
@@ -199,8 +196,7 @@ class VentaDropdownsWidget extends StatelessWidget {
                         )
                     );
                 } catch (e) {
-                    print("Error al crear dato de facturación temporal: $e");
-                }
+                    }
             }
         }
 
@@ -400,7 +396,6 @@ class DropButtonDatosFact extends StatelessWidget {
                     selected = DatosFacturacionModel.datosFacturacionCurrent.first;
                 }
             } catch (e) {
-                print("Error al obtener dato seleccionado: $e");
             }
 
             // Si no se pudo obtener un valor seleccionado, usar el primero de la lista segura
@@ -417,8 +412,7 @@ class DropButtonDatosFact extends StatelessWidget {
                     // Actualizar el estado
                     context.read<ProductosCubit>().updateDatosFacturacion([selected]);
                 } catch (e) {
-                    print("Error al actualizar estado con valor por defecto: $e");
-                }
+                    }
             }
 
             // Verificar que el valor seleccionado esté en la lista disponible
@@ -426,7 +420,6 @@ class DropButtonDatosFact extends StatelessWidget {
             try {
                 encontrado = datosFacturacionSeguros.any((df) => df.id == selected?.id);
             } catch (e) {
-                print("Error al verificar si el valor está en la lista: $e");
             }
 
             if (!encontrado) {
@@ -462,9 +455,7 @@ class DropButtonDatosFact extends StatelessWidget {
                                 DatosFacturacionModel.datosFacturacionCurrent.clear();
                                 DatosFacturacionModel.datosFacturacionCurrent.add(selectedFactura);
                                 context.read<ProductosCubit>().updateDatosFacturacion([selectedFactura]);
-                                print("Seleccionado: ${selectedFactura.razonSocial} - ${selectedFactura.condicionIva}");
                             } catch (e) {
-                                print("Error al actualizar dato seleccionado: $e");
                             }
                         }
                     },
@@ -473,14 +464,12 @@ class DropButtonDatosFact extends StatelessWidget {
                         try {
                             condicionIvaText = factura.condicionIva?.toString().split('.').last ?? 'IVA: No disponible';
                         } catch (e) {
-                            print("Error al obtener condición IVA: $e");
                         }
 
                         String razonSocialText = 'Sin razón social';
                         try {
                             razonSocialText = factura.razonSocial?.isNotEmpty == true ? factura.razonSocial! : 'Sin razón social';
                         } catch (e) {
-                            print("Error al obtener razón social: $e");
                         }
 
                         return DropdownMenuItem<DatosFacturacionModel>(

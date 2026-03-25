@@ -324,7 +324,6 @@ class _AltaClienteDialogState extends State<AltaClienteDialog> {
                         Navigator.of(context).pop();
                       } catch (e) {
                         // Manejo de errores de conversión y otros errores
-                        print('Error: $e');
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('ERROR AL GUARDAR CLIENTE')),
                         );

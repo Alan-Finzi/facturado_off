@@ -23,7 +23,6 @@ Future<void> checkUrl( String url) async {
     }
   } catch (e) {
     // Puedes manejar el error aquí si es necesario
-    print('Error: $e');
     emit(const StatusApisState(isConnected: true));
   }
 

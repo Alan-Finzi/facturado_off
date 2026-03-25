@@ -17,7 +17,6 @@ class ProductosIvasCubit extends Cubit<ProductosIvasState> {
       final list = await userRepository.fetchProductosIvas();
       emit(ProductosIvasState(currentList: list));
     } catch (e) {
-      print("Error al obtener productos IVAs: $e");
     }
   }
 
@@ -29,7 +28,6 @@ class ProductosIvasCubit extends Cubit<ProductosIvasState> {
       updatedList.add(productoIva);
       emit(state.copyWith(currentList: updatedList));
     } catch (e) {
-      print("Error al agregar producto IVA: $e");
     }
   }
 }

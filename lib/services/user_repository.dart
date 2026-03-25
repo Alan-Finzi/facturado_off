@@ -140,8 +140,6 @@ class UserRepository {
   AND pi.sucursal_id = ?
 ''', [listaId, sucursalUsuario]);
 
-    print('Resultados de la consulta principal: $result');
-
     return result.map((map) => ProductoConPrecioYStock.fromMap(map)).toList();
   }
   Future<List<Map<String, dynamic>>> getProductosYStock(int listaId, int sucursalId) async {
@@ -158,7 +156,6 @@ class UserRepository {
     INNER JOIN productos_stock_sucursales pss ON p.id = pss.product_id
   ''', [listaId, sucursalId]);
 
-    print('Lista ID: $listaId, Sucursal ID: $sucursalId');
     return result;
   }
 

@@ -45,7 +45,6 @@ class _SplashScreenAuthState extends State<SplashScreenAuth> {
       // Simplemente vamos a la pantalla de login (las credenciales se cargarán allí)
       _navigateToLogin();
     } catch (e) {
-      print('Error en verificación de autenticación: $e');
       _navigateToLogin();
     }
   }

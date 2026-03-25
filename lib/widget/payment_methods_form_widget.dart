@@ -26,7 +26,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Verificación de identidad de instancia - diagnóstico
       final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
-      print('💳 PaymentMethodsFormWidget: PaymentMethodsCubit instance ID: ${paymentMethodsCubit.hashCode}');
 
       final productosState = context.read<ProductosCubit>().state;
       // Obtener el total de la venta desde el cubit de productos
@@ -232,7 +231,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                   final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
 
                                   try {
-                                    print('=== PAGAR TOTAL - Iniciando cálculos ===');
 
                                     // Forzar una actualización del subtotal para recalcular el recargo
                                     final productosState = context.read<ProductosCubit>().state;
@@ -256,7 +254,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                     // Calcular el subtotal para recargo
                                     final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
 
-                                    print('Subtotal para recargo: \$${subtotalParaRecargo.toStringAsFixed(2)}');
 
                                     // Ejecutar actualizaciones en secuencia específica para asegurar consistencia
 
@@ -269,7 +266,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                     double totalWithRecargo = subtotalParaRecargo;
 
                                     if (state.selectedMethodId != null && state.selectedProviderId != null) {
-                                      print('Método de pago seleccionado. ID: ${state.selectedMethodId}, Proveedor: ${state.selectedProviderId}');
                                       metodoPago = "ID: ${state.selectedMethodId}";
 
                                       // Paso 2: Re-seleccionar el método y proveedor para garantizar cálculos correctos
@@ -281,13 +277,10 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
                                       // Obtener recargo calculado
                                       recargoAmount = paymentMethodsCubit.getRecargoAmount();
-                                      print('Recargo calculado: \$${recargoAmount.toStringAsFixed(2)}');
 
                                       // Calcular total con recargo
                                       totalWithRecargo = subtotalParaRecargo + recargoAmount;
-                                      print('Total con recargo: \$${totalWithRecargo.toStringAsFixed(2)}');
                                     } else {
-                                      print('Sin método de pago seleccionado, usando total sin recargo');
                                     }
 
                                     // Actualizar inmediatamente la UI para mejor experiencia de usuario
@@ -309,7 +302,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
                                           // Asegurar que el recargo se aplica correctamente
                                           if (state.selectedMethodId != null) {
-                                            print('Forzando actualización de recargo para método: ${state.selectedMethodId}');
 
                                             // Secuencia de actualizaciones espaciadas para garantizar propagación
                                             paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
@@ -318,7 +310,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
                                             // Segunda verificación del recargo
                                             final updatedRecargoAmount = paymentMethodsCubit.getRecargoAmount();
-                                            print('Recargo recalculado: \$${updatedRecargoAmount.toStringAsFixed(2)}');
 
                                             // Forzar otra actualización después de un breve retraso
                                             Future.delayed(Duration(milliseconds: 50), () {
@@ -337,36 +328,20 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
                                                 });
                                               }
 
-                                              print('Sincronización completada con múltiples actualizaciones');
                                             });
                                           } else {
-                                            print('No hay método de pago seleccionado, no se aplica recargo');
                                           }
                                         }
                                       } catch (e) {
-                                        print('Error en verificación posterior: $e');
                                       }
                                     });
 
                                     // Registrar información para depuración
-                                    print('=== PAGAR TOTAL - Resumen ===');
-                                    print('Subtotal: \$${subtotal.toStringAsFixed(2)}');
-                                    print('IVA: \$${totalIva.toStringAsFixed(2)}');
-                                    print('Descuento: \$${descuentoGral.toStringAsFixed(2)}');
-                                    print('Método de pago: $metodoPago');
-                                    print('Recargo: \$${recargoAmount.toStringAsFixed(2)}');
-                                    print('Total final: \$${totalWithRecargo.toStringAsFixed(2)}');
-                                    print('=== PAGAR TOTAL - Finalizado ===');
 
                                     // Validar el monto para mostrar mensajes de error si los hay
                                     _validateAmount();
                                   } catch (e) {
-                                    print('Error en Pagar total: $e');
-                                    print('StackTrace: ${StackTrace.current}');
-
-                                    // En caso de error, usar el total disponible en el estado actual
                                     final currentTotal = state.totalAmount;
-                                    print('Usando total del estado por error: $currentTotal');
 
                                     // Asegurar que se establece el monto total en el estado
                                     paymentMethodsCubit.setPayTotalAmount();
@@ -513,8 +488,7 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
         );
       } catch (e) {
         // Si no se encuentra, dejamos selectedProvider como null
-        print('Proveedor con ID ${state.selectedProviderId} no encontrado');
-      }
+        }
     }
 
     // Si no hay proveedor seleccionado o no tiene métodos, mostrar dropdown vacío
@@ -540,8 +514,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
           final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
           final productosState = context.read<ProductosCubit>().state;
 
-          print('=== CAMBIO DE MÉTODO DE PAGO - Iniciando cálculos ===');
-          print('Método seleccionado ID: $methodId');
 
           try {
             // Calcular subtotal y IVA desde ProductosCubit para asegurar valores actualizados
@@ -562,14 +534,11 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
             // Calcular el subtotal para recargo
             final subtotalParaRecargo = subtotal - descuentoGral + totalIva;
-            print('Subtotal calculado para recargo: \$${subtotalParaRecargo.toStringAsFixed(2)}');
 
             // Secuencia optimizada para actualización de estado, garantizando que ResumenTabla
             // reciba los eventos correctamente
 
             // IMPORTANTE: Notificar a los listeners que vamos a hacer cambios importantes
-            print('=== AVISO DE CAMBIO IMPORTANTE DE MÉTODO DE PAGO ===');
-            print('Método seleccionado: $methodId con recargo pendiente de calcular');
 
             // 1. Primero actualiza el subtotal - esto es crítico para cálculos precisos
             paymentMethodsCubit.updateSubtotalAmount(subtotalParaRecargo);
@@ -586,9 +555,7 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
             // 4. Verificar el recargo calculado
             double recargoAmount = paymentMethodsCubit.getRecargoAmount();
-            print('Recargo calculado: \$${recargoAmount.toStringAsFixed(2)} (${methodId})');
             double totalConRecargo = subtotalParaRecargo + recargoAmount;
-            print('Total con recargo: \$${totalConRecargo.toStringAsFixed(2)}');
 
             // 5. Secuencia de actualización con retrasos para garantizar propagación correcta
             Future.delayed(Duration(milliseconds: 50), () {
@@ -606,8 +573,6 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
 
                 // Verificar el recargo final
                 final finalRecargoAmount = paymentMethodsCubit.getRecargoAmount();
-                print('Recargo final (después de múltiples actualizaciones): \$${finalRecargoAmount.toStringAsFixed(2)}');
-                print('=== CAMBIO DE MÉTODO DE PAGO - Finalizado ===');
 
                 // Asegurarse de que la UI se actualice correctamente
                 if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
@@ -622,20 +587,15 @@ class _PaymentMethodsFormWidgetState extends State<PaymentMethodsFormWidget> {
             });
 
           } catch (e) {
-            print('Error al cambiar método de pago: $e');
-            print('StackTrace: ${StackTrace.current}');
-            // Fallback a la implementación original con más seguridad
             try {
               paymentMethodsCubit.selectPaymentMethod(methodId);
               if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
                 final currentState = paymentMethodsCubit.state as PaymentMethodsLoaded;
                 if (currentState.subtotalAmount > 0) {
                   paymentMethodsCubit.updateSubtotalAmount(currentState.subtotalAmount);
-                  print('Recuperación completada usando fallback');
                 }
               }
             } catch (innerError) {
-              print('Error en fallback: $innerError');
             }
           }
         }

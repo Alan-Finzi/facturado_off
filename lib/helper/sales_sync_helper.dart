@@ -93,7 +93,6 @@ class SalesSyncHelper {
           });
 
         } catch (e) {
-          print('Error al preparar venta $ventaId para sincronización: $e');
           // Agregar el error a los resultados
           results.add({
             'ventaId': ventaId,
@@ -256,7 +255,6 @@ class SalesSyncHelper {
           );
         }
       } catch (e) {
-        print('Error al importar venta del servidor: $e');
       }
     }
   }

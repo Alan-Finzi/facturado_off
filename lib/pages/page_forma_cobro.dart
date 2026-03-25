@@ -1220,7 +1220,6 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
           // Si el monto pagado es menor que el total, hay saldo pendiente
           if (totalPagado < totalConRecargos - 0.01) {
             saldoPendiente = totalConRecargos - totalPagado;
-            print('Saldo pendiente calculado: \$${saldoPendiente.toStringAsFixed(2)}');
           }
         }
       }
@@ -1311,7 +1310,6 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
           ),
         );
       }
-      print('Error al guardar venta: $e');
     } finally {
       if (mounted) {
         setState(() {

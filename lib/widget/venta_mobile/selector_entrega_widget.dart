@@ -43,7 +43,10 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
     super.initState();
     // Inicializar datos de envío como retiro por sucursal (opción por defecto)
     _datosEnvio = {'tipo_envio': 'retiro_sucursal'};
-    _notificarDatosEnvio();
+    // Diferir la notificación al padre para evitar setState() durante build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _notificarDatosEnvio();
+    });
   }
 
   @override
@@ -157,7 +160,10 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
       'codigo_postal': cliente.codigoPostal,
       'barrio': cliente.barrio,
     };
-    _notificarDatosEnvio();
+    // Diferir notificación para evitar setState() durante build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _notificarDatosEnvio();
+    });
 
     return Container(
       padding: const EdgeInsets.all(12),

@@ -46,7 +46,6 @@ class SalesDatabaseHelper {
           }
         }
       } catch (e) {
-        print('Error al guardar venta: $e');
         rethrow; // La transacción se revertirá automáticamente
       }
     });
@@ -220,7 +219,6 @@ class SalesDatabaseHelper {
           [ahora, ventaId],
         );
       } catch (e) {
-        print('Error al realizar borrado lógico de venta: $e');
         rethrow;
       }
     });
@@ -245,7 +243,6 @@ class SalesDatabaseHelper {
           [ventaId],
         );
       } catch (e) {
-        print('Error al realizar borrado físico de venta: $e');
         rethrow;
       }
     });
@@ -272,7 +269,6 @@ class SalesDatabaseHelper {
           [ahora, ventaId],
         );
       } catch (e) {
-        print('Error al marcar venta como sincronizada: $e');
         rethrow;
       }
     });

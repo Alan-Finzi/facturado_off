@@ -22,7 +22,6 @@ class ProductosStockSucursalesCubit extends Cubit<ProductosStockSucursalesState>
       emit(ProductosStockSucursalesState(currentList: list));
     } catch (e) {
       // Manejo de errores
-      print("Error al obtener stock de productos en sucursales: $e");
     }
   }
 

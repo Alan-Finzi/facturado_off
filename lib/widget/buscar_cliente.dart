@@ -47,7 +47,6 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
   Widget build(BuildContext context) {
     return BlocConsumer<ClientesMostradorCubit, ClientesMostradorState>(
       listener: (context, state) {
-        print('Estado de clientes actualizado: ${state.clientes.length} clientes');
         if (state.clienteSeleccionado != null && (_fieldController?.text.isEmpty ?? true)) {
           _fieldController?.text = state.clienteSeleccionado?.nombre ?? '';
         }
@@ -190,7 +189,6 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
           (lista) => lista.id == cliente.listaPrecio,
         );
       } catch (e) {
-        print('Lista de precio no encontrada, usando precio base: $e');
         listaCliente = Lista(id: 1, nombre: 'Precio base');
       }
 
@@ -201,7 +199,6 @@ class _BuscarClienteWidgetState extends State<BuscarClienteWidget> {
       );
 
       // Forzar actualización de la UI para mostrar el cambio de lista de precios
-      print('Actualizada lista de precios a: ${listaCliente.nombre} (ID: ${listaCliente.id})');
     }
 
     _fieldFocusNode?.unfocus();

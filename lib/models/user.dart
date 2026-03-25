@@ -68,10 +68,9 @@ class User {
       if (email.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_active_user_email', email);
-        print('Último usuario activo guardado: $email');
       }
     } catch (e) {
-      print('Error al guardar último usuario activo: $e');
+      // ignore
     }
   }
 
@@ -81,7 +80,6 @@ class User {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString('last_active_user_email');
     } catch (e) {
-      print('Error al obtener último usuario activo: $e');
       return null;
     }
   }

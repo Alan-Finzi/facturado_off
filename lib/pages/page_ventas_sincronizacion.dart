@@ -103,7 +103,6 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> wit
           _tablesData[entry.value] = count;
         } catch (e) {
           _tablesData[entry.value] = -1; // -1 indica error
-          print('Error al verificar tabla ${entry.key}: $e');
         }
       }
 
@@ -116,7 +115,6 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> wit
         _isVerifyingDb = false;
       });
     } catch (e) {
-      print('Error al verificar datos maestros: $e');
       setState(() {
         _isVerifyingDb = false;
         _hasMasterData = false;

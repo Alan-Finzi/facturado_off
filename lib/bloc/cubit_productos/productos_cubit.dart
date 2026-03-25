@@ -35,9 +35,6 @@ class ProductosCubit extends Cubit<ProductosState> {
           categorias: ['Todas las categorías'] + _extractCategorias(listProduct),
         ));
       } else {
-        // Manejar el caso cuando no hay productos
-        print("No se encontraron productos");
-        // Aquí podrías emitir un estado que indique que no hay productos
         // emit(ProductosErrorState('No se encontraron productos'));
       }
     } catch (e) {
@@ -120,7 +117,6 @@ class ProductosCubit extends Cubit<ProductosState> {
 
       final user = User.currencyUser;
       if (user == null) {
-        print('Error: Usuario no autenticado.');
         emit(state.copyWith(isLoading: false));
         return;
       }
@@ -235,8 +231,6 @@ class ProductosCubit extends Cubit<ProductosState> {
         ));
       }
     } catch (e) {
-      print('Error al agregar producto: $e');
-      // Desactivar indicador de carga en caso de error
       emit(state.copyWith(isLoading: false));
       // Considerar emitir un estado de error para mostrar en UI
     }
@@ -307,8 +301,6 @@ class ProductosCubit extends Cubit<ProductosState> {
       productoExistente.precioFinal = nuevoPrecio * (productoExistente.cantidad ?? 1);
 
       emit(state.copyWith(productosSeleccionados: updatedList, precioTotal: true));
-    } else {
-      print('Producto no encontrado en la lista de seleccionados');
     }
   }
 

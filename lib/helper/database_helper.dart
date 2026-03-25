@@ -69,136 +69,85 @@ class DatabaseHelper {
   /// Usado cuando cambia el usuario o hay cambios importantes de esquema
   Future<void> deleteDatabaseIfExists() async {
     try {
-      print('🧹 INICIANDO LIMPIEZA COMPLETA DE BASE DE DATOS LOCAL');
-
-      // Cerrar la base de datos si está abierta
       if (_database != null) {
-        print('Cerrando conexión de base de datos activa');
         await _database!.close();
         _database = null;
       }
 
-      // Eliminar el archivo de la base de datos
       String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
       bool exists = await databaseExists(path);
 
       if (exists) {
-        print('Eliminando archivo de base de datos existente en: $path');
         await deleteDatabase(path);
-        print('Archivo de base de datos eliminado correctamente');
-      } else {
-        print('No existe archivo de base de datos para eliminar en: $path');
       }
 
-      // Limpiar referencias en memoria para modelos estáticos
       User.currencyUser = null;
-
-      // Limpiar caché de consultas
       _queryCache.clear();
       _cacheTimestamps.clear();
-
-      print('✅ LIMPIEZA COMPLETA DE BASE DE DATOS FINALIZADA');
     } catch (e) {
-      print('❌ ERROR al eliminar la base de datos: $e');
+      // Error al eliminar la base de datos
     }
   }
 
   Future<Database> _initDatabase() async {
     try {
       String path = join(await getDatabasesPath(), 'flaminco_appv14_DB.db');
-      print('La base de datos se guarda en la siguiente ruta: $path');
 
       return await openDatabase(
         path,
-        version: 31, // Incrementado para incluir campo saldo_pendiente en tabla ventas
+        version: 31,
         onCreate: (db, version) async {
-          print('Creando base de datos desde cero - versión $version');
           try {
             await _createTables(db);
-            print('Tablas creadas con éxito');
           } catch (e) {
-            print('Error al crear tablas: $e');
-            throw e; // Re-lanzamos el error para manejarlo en el nivel superior
+            throw e;
           }
         },
         onUpgrade: (db, oldVersion, newVersion) async {
-          print('Actualizando base de datos: $oldVersion → $newVersion');
-
-          // Manejo específico según la versión antigua
           if (oldVersion < 31) {
-            // Actualizar a versión 31 con soporte para saldo_pendiente en ventas
             try {
-              // Verificar si necesitamos agregar la columna saldo_pendiente
               if (oldVersion == 30) {
                 await db.execute('ALTER TABLE ventas ADD COLUMN saldo_pendiente REAL DEFAULT 0.0');
-                print('Columna saldo_pendiente agregada exitosamente a la tabla ventas');
               } else {
-                // Crear tabla de ventas si no existe (incluye saldo_pendiente)
                 await db.execute(SalesQueries.createVentasTable);
-                print('Tabla ventas creada exitosamente');
-
-                // Crear tabla de detalles de venta si no existe
                 await db.execute(SalesQueries.createVentasDetalleTable);
-                print('Tabla ventas_detalle creada exitosamente');
               }
             } catch (e) {
-              print('Error al actualizar tablas de ventas: $e');
-              // Continuar con otras actualizaciones, no lanzar error aquí
+              // Continuar con otras actualizaciones
             }
           }
 
           if (oldVersion < 29) {
             try {
-              // En lugar de recrear todas las tablas, verificamos si existen y creamos sólo las faltantes
-              // Esto evitará los errores de "table already exists"
-              print('Verificando y actualizando tablas existentes');
               await _updateTablesIfNeeded(db);
-
-              print('Base de datos actualizada exitosamente');
             } catch (e) {
-              print('Error al actualizar tablas: $e');
-              // Si hay un error grave, intentamos recrear todas las tablas
               try {
-                print('Intentando recrear todas las tablas después del error...');
                 await _dropAllTables(db);
                 await _createTables(db);
-                print('Recreación de tablas completada con éxito');
               } catch (recreationError) {
-                print('Error al recrear tablas: $recreationError');
                 throw recreationError;
               }
             }
           }
         },
-        onOpen: (db) {
-          print('Base de datos abierta correctamente');
-        },
-
+        onOpen: (db) {},
       );
     } catch (e) {
-      print('Error crítico al inicializar la base de datos: $e');
-      rethrow; // Propagamos el error al llamador
+      rethrow;
     }
   }
 
   /// Método auxiliar para eliminar todas las tablas en caso de problemas graves
   Future<void> _dropAllTables(Database db) async {
-    print('Eliminando todas las tablas existentes...');
-
     try {
-      // Obtener lista de todas las tablas
       final List<Map<String, dynamic>> tables = await db.rawQuery(
           "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'");
 
       for (var table in tables) {
         final tableName = table['name'];
-        print('Eliminando tabla: $tableName');
         await db.execute('DROP TABLE IF EXISTS $tableName');
       }
-
-      print('Todas las tablas fueron eliminadas correctamente');
     } catch (e) {
-      print('Error al eliminar tablas: $e');
       throw e;
     }
   }
@@ -242,9 +191,7 @@ class DatabaseHelper {
         )
       ''');
 
-      print('Tablas de métodos de pago verificadas/creadas con éxito');
     } catch (e) {
-      print('Error al actualizar tablas: $e');
       throw e;
     }
   }
@@ -282,9 +229,7 @@ class DatabaseHelper {
           id_lista_precio INTEGER
         )
       ''');
-      print('Tabla users creada/verificada con éxito');
     } catch (e) {
-      print('Error al crear tabla users: $e');
       throw e;
     }
 
@@ -340,14 +285,11 @@ class DatabaseHelper {
           error_message TEXT
         )
       ''');
-      print('Tabla sync_queue creada/verificada con éxito');
     } catch (e) {
-      print('Error al crear tabla sync_queue: $e');
       // Continuamos a pesar del error para crear otras tablas
     }
 
     try {
-      // Tabla Clientes_mostrador - Agregamos IF NOT EXISTS
       await db.execute('''
         CREATE TABLE IF NOT EXISTS Clientes_mostrador(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -384,9 +326,7 @@ class DatabaseHelper {
           wc_customer_id TEXT
         )
       ''');
-      print('Tabla Clientes_mostrador creada/verificada con éxito');
     } catch (e) {
-      print('Error al crear tabla Clientes_mostrador: $e');
       // Continuamos a pesar del error para crear otras tablas
     }
 
@@ -427,13 +367,10 @@ class DatabaseHelper {
         UNIQUE(id)
       );
     ''');
-      print('Tabla product creada/verificada con éxito');
     } catch (e) {
-      print('Error al crear tabla product: $e');
       // Continuamos a pesar del error para crear otras tablas
     }
 
-// Tabla: producto_response
     try {
       await db.execute('''
       CREATE TABLE IF NOT EXISTS producto_response (
@@ -441,9 +378,7 @@ class DatabaseHelper {
         current_page INTEGER
       );
       ''');
-      print('Tabla producto_response creada/verificada con éxito');
     } catch (e) {
-      print('Error al crear tabla producto_response: $e');
       // Continuamos a pesar del error para crear otras tablas
     }
 
@@ -599,13 +534,8 @@ class DatabaseHelper {
     try {
       // Tabla de ventas
       await db.execute(SalesQueries.createVentasTable);
-      print('Tabla ventas creada con éxito');
-
-      // Tabla de detalles de venta
       await db.execute(SalesQueries.createVentasDetalleTable);
-      print('Tabla ventas_detalle creada con éxito');
     } catch (e) {
-      print('Error al crear tablas de ventas: $e');
       // Continuamos a pesar del error para crear otras tablas
     }
   }
@@ -613,20 +543,14 @@ class DatabaseHelper {
   /// Este método debe llamarse antes de sincronizar productos cuando se cambia de comercio
   Future<void> clearProductsData() async {
     try {
-      print('Limpiando datos de productos anteriores...');
       final db = await database;
-
-      // Eliminar datos de todas las tablas relacionadas con productos
       await db.delete('producto_response');
       await db.delete('product');
       await db.delete('stock');
       await db.delete('lista_precio');
       await db.delete('variacion');
       await db.delete('producto_data');
-
-      print('Datos de productos eliminados correctamente');
     } catch (e) {
-      print('Error al limpiar datos de productos: $e');
       throw Exception('Error al limpiar datos de productos: $e');
     }
   }
@@ -790,7 +714,6 @@ class DatabaseHelper {
         }
       }
     } catch (e) {
-      print('Error al insertar ProductoResponse: $e');
       rethrow;
     }
   }
@@ -828,8 +751,6 @@ class DatabaseHelper {
     WHERE p.eliminado = 0 OR p.eliminado IS NULL
   ''');
     
-    print('Consulta ejecutada, filas obtenidas: ${rows.length}');
-
     final Map<int, Datum> productosMap = {};
 
     for (var row in rows) {
@@ -849,9 +770,7 @@ class DatabaseHelper {
           try {
             final List<dynamic> lpJson = jsonDecode(row['listas_precios']);
             listasPrecios = lpJson.map((lp) => ListasPrecio.fromJson(lp)).toList();
-            print('Listas de precios para producto $productId: ${listasPrecios.length}');
           } catch (e) {
-            print('Error al decodificar listas_precios para producto $productId: $e');
             listasPrecios = [];
           }
         }
@@ -862,15 +781,10 @@ class DatabaseHelper {
           try {
             final List<dynamic> stocksJson = jsonDecode(row['stocks']);
             stocks = stocksJson.map((s) => Stock.fromJson(s)).toList();
-            print('Stocks para producto $productId: ${stocks.length}');
           } catch (e) {
-            print('Error al decodificar stocks para producto $productId: $e');
             stocks = [];
           }
         }
-        
-        // Debug datos de la fila
-        print('DEBUG ROW: $row');
         
         productosMap[productId] = Datum(
           id: productId,
@@ -948,15 +862,7 @@ class DatabaseHelper {
       // porque los estamos obteniendo directamente desde los campos JSON
     }
 
-    // Agregar debug para ver qué datos estamos obteniendo
-    print('DEBUG: Número de productos encontrados: ${productosMap.length}');
-    
-    // Ver si hay productos con stocks y precios
     for (var producto in productosMap.values) {
-      print('DEBUG: Producto ID ${producto.id}, Nombre: ${producto.nombre}');
-      print('DEBUG: Stocks: ${producto.stocks?.length ?? 0}');
-      print('DEBUG: Precios: ${producto.listasPrecios?.length ?? 0}');
-      
       // Filtrar stocks para la sucursal solicitada (si es necesario)
       if (producto.stocks != null && producto.stocks!.isNotEmpty && sucursalId > 0) {
         producto.stocks = producto.stocks!.where((s) => 
@@ -1038,11 +944,8 @@ class DatabaseHelper {
         user.toJson(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-    } catch (e, stackTrace) {
-      print('Error al insertar el usuario: $e');
-      print('StackTrace: $stackTrace');
-      // Podés lanzar el error si querés que se propague hacia arriba
-      // throw Exception('Fallo al insertar usuario');
+    } catch (e) {
+      // Error al insertar usuario
     }
   }
 
@@ -1059,16 +962,11 @@ class DatabaseHelper {
       final maps = await db.query('users', where: 'email = ?', whereArgs: [email]);
 
       if (maps.isNotEmpty) {
-        // Convertir el registro a objeto User
-        final user = User.fromJson(maps.first);
-        print('Usuario encontrado en BD para email $email: ${user.username} (comercioId: ${user.comercioId})');
-        return user;
+        return User.fromJson(maps.first);
       } else {
-        print('No se encontró ningún usuario con email $email en la BD');
         return null;
       }
     } catch (e) {
-      print('Error al buscar usuario por email $email: $e');
       return null;
     }
   }
@@ -1076,48 +974,34 @@ class DatabaseHelper {
   // Método para cargar todos los modelos currency desde la BD
   Future<bool> loadAllCurrencyModels(User user) async {
     try {
-      print('Iniciando carga de modelos currency para: ${user.username}');
       bool success = true;
 
-      // 1. Cargar datos de facturación si no están ya cargados
       if (DatosFacturacionModel.datosFacturacionCurrent.isEmpty) {
         try {
           final SharedPreferences prefs = await SharedPreferences.getInstance();
           final String? savedComercioId = prefs.getString('datos_facturacion_comercio_id');
-
-          // Fuente autoritativa: el usuario (ya está en memoria como User.currencyUser)
-          // SharedPreferences es fallback, pero solo si no es el valor erróneo "0"
           int comercioId = 0;
 
           if (user.comercioId != null && user.comercioId!.isNotEmpty) {
             comercioId = int.tryParse(user.comercioId!) ?? 0;
-            print('Usando comercioId desde usuario: $comercioId');
           } else if (savedComercioId != null && savedComercioId.isNotEmpty && savedComercioId != '0') {
             comercioId = int.tryParse(savedComercioId) ?? 0;
-            print('Usando comercioId desde SharedPreferences: $comercioId');
           }
 
-          // Cargar datos de facturación
           final datosList = await getAllDatosFacturacionCommerce(comercioId);
           if (datosList.isNotEmpty) {
             DatosFacturacionModel.datosFacturacionCurrent.clear();
             DatosFacturacionModel.datosFacturacionCurrent.addAll(datosList);
-            print('✅ Datos de facturación cargados: ${datosList.length} registros');
           } else {
-            print('⚠️ No se encontraron datos de facturación');
             success = false;
           }
         } catch (e) {
-          print('❌ Error al cargar datos de facturación: $e');
           success = false;
         }
-      } else {
-        print('✓ Datos de facturación ya estaban cargados');
       }
 
       return success;
     } catch (e) {
-      print('❌ Error al cargar modelos currency: $e');
       return false;
     }
   }
@@ -1153,8 +1037,7 @@ class DatabaseHelper {
         }
       });
     } catch (e, s) {
-      print('Error al insertar categorías: $e');
-      print('Stack trace: $s');
+      // Error al insertar categorías
       // Opcional: relanzar la excepción si deseas que el llamador también la maneje
       // throw e;
     }
@@ -1272,78 +1155,35 @@ class DatabaseHelper {
   /// Retorna true si las tablas esenciales ya contienen datos
   Future<bool> isDataSynchronized() async {
     try {
-      print('🔍 INICIO DE VERIFICACIÓN DE SINCRONIZACIÓN DE DATOS');
       final db = await database;
 
-      // Verificación simple: ¿Hay datos en la tabla datos_facturacion?
       try {
         final List<Map<String, dynamic>> facturacionResult =
             await db.rawQuery('SELECT COUNT(*) as count FROM datos_facturacion');
         final int facturacionCount = facturacionResult.first['count'] as int;
-
-        // Si no hay datos de facturación, consideramos NO sincronizado inmediatamente
-        if (facturacionCount == 0) {
-          print('⚠️ CRÍTICO: No se encontraron datos de facturación! '
-                'Considerando base de datos NO sincronizada.');
-          return false;
-        }
-
-        print('✅ Se encontraron $facturacionCount registros en datos_facturacion');
+        if (facturacionCount == 0) return false;
       } catch (facturacionError) {
-        print('⚠️ CRÍTICO: Error al verificar tabla datos_facturacion: $facturacionError');
         return false;
       }
 
-      // Verificación de las tablas críticas - MODIFICADO: Solo requerimos que datos_facturacion tenga datos
-      // El resto de tablas son opcionales para considerar la DB como sincronizada
       final List<String> criticalTables = ['datos_facturacion', 'product'];
-      final List<String> optionalTables = ['productos_lista_precios'];
       bool allCriticalTablesHaveData = true;
 
-      print('🔍 Verificando tablas CRÍTICAS (requeridas para funcionar):');
       for (final table in criticalTables) {
         try {
           final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
           final count = result.first['count'] as int;
-
-          if (count == 0) {
-            print('⚠️ La tabla crítica $table está vacía');
-            allCriticalTablesHaveData = false;
-          } else {
-            print('✅ La tabla CRÍTICA $table contiene $count registros');
-          }
+          if (count == 0) allCriticalTablesHaveData = false;
         } catch (tableError) {
-          print('❌ Error al verificar tabla $table: $tableError');
           allCriticalTablesHaveData = false;
         }
       }
 
-      print('🔍 Verificando tablas OPCIONALES (no bloquean el funcionamiento):');
-      for (final table in optionalTables) {
-        try {
-          final List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
-          final count = result.first['count'] as int;
-
-          if (count == 0) {
-            print('ℹ️ La tabla opcional $table está vacía - CONTINUANDO DE TODOS MODOS');
-            // No afecta a allCriticalTablesHaveData
-          } else {
-            print('✅ La tabla opcional $table contiene $count registros');
-          }
-        } catch (tableError) {
-          print('ℹ️ Error al verificar tabla opcional $table: $tableError - CONTINUANDO DE TODOS MODOS');
-          // No afecta a allCriticalTablesHaveData
-        }
-      }
-
-      // Verificar específicamente datos de facturación para el comercioId guardado
       try {
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         final savedComercioId = prefs.getString('datos_facturacion_comercio_id');
 
         if (savedComercioId != null && savedComercioId.isNotEmpty) {
-          print('🔍 Verificando datos de facturación para comercioId guardado: $savedComercioId');
-
           final List<Map<String, dynamic>> specificData = await db.query(
             'datos_facturacion',
             where: 'comercio_id = ?',
@@ -1351,43 +1191,25 @@ class DatabaseHelper {
           );
 
           if (specificData.isEmpty) {
-            print('⚠️ No hay datos de facturación para el comercioId guardado: $savedComercioId - Buscando alternativas');
-
-            // Buscar cualquier dato de facturación y actualizar el SharedPreferences
             final List<Map<String, dynamic>> anyData = await db.query('datos_facturacion', limit: 1);
-
             if (anyData.isNotEmpty) {
               final int anyComercioId = anyData.first['comercio_id'] as int? ?? 0;
               await prefs.setString('datos_facturacion_comercio_id', anyComercioId.toString());
-              print('✅ Actualizado comercioId en SharedPreferences: $anyComercioId');
-
-              // IMPORTANTE: No consideramos que falte sincronización si encontramos datos para otro comercioId
-              print('✅ Usando datos de comercioId alternativo - NO es necesaria nueva sincronización');
             }
-          } else {
-            print('✅ Se encontraron datos de facturación para comercioId: $savedComercioId');
           }
         } else {
-          print('ℹ️ No hay comercioId guardado en SharedPreferences - Buscando cualquier dato de facturación');
-
-          // Buscar cualquier dato de facturación y guardarlo en SharedPreferences
           final List<Map<String, dynamic>> anyData = await db.query('datos_facturacion', limit: 1);
-
           if (anyData.isNotEmpty) {
             final int anyComercioId = anyData.first['comercio_id'] as int? ?? 0;
             await prefs.setString('datos_facturacion_comercio_id', anyComercioId.toString());
-            print('✅ Guardado nuevo comercioId en SharedPreferences: $anyComercioId');
           }
         }
       } catch (e) {
-        print('⚠️ Error al verificar datos de facturación específicos: $e');
-        // No afectamos allCriticalTablesHaveData aquí, solo es un error en la verificación específica
+        // Error verificando comercioId específico
       }
 
-      print('📊 RESULTADO FINAL de verificación de sincronización: ${allCriticalTablesHaveData ? "SINCRONIZADO ✅" : "NO SINCRONIZADO ❌"}');
       return allCriticalTablesHaveData;
     } catch (e) {
-      print('❌ ERROR isDataSynchronized: Error general al verificar sincronización: $e');
       return false;
     }
   }
@@ -1431,11 +1253,7 @@ class DatabaseHelper {
         }
       }
 
-      // Reportar progreso
-      print('Proveedor de pago guardado: ${provider.nombre} (+1%)');
-
     } catch (e) {
-      print('Error al insertar proveedor de pago: $e');
       rethrow;
     }
   }
@@ -1448,7 +1266,6 @@ class DatabaseHelper {
       // Verificar si la tabla existe
       final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='payment_providers'");
       if (tables.isEmpty) {
-        print("La tabla payment_providers no existe, iniciando creación de tabla");
         // Si la tabla no existe, crearla
         await db.execute('''
           CREATE TABLE IF NOT EXISTS payment_providers (
@@ -1505,8 +1322,6 @@ class DatabaseHelper {
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
-
-        print("Tablas de métodos de pago creadas y datos por defecto insertados");
 
         // Retornar un proveedor por defecto
         final defaultProvider = PaymentProvider(
@@ -1585,15 +1400,12 @@ class DatabaseHelper {
           // Crear un nuevo proveedor con los métodos incluidos
           providers.add(provider.copyWith(metodosPago: methods));
         } catch (e) {
-          print('Error al procesar proveedor: $e');
           // Continuar con el siguiente proveedor
         }
       }
 
       return providers;
     } catch (e) {
-      print('Error en getPaymentProviders: $e');
-      // Retornar un proveedor por defecto en caso de error
       return [
         PaymentProvider(
           id: 0,
@@ -1772,7 +1584,6 @@ class DatabaseHelper {
     // Consultar la base de datos
     Database db = await database;
     final List<Map<String, dynamic>> maps = await db.query('Clientes_mostrador');
-    print('Clientes encontrados en BD: ${maps.length}');
 
     final result = List.generate(maps.length, (i) => ClientesMostrador.fromJson(maps[i]));
 
@@ -1843,8 +1654,6 @@ class DatabaseHelper {
       }).toList();
       
     } catch (e) {
-      print('Error al obtener sucursales: $e');
-      // En caso de error, devolver al menos una sucursal predeterminada
       return [{'id': 0, 'nombre': 'Casa Central'}];
     }
   }
@@ -1862,10 +1671,9 @@ class DatabaseHelper {
           final String? savedComercioId = prefs.getString('datos_facturacion_comercio_id');
           if (savedComercioId != null && savedComercioId.isNotEmpty) {
             comercioId = int.tryParse(savedComercioId) ?? 0;
-            print('Usando comercioId guardado: $comercioId');
           }
         } catch (e) {
-          print('Error al leer comercioId de SharedPreferences: $e');
+          // Error al leer comercioId
         }
       }
 
@@ -1881,33 +1689,27 @@ class DatabaseHelper {
         try {
           final SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString('datos_facturacion_comercio_id', comercioId.toString());
-          print('comercioId: $comercioId guardado en SharedPreferences');
         } catch (e) {
-          print('Error al guardar comercioId: $e');
+          // Error al guardar comercioId
         }
       }
 
       // PASO 3: Si no hay datos para este comercioId, buscar cualquier dato disponible
       if (maps.isEmpty) {
-        print('No se encontraron datos para comercioId: $comercioId. Buscando cualquier dato disponible...');
         maps = await db.query('datos_facturacion');
 
-        // Si encontramos cualquier dato, guardar su comercioId para usos futuros
         if (maps.isNotEmpty) {
           try {
             final int foundComercioId = maps.first['comercio_id'] as int? ?? 0;
             final SharedPreferences prefs = await SharedPreferences.getInstance();
             await prefs.setString('datos_facturacion_comercio_id', foundComercioId.toString());
-            print('Encontrado y guardado nuevo comercioId: $foundComercioId');
           } catch (e) {
-            print('Error al guardar nuevo comercioId: $e');
+            // Error al guardar nuevo comercioId
           }
         }
       }
 
-      // PASO 4: Si no hay datos en absoluto, crear un dato de emergencia
       if (maps.isEmpty) {
-        print('EMERGENCIA: No hay datos de facturación en la BD');
 
         // Crear dato de emergencia en memoria
         return [DatosFacturacionModel(
@@ -1925,7 +1727,6 @@ class DatabaseHelper {
       return List.generate(maps.length, (i) => DatosFacturacionModel.fromJson(maps[i]));
 
     } catch (e) {
-      print('ERROR en getAllDatosFacturacionCommerce: $e');
 
       // Dato de emergencia como último recurso
       return [DatosFacturacionModel(
@@ -1990,7 +1791,6 @@ class DatabaseHelper {
         );
       });
     } catch (e) {
-      print('Error en getProductosConPrecioYStockQuery: $e');
       return [];
     }
   }
@@ -2006,7 +1806,7 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
-      print('Error al insertar producto lista precio: $e');
+      // Error al insertar producto lista precio
     }
   }
 
@@ -2057,7 +1857,6 @@ class DatabaseHelper {
     WHERE plp.lista_id = ? AND pss.sucursal_id = ?
   ''', [listaId, sucursalId]);
 
-    print('Lista ID: $listaId, Sucursal ID: $sucursalId');
     return result;
   }
 
@@ -2077,7 +1876,6 @@ class DatabaseHelper {
     INNER JOIN productos_stock_sucursales pss ON p.idProducto = pss.producto_id
   ''', [listaId, sucursalId]);
 
-    print('Lista ID: $listaId, Sucursal ID: $sucursalId');
     return result;
   }
   // Métodos relacionados con la tabla productos_ivas
@@ -2087,22 +1885,17 @@ class DatabaseHelper {
       final List<Map<String, dynamic>> maps = await db.query('productos_ivas');
       return List.generate(maps.length, (i) => ProductosIvasModel.fromMap(maps[i]));
     } catch (e) {
-      print('Error al obtener productos IVAs: $e');
       return [];
     }
   }
 
   Future<void> insertProductoIva(ProductosIvasModel productoIva) async {
     final db = await database;
-    try {
-      await db.insert(
-        'productos_ivas',
-        productoIva.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    } catch (e) {
-      print('Error al insertar producto IVA: $e');
-    }
+    await db.insert(
+      'productos_ivas',
+      productoIva.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   // Método para insertar una lista de productosIvas en una sola transacción
@@ -2228,7 +2021,6 @@ class DatabaseHelper {
 
       return datumMap.values.toList();
     } catch (e) {
-      print('Error en getProducts: $e');
       return [];
     }
   }

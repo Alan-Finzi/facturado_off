@@ -93,7 +93,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
           logo: SizedBox(
             width: 120,
             child: Image.asset(
-              'assets/images/app_icon2.png',
+              'assets/images/app_icon.png',
               fit: BoxFit.contain,
             ),
           ),
@@ -344,6 +344,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
 
       // Botón flotante de chat
       floatingActionButton: FloatingActionButton(
+        heroTag: 'chat_fab_venta_mobile',
         onPressed: () {},
         backgroundColor: Colors.blue,
         child: const Icon(Icons.chat_bubble_outline),
@@ -352,12 +353,16 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
   }
 
   // Método para mostrar el catálogo de productos
-  void _showCatalogoProductos() {
-    Navigator.of(context).push(
+  Future<void> _showCatalogoProductos() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
-        builder: (context) =>  CatalogoPage(),
+        builder: (context) => CatalogoPage(),
       ),
     );
+
+    if (result != null && mounted) {
+      await context.read<ProductosCubit>().agregarProducto(result);
+    }
   }
 
   // Método para eliminar un producto del carrito
@@ -539,7 +544,6 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
       final paymentMethodsCubit = context.read<PaymentMethodsCubit>();
       final loginCubit = context.read<LoginCubit>();
 
-      print('⚠️ Debug: Iniciando guardado de venta en móvil...');
 
       // Datos del usuario actual
       final userId = loginCubit.state.user?.id;
@@ -547,11 +551,9 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
           ? int.tryParse(loginCubit.state.user!.comercioId!) ?? 0
           : 0;
 
-      print('⚠️ Debug: User ID: $userId, Comercio ID: $comercioId');
 
       // Productos seleccionados
       final productos = productosCubit.state.productosSeleccionados;
-      print('⚠️ Debug: Número de productos seleccionados: ${productos.length}');
 
       // Calcular totales
       double subtotal = 0;
@@ -599,7 +601,6 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
       // Calcular total final con todos los componentes
       final totalFinal = subtotal - montoDescuento + totalIva + recargo;
 
-      print('⚠️ Debug: Subtotal: $subtotal, IVA: $totalIva, Recargo: $recargo, Total: $totalFinal');
 
       // Datos para la venta
       final tipoComprobante = productosCubit.state.tipoFactura ?? 'Ticket';
@@ -613,7 +614,6 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
         try {
           domicilioEntrega = jsonEncode(_datosEnvio);
         } catch (e) {
-          print('⚠️ Error al serializar domicilio: $e');
           domicilioEntrega = _datosEnvio.toString();
         }
       }
@@ -643,7 +643,6 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
         observaciones: _observacionesController.text.isNotEmpty ? _observacionesController.text : null,
       );
 
-      print('⚠️ Debug: Objeto de venta creado correctamente');
 
       // Crear detalles de venta para cada producto
       final detalles = productos.map((producto) {
@@ -672,13 +671,11 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
       // Asignar los detalles a la venta
       final ventaConDetalles = sale.copyWith(detalles: detalles);
 
-      print('⚠️ Debug: Intentando guardar venta en base de datos...');
 
       // Guardar la venta en la base de datos utilizando SalesDatabaseHelper
       final salesDatabaseHelper = SalesDatabaseHelper();
       final ventaId = await salesDatabaseHelper.saveSale(ventaConDetalles);
 
-      print('✅ Debug: Venta guardada exitosamente con ID: $ventaId');
 
       // Cerrar diálogo de carga
       Navigator.of(context).pop();
@@ -701,7 +698,6 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
         },
       );
     } catch (e) {
-      print('❌ Error crítico al guardar venta: $e');
 
       // Cerrar diálogo de carga
       Navigator.of(context).pop();

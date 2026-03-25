@@ -72,22 +72,18 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     // Si tenemos seleccionada una lista y sucursal específicas, aplicamos ambos filtros
     if (_selectedListaId != null && _selectedSucursalId != null) {
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId!, _selectedSucursalId!);
-      print('Productos filtrados por lista $_selectedListaId y sucursal $_selectedSucursalId cargados');
     } 
     // Si solo tenemos lista seleccionada
     else if (_selectedListaId != null) {
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(_selectedListaId!, -1);
-      print('Productos filtrados por lista $_selectedListaId cargados');
     }
     // Si solo tenemos sucursal seleccionada
     else if (_selectedSucursalId != null) {
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId!);
-      print('Productos filtrados por sucursal $_selectedSucursalId cargados');
     }
     // Si no tenemos nada seleccionado, cargamos todos
     else {
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1);
-      print('Todos los productos cargados');
     }
   }
   
@@ -96,18 +92,15 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
     if (_selectedSucursalId == null) {
       // Si no hay sucursal seleccionada, cargamos todos los productos
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1);
-      print('Todos los productos cargados para mostrar stock');
     } else {
       // Cargamos productos filtrados por la sucursal_id seleccionada
       context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, _selectedSucursalId!); 
-      print('Productos filtrados por sucursal_id $_selectedSucursalId cargados');
     }
   }
   
   // Carga todos los productos independientemente del stock o lista de precio para la pestaña CATÁLOGO
   Future<void> _cargarTodosProductos() async {
     context.read<ProductosMaestroCubit>().cargarProductosConPrecioYStock(-1, -1); // Usamos -1 para todos
-    print('Todos los productos cargados');
   }
   
   // Carga las listas de precios disponibles para el selector de la pestaña PRECIOS
@@ -117,9 +110,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
       setState(() {
         _listasPrecios = listas;
       });
-      print('${listas.length} listas de precios cargadas');
     } catch (e) {
-      print('Error al cargar listas de precios: $e');
       setState(() {
         _listasPrecios = [];
       });
@@ -133,9 +124,7 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
       setState(() {
         _sucursales = sucursales;
       });
-      print('${sucursales.length} sucursales cargadas');
     } catch (e) {
-      print('Error al cargar sucursales: $e');
       // Fallback en caso de error
       setState(() {
         _sucursales = [
@@ -419,7 +408,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
       onChanged: (value) {
         setState(() {
           _selectedListaId = value;
-          print('Lista seleccionada: $value');
           _cargarProductosLista(); // Recargar productos con la lista seleccionada
         });
       },
@@ -517,7 +505,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
                           setState(() {
                             _selectedSucursalId = value;
                             _cargarProductosStock(); // Siempre recargamos
-                            print('Sucursal seleccionada: ${_selectedSucursalId}');
                           });
                         },
                       ),
@@ -1029,7 +1016,6 @@ class _ProductsPageState extends State<ProductsPage> with SingleTickerProviderSt
           }
         }
         
-        print('Sucursales ID disponibles: $sucursalesIdDisponibles');
         
         // Crear columnas para DataTable
         List<DataColumn> columns = [

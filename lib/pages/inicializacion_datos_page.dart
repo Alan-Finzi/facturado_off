@@ -49,7 +49,6 @@ class _InicializacionDatosPageState extends State<InicializacionDatosPage> {
         child: BlocConsumer<InicializacionDatosCubit, InicializacionDatosState>(
           listener: (context, state) {
             if (state is InicializacionDatosExitosa) {
-              print("✅ Inicialización completada con éxito, navegando a la pantalla principal");
               // Mostrar un mensaje breve para confirmar que los datos se cargaron
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

@@ -20,8 +20,6 @@ class ProductosListaPreciosCubit extends Cubit<ProductosListaPreciosState> {
       emit(ProductosListaPreciosState(currentList: list));
     } catch (e) {
 
-      print("Error al obtener productos de la lista de precios: $e");
-
       // También podrías emitir un estado de error, si tienes un estado definido para eso
       // emit(ProductosListaPreciosStateError());
     }
