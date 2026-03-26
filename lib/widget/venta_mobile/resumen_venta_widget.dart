@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 /// Widget para mostrar el resumen de la venta con totales
 class ResumenVentaWidget extends StatelessWidget {
-  /// Precio sin IVA (suma de precioLista * cantidad)
+  /// Precio base sin IVA (sum de precioLista * cantidad)
   final double subtotal;
 
-  /// Monto de IVA
+  /// Monto de IVA total (incluido en el precio del producto)
   final double iva;
+
+  /// IVA discriminado por alícuota: clave = % (ej: 21.0), valor = monto
+  final Map<double, double> ivaDiscriminado;
 
   /// Monto de descuento general
   final double descuento;
@@ -45,6 +48,7 @@ class ResumenVentaWidget extends StatelessWidget {
     required this.descuento,
     required this.total,
     required this.deuda,
+    this.ivaDiscriminado = const {},
     this.porcentajeDescuento = 0.0,
     this.descuentoAdicional = 0.0,
     this.porcentajeDescuentoAdicional = 0.0,
@@ -60,6 +64,10 @@ class ResumenVentaWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // El cliente ve precioFinal por producto, que ya incluye IVA.
+    // subtotal = sum(precioLista * qty) — base sin IVA
+    // iva      = sum(precioLista * qty * %iva) — porción IVA
+    // subtotalConIva = lo que el cliente vio en el carrito
     final subtotalConIva = subtotal + iva;
 
     return Container(
@@ -72,39 +80,50 @@ class ResumenVentaWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Precio sin IVA ──────────────────────────────────────
+          // ── Subtotal (precio con IVA, lo que el cliente ve) ─────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Precio sin IVA:', style: TextStyle(fontSize: 15, color: Colors.black54)),
-              Text(formatearMonto(subtotal),
-                  style: const TextStyle(fontSize: 15, color: Colors.black54)),
-            ],
-          ),
-
-          const SizedBox(height: 4),
-
-          // ── IVA ─────────────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('+ IVA (incluido en precios):', style: TextStyle(fontSize: 15, color: Colors.black54)),
-              Text(formatearMonto(iva),
-                  style: const TextStyle(fontSize: 15, color: Colors.black54)),
-            ],
-          ),
-
-          const Divider(height: 16),
-
-          // ── Subtotal con IVA ────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Subtotal c/IVA:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const Text('Subtotal:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               Text(formatearMonto(subtotalConIva),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ],
           ),
+
+          // ── IVA discriminado por alícuota ───────────────────────
+          if (iva > 0) ...[
+            const SizedBox(height: 2),
+            // Si hay detalle por alícuota, mostrar cada una; si no, mostrar total
+            if (ivaDiscriminado.isNotEmpty) ...[
+              ...( () {
+                final alicuotas = ivaDiscriminado.keys.toList()..sort();
+                return alicuotas.map((pct) => Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '  IVA ${pct % 1 == 0 ? pct.toInt() : pct}% (incluido):',
+                        style: const TextStyle(fontSize: 13, color: Colors.black45),
+                      ),
+                      Text(
+                        formatearMonto(ivaDiscriminado[pct]!),
+                        style: const TextStyle(fontSize: 13, color: Colors.black45),
+                      ),
+                    ],
+                  ),
+                ));
+              })(),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('  IVA incluido:', style: TextStyle(fontSize: 13, color: Colors.black45)),
+                  Text(formatearMonto(iva), style: const TextStyle(fontSize: 13, color: Colors.black45)),
+                ],
+              ),
+            ],
+          ],
 
           const SizedBox(height: 8),
 
@@ -116,8 +135,7 @@ class ResumenVentaWidget extends StatelessWidget {
                 '- Descuento${porcentajeDescuento > 0 ? ' (${porcentajeDescuento.toStringAsFixed(0)}%)' : ''}:',
                 style: const TextStyle(fontSize: 15),
               ),
-              Text(formatearMonto(descuento),
-                  style: const TextStyle(fontSize: 15)),
+              Text(formatearMonto(descuento), style: const TextStyle(fontSize: 15)),
             ],
           ),
 
@@ -147,8 +165,7 @@ class ResumenVentaWidget extends StatelessWidget {
                 '+ Recargo${porcentajeRecargo > 0 ? ' (${porcentajeRecargo.toStringAsFixed(1)}%)' : ' (0%)'}:',
                 style: const TextStyle(fontSize: 15),
               ),
-              Text(formatearMonto(recargo),
-                  style: const TextStyle(fontSize: 15)),
+              Text(formatearMonto(recargo), style: const TextStyle(fontSize: 15)),
             ],
           ),
 

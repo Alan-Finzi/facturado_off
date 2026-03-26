@@ -87,6 +87,17 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
     final montoDescuento = subtotal * (descuentoGeneral / 100);
     final total = subtotal - montoDescuento + iva;
 
+    // IVA discriminado por alícuota (porcentajeIva está en decimal: 0.21 = 21%)
+    final Map<double, double> ivaDiscriminado = {};
+    for (final producto in productos) {
+      final pctDecimal = producto.porcentajeIva ?? 0.0;
+      if (pctDecimal > 0) {
+        final pctLabel = (pctDecimal * 100).roundToDouble();
+        final base = (producto.precioLista ?? 0.0) * (producto.cantidad ?? 0.0);
+        ivaDiscriminado[pctLabel] = (ivaDiscriminado[pctLabel] ?? 0.0) + base * pctDecimal;
+      }
+    }
+
     // Calcular recargo del método de pago seleccionado
     double recargoAmount = 0.0;
     double recargoPercentage = 0.0;
@@ -351,6 +362,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
               ResumenVentaWidget(
                 subtotal: subtotal,
                 iva: iva,
+                ivaDiscriminado: ivaDiscriminado,
                 descuento: montoDescuento,
                 porcentajeDescuento: descuentoGeneral,
                 descuentoAdicional: descuentoAdicionalAmount,
