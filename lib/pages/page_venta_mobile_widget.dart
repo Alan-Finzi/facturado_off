@@ -73,6 +73,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
     // Observar los estados necesarios para actualizar la UI
     final productosCubit = context.watch<ProductosCubit>();
     final clienteCubit = context.watch<ClientesMostradorCubit>();
+    final paymentMethodsCubit = context.watch<PaymentMethodsCubit>();
 
     // Verificar si hay productos en el carrito
     final productos = productosCubit.state.productosSeleccionados;
@@ -84,6 +85,28 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
     final descuentoGeneral = productosCubit.state.descuentoGeneral;
     final montoDescuento = subtotal * (descuentoGeneral / 100);
     final total = subtotal - montoDescuento + iva;
+
+    // Calcular recargo del método de pago seleccionado
+    double recargoAmount = 0.0;
+    double recargoPercentage = 0.0;
+    if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+      final payState = paymentMethodsCubit.state as PaymentMethodsLoaded;
+      if (payState.selectedMethodId != null && payState.selectedProviderId != null) {
+        for (final provider in payState.providers) {
+          if (provider.id == payState.selectedProviderId) {
+            for (final method in provider.metodosPago ?? []) {
+              if (method.id == payState.selectedMethodId) {
+                recargoPercentage = method.recargo;
+                recargoAmount = (total * recargoPercentage) / 100;
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+    final totalConRecargo = total + recargoAmount;
 
     return Scaffold(
       // Encabezado de la aplicación
@@ -324,13 +347,15 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
                 descuento: montoDescuento,
                 porcentajeDescuento: descuentoGeneral,
                 iva: iva,
-                total: total + (total * _recargoMetodoPago / 100), // Incluir recargo del método de pago
-                deuda: total + (total * _recargoMetodoPago / 100), // La deuda inicialmente es igual al total con recargo
+                recargo: recargoAmount,
+                porcentajeRecargo: recargoPercentage,
+                total: totalConRecargo,
+                deuda: totalConRecargo,
               ),
 
               // Acciones finales (botones y deuda)
               AccionesVentaWidget(
-                deuda: total, // La deuda inicialmente es igual al total
+                deuda: totalConRecargo,
                 onCancelar: () => _showCancelDialog(context),
                 onGuardar: () => _confirmarVenta(context),
               ),
@@ -466,6 +491,25 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
     final montoDescuento = subtotal * (descuentoGeneral / 100);
     final total = subtotal - montoDescuento + iva;
 
+    // Calcular recargo del método de pago
+    double recargoConfirm = 0.0;
+    if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
+      final payState = paymentMethodsCubit.state as PaymentMethodsLoaded;
+      if (payState.selectedMethodId != null && payState.selectedProviderId != null) {
+        for (final provider in payState.providers) {
+          if (provider.id == payState.selectedProviderId) {
+            for (final method in provider.metodosPago ?? []) {
+              if (method.id == payState.selectedMethodId) {
+                recargoConfirm = (total * method.recargo) / 100;
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+
     // Preparar lista de productos para el diálogo
     List<Map<String, dynamic>> productosParaDialogo = productos.map((producto) {
       return {
@@ -483,7 +527,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
       descuentoGeneral: descuentoGeneral,
       montoDescuento: montoDescuento,
       iva: iva,
-      total: total,
+      total: total + recargoConfirm,
     );
 
     // Si el usuario confirmó, proceder con el guardado

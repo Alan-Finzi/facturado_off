@@ -33,12 +33,14 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
   void initState() {
     super.initState();
 
-    // Inicializar el input con el total de la venta
-    _updateInputAmount(widget.totalVenta);
+    // Inicializar el input en 0 (se completa con "Pagar Monto Exacto")
+    _inputAmountController.text = '0';
 
-    // Actualizar el subtotal en el cubit
+    // Actualizar el subtotal en el cubit e input en 0
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PaymentMethodsCubit>().updateSubtotalAmount(widget.totalVenta);
+      final cubit = context.read<PaymentMethodsCubit>();
+      cubit.updateSubtotalAmount(widget.totalVenta);
+      cubit.updateInputAmount(0);
     });
   }
 
@@ -46,14 +48,9 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
   void didUpdateWidget(PaymentMethodsWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Si el total cambió, actualizar el subtotal en el cubit
+    // Si el total cambió, actualizar solo el subtotal en el cubit
     if (oldWidget.totalVenta != widget.totalVenta) {
       context.read<PaymentMethodsCubit>().updateSubtotalAmount(widget.totalVenta);
-
-      // Solo actualizar el monto de entrada si no es pago dividido
-      if (!_isPartialPayment) {
-        _updateInputAmount(widget.totalVenta);
-      }
     }
   }
 
@@ -462,6 +459,16 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                       // Actualizar recargo local
                       setState(() {
                         _recargo = _findMethodById(state, methodId)?.recargo ?? 0.0;
+                      });
+
+                      // Actualizar input al nuevo total con recargo
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          final updatedState = context.read<PaymentMethodsCubit>().state;
+                          if (updatedState is PaymentMethodsLoaded) {
+                            _updateInputAmount(updatedState.totalAmount);
+                          }
+                        }
                       });
 
                       // Notificar cambio de recargo
