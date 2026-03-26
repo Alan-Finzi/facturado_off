@@ -24,10 +24,12 @@ class PaymentMethodsWidget extends StatefulWidget {
 class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
   // Control para el monto ingresado
   final TextEditingController _inputAmountController = TextEditingController();
+  final TextEditingController _discountController = TextEditingController(text: '0');
 
   // Estado local
   bool _isPartialPayment = false; // true: pago dividido, false: pago total
   double _recargo = 0.0;
+  double _additionalDiscountPct = 0.0;
 
   @override
   void initState() {
@@ -57,6 +59,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
   @override
   void dispose() {
     _inputAmountController.dispose();
+    _discountController.dispose();
     super.dispose();
   }
 
@@ -160,10 +163,14 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
         ? _findSelectedMethod(state)?.recargo ?? 0.0
         : 0.0;
 
+    // Calcular descuento adicional y total final
+    final discountAmount = state.subtotalAmount * _additionalDiscountPct / 100;
+    final totalConDescuento = state.totalAmount - discountAmount;
+
     // Calcular vuelto
-    final changeAmount = state.inputAmount - state.totalAmount;
+    final changeAmount = state.inputAmount - totalConDescuento;
     final hasChange = changeAmount > 0;
-    final isInputValid = state.inputAmount >= state.totalAmount;
+    final isInputValid = state.inputAmount >= totalConDescuento;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,6 +182,30 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
         // Selector de método de pago
         _buildMethodSelector(state),
         const SizedBox(height: 16),
+
+        // Campo de descuento adicional
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Descuento adicional (%):'),
+            const SizedBox(height: 4),
+            TextField(
+              controller: _discountController,
+              decoration: const InputDecoration(
+                suffixText: '%',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (value) {
+                setState(() {
+                  _additionalDiscountPct = (double.tryParse(value) ?? 0.0).clamp(0.0, 100.0);
+                });
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
 
         // Campo de entrada de monto
         Column(
@@ -199,7 +230,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () {
-                _updateInputAmount(state.totalAmount);
+                _updateInputAmount(totalConDescuento);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
@@ -214,9 +245,11 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
         // Mostrar resumen
         _buildPaymentSummary(
           subtotal: state.subtotalAmount,
+          descuentoAdicional: discountAmount,
+          descuentoAdicionalPct: _additionalDiscountPct,
           recargo: recargoAmount,
           recargoPercentage: recargoPercentage,
-          total: state.totalAmount
+          total: totalConDescuento,
         ),
 
         // Mostrar vuelto si aplica
@@ -461,12 +494,13 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                         _recargo = _findMethodById(state, methodId)?.recargo ?? 0.0;
                       });
 
-                      // Actualizar input al nuevo total con recargo
+                      // Actualizar input al nuevo total con recargo y descuento
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) {
                           final updatedState = context.read<PaymentMethodsCubit>().state;
                           if (updatedState is PaymentMethodsLoaded) {
-                            _updateInputAmount(updatedState.totalAmount);
+                            final discount = updatedState.subtotalAmount * _additionalDiscountPct / 100;
+                            _updateInputAmount(updatedState.totalAmount - discount);
                           }
                         }
                       });
@@ -489,6 +523,8 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
   // Resumen para pago total
   Widget _buildPaymentSummary({
     required double subtotal,
+    required double descuentoAdicional,
+    required double descuentoAdicionalPct,
     required double recargo,
     required double recargoPercentage,
     required double total,
@@ -510,7 +546,19 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Recargo (${recargoPercentage.toStringAsFixed(1)}%):', style: const TextStyle(fontSize: 14)),
-              Text('\$${recargo.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
+              Text('+\$${recargo.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ],
+        // Descuento adicional (si hay)
+        if (descuentoAdicional > 0) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Descuento (${descuentoAdicionalPct.toStringAsFixed(1)}%):',
+                style: const TextStyle(fontSize: 14, color: Colors.green)),
+              Text('-\$${descuentoAdicional.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 14, color: Colors.green)),
             ],
           ),
         ],
