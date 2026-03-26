@@ -10,11 +10,13 @@ import 'package:facturador_offline/models/split_payment_item.dart';
 class PaymentMethodsWidget extends StatefulWidget {
   final double totalVenta;
   final Function(bool isPartialPayment, double recargo)? onPaymentTypeChanged;
+  final Function(double discountPct)? onAdditionalDiscountChanged;
 
   const PaymentMethodsWidget({
     Key? key,
     required this.totalVenta,
     this.onPaymentTypeChanged,
+    this.onAdditionalDiscountChanged,
   }) : super(key: key);
 
   @override
@@ -201,6 +203,7 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
                 setState(() {
                   _additionalDiscountPct = (double.tryParse(value) ?? 0.0).clamp(0.0, 100.0);
                 });
+                widget.onAdditionalDiscountChanged?.call(_additionalDiscountPct);
               },
             ),
           ],

@@ -2,14 +2,23 @@ import 'package:flutter/material.dart';
 
 /// Widget para mostrar el resumen de la venta con totales
 class ResumenVentaWidget extends StatelessWidget {
-  /// Subtotal de la venta
+  /// Precio sin IVA (suma de precioLista * cantidad)
   final double subtotal;
 
-  /// Monto de descuento
+  /// Monto de IVA
+  final double iva;
+
+  /// Monto de descuento general
   final double descuento;
 
-  /// Porcentaje de descuento
+  /// Porcentaje de descuento general
   final double porcentajeDescuento;
+
+  /// Monto de descuento adicional (ingresado en el cobro)
+  final double descuentoAdicional;
+
+  /// Porcentaje de descuento adicional
+  final double porcentajeDescuentoAdicional;
 
   /// Monto de recargo
   final double recargo;
@@ -17,10 +26,7 @@ class ResumenVentaWidget extends StatelessWidget {
   /// Porcentaje de recargo
   final double porcentajeRecargo;
 
-  /// Monto de IVA
-  final double iva;
-
-  /// Total de la venta
+  /// Total final de la venta
   final double total;
 
   /// Deuda pendiente
@@ -35,11 +41,13 @@ class ResumenVentaWidget extends StatelessWidget {
   const ResumenVentaWidget({
     super.key,
     required this.subtotal,
-    required this.descuento,
     required this.iva,
+    required this.descuento,
     required this.total,
     required this.deuda,
     this.porcentajeDescuento = 0.0,
+    this.descuentoAdicional = 0.0,
+    this.porcentajeDescuentoAdicional = 0.0,
     this.recargo = 0.0,
     this.porcentajeRecargo = 0.0,
     this.mensajeRetiro = 'Retiro en el local',
@@ -52,6 +60,8 @@ class ResumenVentaWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtotalConIva = subtotal + iva;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -62,83 +72,99 @@ class ResumenVentaWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Subtotal
+          // ── Precio sin IVA ──────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Subtotal:', style: TextStyle(fontSize: 16)),
-              Text(
-                formatearMonto(subtotal),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              const Text('Precio sin IVA:', style: TextStyle(fontSize: 15, color: Colors.black54)),
+              Text(formatearMonto(subtotal),
+                  style: const TextStyle(fontSize: 15, color: Colors.black54)),
             ],
           ),
 
-          const SizedBox(height: 8),
-
-          // Descuento
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Descuento${porcentajeDescuento > 0 ? ' (${porcentajeDescuento.toStringAsFixed(0)}%)' : ''}:',
-                style: const TextStyle(fontSize: 16),
-              ),
-              Text(
-                formatearMonto(descuento),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Recargo
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recargo${porcentajeRecargo > 0 ? ' (${porcentajeRecargo.toStringAsFixed(0)}%)' : ' (0%)'}:',
-                style: const TextStyle(fontSize: 16),
-              ),
-              Text(
-                formatearMonto(recargo),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // IVA
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('IVA:', style: TextStyle(fontSize: 16)),
-              Text(
-                formatearMonto(iva),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
           const SizedBox(height: 4),
-          const Text('(incluido en el precio)', style: TextStyle(fontSize: 14, color: Colors.grey)),
 
-          const SizedBox(height: 8),
-
-          // Total
+          // ── IVA ─────────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text(
-                formatearMonto(total),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              const Text('+ IVA (incluido en precios):', style: TextStyle(fontSize: 15, color: Colors.black54)),
+              Text(formatearMonto(iva),
+                  style: const TextStyle(fontSize: 15, color: Colors.black54)),
             ],
           ),
 
-          // Opción de retiro
+          const Divider(height: 16),
+
+          // ── Subtotal con IVA ────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Subtotal c/IVA:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(formatearMonto(subtotalConIva),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // ── Descuento general ───────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '- Descuento${porcentajeDescuento > 0 ? ' (${porcentajeDescuento.toStringAsFixed(0)}%)' : ''}:',
+                style: const TextStyle(fontSize: 15),
+              ),
+              Text(formatearMonto(descuento),
+                  style: const TextStyle(fontSize: 15)),
+            ],
+          ),
+
+          // ── Descuento adicional (solo si > 0) ───────────────────
+          if (descuentoAdicional > 0) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '- Desc. adicional (${porcentajeDescuentoAdicional.toStringAsFixed(1)}%):',
+                  style: const TextStyle(fontSize: 15, color: Colors.green),
+                ),
+                Text(formatearMonto(descuentoAdicional),
+                    style: const TextStyle(fontSize: 15, color: Colors.green)),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 4),
+
+          // ── Recargo ─────────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '+ Recargo${porcentajeRecargo > 0 ? ' (${porcentajeRecargo.toStringAsFixed(1)}%)' : ' (0%)'}:',
+                style: const TextStyle(fontSize: 15),
+              ),
+              Text(formatearMonto(recargo),
+                  style: const TextStyle(fontSize: 15)),
+            ],
+          ),
+
+          const Divider(height: 16),
+
+          // ── TOTAL ───────────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('TOTAL:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(formatearMonto(total),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+
+          // ── Mensaje de retiro ───────────────────────────────────
           const SizedBox(height: 16),
           Text(
             mensajeRetiro,

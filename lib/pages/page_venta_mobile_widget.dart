@@ -41,6 +41,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
   bool _datosFacturacionCargados = false;
   Map<String, dynamic>? _datosEnvio; // Para almacenar datos de envío
   double _recargoMetodoPago = 0.0; // Para almacenar el recargo del método de pago seleccionado
+  double _additionalDiscountPct = 0.0; // Descuento adicional ingresado en el widget de cobro
   final TextEditingController _notaInternaController = TextEditingController();
   final TextEditingController _observacionesController = TextEditingController();
 
@@ -106,7 +107,8 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
         }
       }
     }
-    final totalConRecargo = total + recargoAmount;
+    final descuentoAdicionalAmount = total * _additionalDiscountPct / 100;
+    final totalConRecargo = total - descuentoAdicionalAmount + recargoAmount;
 
     return Scaffold(
       // Encabezado de la aplicación
@@ -335,8 +337,12 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
                 totalVenta: total,
                 onPaymentTypeChanged: (isPartialPayment, recargo) {
                   setState(() {
-                    // Actualizar recargo si es necesario
                     _recargoMetodoPago = recargo;
+                  });
+                },
+                onAdditionalDiscountChanged: (pct) {
+                  setState(() {
+                    _additionalDiscountPct = pct;
                   });
                 },
               ),
@@ -344,9 +350,11 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
               // Resumen de la venta con totales
               ResumenVentaWidget(
                 subtotal: subtotal,
+                iva: iva,
                 descuento: montoDescuento,
                 porcentajeDescuento: descuentoGeneral,
-                iva: iva,
+                descuentoAdicional: descuentoAdicionalAmount,
+                porcentajeDescuentoAdicional: _additionalDiscountPct,
                 recargo: recargoAmount,
                 porcentajeRecargo: recargoPercentage,
                 total: totalConRecargo,
