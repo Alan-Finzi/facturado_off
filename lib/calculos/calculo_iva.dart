@@ -33,20 +33,21 @@ ResultadoIva calcularIva({
     }
 
     // 2. Determinar el IVA según la relación del precio con IVA
+    // Nota: usar porcentajeIva (que ya tiene el default 0.21 aplicado cuando alicuotaIva==0)
+    // en lugar de alicuotaIva crudo, para no pisar el default correcto.
     if (relacionPrecioIva == 0) {
         ivaFinal = 0.0;  // Sin relación, no se aplica IVA
+        porcentajeIva = 0.0;
         detalleCalculo = "Sin relación con IVA (relacion_precio_iva == 0)";
     } else if (relacionPrecioIva == 1) {
-        // El precio incluye IVA, así que calculamos el IVA sobre el precio dado
-        ivaFinal = precioProducto * alicuotaIva;  // Calculamos el IVA sobre el precio
-        porcentajeIva = alicuotaIva; // El porcentaje de IVA aplicado
-        detalleCalculo = "Precio + IVA: \$${precioProducto.toStringAsFixed(2)} * ${porcentajeIva}% = \$${ivaFinal.toStringAsFixed(2)}";
+        // Precio sin IVA: se agrega IVA encima
+        ivaFinal = precioProducto * porcentajeIva;
+        detalleCalculo = "Precio + IVA: \$${precioProducto.toStringAsFixed(2)} * ${(porcentajeIva * 100).toStringAsFixed(1)}% = \$${ivaFinal.toStringAsFixed(2)}";
     } else if (relacionPrecioIva == 2) {
-        // El precio ya incluye IVA, así que calculamos el precio sin IVA
-        double precioSinIva = precioProducto / (1 + alicuotaIva);  // Extraemos el precio sin IVA
-        ivaFinal = precioProducto - precioSinIva;  // El IVA es la diferencia
-        porcentajeIva = alicuotaIva; // El porcentaje de IVA aplicado
-        detalleCalculo = "Precio con IVA incluido: \$${precioProducto.toStringAsFixed(2)} - \$${precioSinIva.toStringAsFixed(2)} = \$${ivaFinal.toStringAsFixed(2)} (porcentaje: ${porcentajeIva}%)";
+        // Precio ya incluye IVA: extraer la porción de IVA
+        double precioSinIva = precioProducto / (1 + porcentajeIva);
+        ivaFinal = precioProducto - precioSinIva;
+        detalleCalculo = "Precio con IVA incluido: \$${precioProducto.toStringAsFixed(2)} - \$${precioSinIva.toStringAsFixed(2)} = \$${ivaFinal.toStringAsFixed(2)} (${(porcentajeIva * 100).toStringAsFixed(1)}%)";
     }
 
     return ResultadoIva(
