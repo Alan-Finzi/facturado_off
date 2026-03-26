@@ -122,7 +122,6 @@ class _ResumenTablaState extends State<ResumenTabla> {
                     });
                 }
 
-                if (_recargoAmount > 0) {
             }
         } catch (e) {
         }
