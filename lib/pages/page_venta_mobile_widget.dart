@@ -121,6 +121,20 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
     final descuentoAdicionalAmount = total * _additionalDiscountPct / 100;
     final totalConRecargo = total - descuentoAdicionalAmount + recargoAmount;
 
+    // Texto de retiro/entrega basado en los datos de envío
+    String mensajeRetiro = 'Retiro en el local';
+    if (_datosEnvio != null) {
+      final tipoEnvio = _datosEnvio!['tipo_envio'];
+      if (tipoEnvio == 'domicilio_cliente' || tipoEnvio == 'otro_domicilio') {
+        final calle = (_datosEnvio!['calle'] ?? '').toString();
+        final altura = (_datosEnvio!['altura'] ?? '').toString();
+        final localidad = (_datosEnvio!['localidad'] ?? '').toString();
+        if (calle.isNotEmpty) {
+          mensajeRetiro = 'Dirección de entrega: $calle $altura${localidad.isNotEmpty ? ", $localidad" : ""}';
+        }
+      }
+    }
+
     return Scaffold(
       // Encabezado de la aplicación
       appBar: PreferredSize(
@@ -371,6 +385,7 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
                 porcentajeRecargo: recargoPercentage,
                 total: totalConRecargo,
                 deuda: totalConRecargo,
+                mensajeRetiro: mensajeRetiro,
               ),
 
               // Acciones finales (botones y deuda)

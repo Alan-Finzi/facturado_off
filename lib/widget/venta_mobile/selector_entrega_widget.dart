@@ -38,6 +38,9 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
   // Mapa para almacenar los datos de envío
   Map<String, dynamic> _datosEnvio = {};
 
+  // Indica si el usuario ya guardó una dirección en el formulario inline
+  bool _direccionGuardada = false;
+
   @override
   void initState() {
     super.initState();
@@ -128,6 +131,9 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
       if (widget.cliente != null && _verificarDireccionCompleta(widget.cliente!)) {
         // Si tiene dirección completa, mostrarla
         return _buildDireccionCliente(widget.cliente!);
+      } else if (_direccionGuardada) {
+        // Si el usuario completó el formulario inline, mostrar resumen
+        return _buildDireccionGuardada();
       } else {
         // Si no tiene dirección completa, mostrar formulario para completarla
         return _buildFormularioDireccion(
@@ -139,6 +145,9 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
     }
 
     // Si es envío a otro domicilio
+    if (_direccionGuardada) {
+      return _buildDireccionGuardada();
+    }
     return _buildFormularioDireccion(
       titulo: 'Dirección de envío',
       tipoEnvio: 'otro_domicilio',
@@ -207,6 +216,57 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
                 tipoEnvio: 'domicilio_cliente',
                 clienteId: cliente.idCliente,
               );
+            },
+            icon: const Icon(Icons.edit, size: 16),
+            label: const Text('Editar dirección'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Muestra el resumen de la dirección guardada con opción de editar
+  Widget _buildDireccionGuardada() {
+    final calle = _datosEnvio['calle'] ?? '';
+    final altura = _datosEnvio['altura'] ?? '';
+    final piso = _datosEnvio['piso'];
+    final depto = _datosEnvio['depto'];
+    final localidad = _datosEnvio['localidad'] ?? '';
+    final provincia = _datosEnvio['provincia'] ?? '';
+    final cp = _datosEnvio['codigo_postal'];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                'Dirección guardada',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('$calle $altura'),
+          if (piso != null || depto != null)
+            Text('Piso: ${piso ?? ""}, Depto: ${depto ?? ""}'),
+          Text('$localidad, $provincia'),
+          if (cp != null) Text('CP: $cp'),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                _direccionGuardada = false;
+              });
             },
             icon: const Icon(Icons.edit, size: 16),
             label: const Text('Editar dirección'),
@@ -426,8 +486,10 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
     // Notificar cambios
     _notificarDatosEnvio();
 
-    // Forzar rebuild del widget
-    setState(() {});
+    // Marcar dirección como guardada y forzar rebuild
+    setState(() {
+      _direccionGuardada = true;
+    });
   }
 
   // Método para mostrar diálogo con formulario
@@ -559,6 +621,10 @@ class _SelectorEntregaWidgetState extends State<SelectorEntregaWidget> {
 
   // Maneja el cambio de tipo de envío
   void _handleTipoEnvioChanged(String tipoEnvio) {
+    // Resetear dirección guardada al cambiar el tipo de envío
+    setState(() {
+      _direccionGuardada = false;
+    });
     switch (tipoEnvio) {
       case 'Retiro por sucursal':
         _datosEnvio = {'tipo_envio': 'retiro_sucursal'};
