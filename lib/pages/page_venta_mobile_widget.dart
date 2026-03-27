@@ -99,22 +99,29 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
       }
     }
 
-    // Calcular recargo del método de pago seleccionado
+    // Calcular recargo: en pago dividido se suma el recargo de cada ítem individualmente
     double recargoAmount = 0.0;
     double recargoPercentage = 0.0;
     if (paymentMethodsCubit.state is PaymentMethodsLoaded) {
       final payState = paymentMethodsCubit.state as PaymentMethodsLoaded;
-      if (payState.selectedMethodId != null && payState.selectedProviderId != null) {
-        for (final provider in payState.providers) {
-          if (provider.id == payState.selectedProviderId) {
-            for (final method in provider.metodosPago ?? []) {
-              if (method.id == payState.selectedMethodId) {
-                recargoPercentage = method.recargo;
-                recargoAmount = (total * recargoPercentage) / 100;
-                break;
+      if (payState.isPartialPayment) {
+        // Pago dividido: recargo = suma de recargos individuales por método
+        recargoAmount = payState.splitPayments.totalRecargoAmount;
+        // recargoPercentage no aplica en modo dividido (múltiples tasas)
+      } else {
+        // Pago total: recargo del método único seleccionado
+        if (payState.selectedMethodId != null && payState.selectedProviderId != null) {
+          for (final provider in payState.providers) {
+            if (provider.id == payState.selectedProviderId) {
+              for (final method in provider.metodosPago ?? []) {
+                if (method.id == payState.selectedMethodId) {
+                  recargoPercentage = method.recargo;
+                  recargoAmount = (total * recargoPercentage) / 100;
+                  break;
+                }
               }
+              break;
             }
-            break;
           }
         }
       }
