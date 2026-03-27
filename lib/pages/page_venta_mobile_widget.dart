@@ -8,6 +8,7 @@ import 'package:facturador_offline/bloc/cubit_login/login_cubit.dart';
 import 'package:facturador_offline/models/Producto_precio_stock.dart';
 import 'package:facturador_offline/models/payment_method.dart';
 import 'package:facturador_offline/models/datos_facturacion_model.dart';
+import 'package:facturador_offline/pages/page_login.dart';
 import 'package:facturador_offline/pages/page_ventas_sincronizacion.dart';
 import 'package:facturador_offline/widget/venta_mobile/acciones_venta_widget.dart';
 import 'package:facturador_offline/widget/venta_mobile/buscador_widget.dart';
@@ -147,6 +148,32 @@ class _PageVentaMobileWidgetState extends State<PageVentaMobileWidget> {
               fit: BoxFit.contain,
             ),
           ),
+          onMenu: () {
+            showMenu<String>(
+              context: context,
+              position: const RelativeRect.fromLTRB(0, kToolbarHeight, double.infinity, 0),
+              items: [
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Cerrar sesión'),
+                    ],
+                  ),
+                ),
+              ],
+            ).then((value) {
+              if (value == 'logout') {
+                context.read<LoginCubit>().logout();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            });
+          },
         ),
       ),
 
