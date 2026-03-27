@@ -270,6 +270,8 @@ class _PaymentMethodsWidgetState extends State<PaymentMethodsWidget> {
               providers: state.providers,
               itemNumber: e.key + 1,
               cubit: cubit,
+              subtotalAmount: state.subtotalAmount,
+              totalAssigned: totalBase,
             )),
 
         // Botón agregar
@@ -547,6 +549,8 @@ class _SplitItemEditor extends StatefulWidget {
   final List<PaymentProvider> providers;
   final int itemNumber;
   final PaymentMethodsCubit cubit;
+  final double subtotalAmount;
+  final double totalAssigned;
 
   const _SplitItemEditor({
     Key? key,
@@ -554,6 +558,8 @@ class _SplitItemEditor extends StatefulWidget {
     required this.providers,
     required this.itemNumber,
     required this.cubit,
+    required this.subtotalAmount,
+    required this.totalAssigned,
   }) : super(key: key);
 
   @override
@@ -660,21 +666,54 @@ class _SplitItemEditorState extends State<_SplitItemEditor> {
           const Text('Monto a asignar:',
               style: TextStyle(fontSize: 12, color: Colors.black54)),
           const SizedBox(height: 4),
-          TextField(
-            controller: _amountController,
-            decoration: const InputDecoration(
-              prefixText: '\$ ',
-              border: OutlineInputBorder(),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              isDense: true,
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (value) {
-              final amount = double.tryParse(value) ?? 0.0;
-              widget.cubit.updateSplitItemAmount(item.id, amount);
-            },
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _amountController,
+                  decoration: const InputDecoration(
+                    prefixText: '\$ ',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    final amount = double.tryParse(value) ?? 0.0;
+                    widget.cubit.updateSplitItemAmount(item.id, amount);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Botón "Agregar restante"
+              Builder(builder: (context) {
+                final restante = (widget.subtotalAmount - widget.totalAssigned + item.amount)
+                    .clamp(0.0, double.infinity);
+                if (restante <= 0.01) return const SizedBox.shrink();
+                return Tooltip(
+                  message: 'Completar con monto restante (\$${restante.toStringAsFixed(2)})',
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _amountController.text = restante.toStringAsFixed(2);
+                      widget.cubit.updateSplitItemAmount(item.id, restante);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      '\$${restante.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
 
           // Resultado del recargo + total a cobrar
