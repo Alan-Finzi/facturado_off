@@ -8,6 +8,8 @@ import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
 import 'package:facturador_offline/pages/splash_screen_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/cubit_lista_precios/lista_precios_cubit.dart';
@@ -23,8 +25,12 @@ import 'util/constants.dart';
 
 
 void main() async {
-  // Inicializar el entorno Flutter y la base de datos
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Inicializar plataforma específica
   final platformService = PlatformService();
@@ -32,7 +38,6 @@ void main() async {
 
   // Configurar SQLite para todas las plataformas
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Configuración para desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
@@ -42,19 +47,16 @@ void main() async {
   final isFirstSyncDone = prefs.getBool('isFirstSyncDone') ?? false;
 
   if (!isFirstSyncDone) {
-    // 🔥 Solo borra la DB la primera vez
     await DatabaseHelper.instance.deleteDatabaseIfExists();
     await prefs.setBool('isFirstSyncDone', true);
   }
 
-  await DatabaseHelper.instance.database; // Siempre inicializa la base
+  await DatabaseHelper.instance.database;
 
-  // Configurar manejo de foco
   WidgetsBinding.instance.addPostFrameCallback((_) {
     FocusManager.instance.primaryFocus?.unfocus();
   });
 
-  // Ejecutar la aplicación
   runApp(BlocProviders());
 }
 
