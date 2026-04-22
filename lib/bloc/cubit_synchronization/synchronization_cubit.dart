@@ -2,7 +2,6 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:facturador_offline/services/service_api.dart';
 import 'dart:async';
-import '../../helper/database_helper.dart';
 import '../cubit_login/login_cubit.dart';
 
 part 'synchronization_state.dart';
