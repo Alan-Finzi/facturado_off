@@ -51,7 +51,9 @@ class _ConnectionPageState extends State<ConnectionPage> {
         },
       ),
       body: Center(
-        child: Column(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
              Text(
@@ -228,6 +230,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

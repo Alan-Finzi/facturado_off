@@ -269,10 +269,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
 
         if (state.errorMessage != null) {
           return Center(
-            child: Text(
-              'Error: ${state.errorMessage}',
-              style: const TextStyle(color: Colors.red),
-            ),
+            child: Text('Error: ${state.errorMessage}', style: const TextStyle(color: Colors.red)),
           );
         }
 
@@ -284,68 +281,95 @@ class _CatalogoPageState extends State<CatalogoPage> {
           return const Center(child: Text('No hay productos disponibles.'));
         }
 
-        return Column(
-          children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Producto')),
-                  DataColumn(label: Text('Código')),
-                  DataColumn(label: Text('Precio de Lista')),
-                  DataColumn(label: Text('Stock')),
-                  DataColumn(label: Text('Categoría')),
-                  DataColumn(label: Text('Acción')),
-                ],
-                rows: productos.take(limit).map((producto) {
-                  final listaPrecio = (producto.productosVariaciones?.any((v) => v.listasPrecios?.isNotEmpty == true) ?? false)
-                      ? "producto con variacion"
-                      : (producto.listasPrecios?.isNotEmpty == true
-                      ? (producto.listasPrecios!
-                      .firstWhere(
-                       (lp) => lp.listaId == _listaId,
-                      // Usa la lista de precios del cliente seleccionado
-                    orElse: () => ListasPrecio(precioLista: '0.0'),
-                  )
-                      .precioLista ?? '0.0')
-                      : '0.0');
-                  final stock = producto.stocks?.isNotEmpty == true
-                      ? (producto.stocks!.first.stock?.toString() ?? '0')
-                      : '0';
-                  final categoria = producto.categoriaName?.toString() ?? 'Sin categoría';
+        final visibles = productos.take(limit).toList();
 
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(producto.nombre ?? 'N/A')),
-                      DataCell(Text(producto.barcode ?? 'N/A')),
-                      DataCell(Text(listaPrecio)),
-                      DataCell(Text(stock)),
-                      DataCell(Text(categoria)),
-                      DataCell(
-                        ElevatedButton(
-                          onPressed: () async {
-                            if ((producto.productosVariaciones?.isNotEmpty ?? false)) {
-                              await mostrarVariacionesPopup(context, producto, 0 ,317);
-                            } else {
-                              // No tiene variaciones, se agrega directo
-                              Navigator.pop(context, {
-                                'productoSeleccionado': producto,
-                                'variacionSeleccionada': null,
-                              });
-                            }
-                          },
-                          child: const Text("Agregar Producto"),
-                        ),
-
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 700) {
+              return _buildProductDataTable(visibles);
+            }
+            return _buildProductCardList(visibles);
+          },
         );
       },
+    );
+  }
+
+  Widget _buildProductDataTable(List<Datum> productos) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Producto')),
+          DataColumn(label: Text('Código')),
+          DataColumn(label: Text('Precio')),
+          DataColumn(label: Text('Stock')),
+          DataColumn(label: Text('Categoría')),
+          DataColumn(label: Text('Acción')),
+        ],
+        rows: productos.map((producto) {
+          final listaPrecio = _getPrecio(producto);
+          final stock = producto.stocks?.isNotEmpty == true
+              ? (producto.stocks!.first.stock?.toString() ?? '0')
+              : '0';
+          return DataRow(cells: [
+            DataCell(Text(producto.nombre ?? 'N/A')),
+            DataCell(Text(producto.barcode ?? 'N/A')),
+            DataCell(Text(listaPrecio)),
+            DataCell(Text(stock)),
+            DataCell(Text(producto.categoriaName ?? 'Sin categoría')),
+            DataCell(_buildAgregarButton(producto)),
+          ]);
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildProductCardList(List<Datum> productos) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: productos.length,
+      itemBuilder: (context, index) {
+        final producto = productos[index];
+        final precio = _getPrecio(producto);
+        final stock = producto.stocks?.isNotEmpty == true
+            ? (producto.stocks!.first.stock?.toString() ?? '0')
+            : '0';
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            title: Text(producto.nombre ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text('Cód: ${producto.barcode ?? '-'}  |  \$$precio  |  Stock: $stock\n${producto.categoriaName ?? ''}'),
+            isThreeLine: true,
+            trailing: _buildAgregarButton(producto),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getPrecio(Datum producto) {
+    if (producto.productosVariaciones?.any((v) => v.listasPrecios?.isNotEmpty == true) ?? false) {
+      return 'con variación';
+    }
+    return producto.listasPrecios?.isNotEmpty == true
+        ? (producto.listasPrecios!
+                .firstWhere((lp) => lp.listaId == _listaId, orElse: () => ListasPrecio(precioLista: '0.0'))
+                .precioLista ?? '0.0')
+        : '0.0';
+  }
+
+  Widget _buildAgregarButton(Datum producto) {
+    return ElevatedButton(
+      onPressed: () async {
+        if (producto.productosVariaciones?.isNotEmpty ?? false) {
+          await mostrarVariacionesPopup(context, producto, 0, 317);
+        } else {
+          Navigator.pop(context, {'productoSeleccionado': producto, 'variacionSeleccionada': null});
+        }
+      },
+      child: const Text('Agregar'),
     );
   }
 

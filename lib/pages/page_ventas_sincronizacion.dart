@@ -642,107 +642,66 @@ class _PageVentasSincronizacionState extends State<PageVentasSincronizacion> wit
                     SizedBox(height: 16),
 
                     // Filtros y ordenamiento
-                    Row(
-                      children: [
-                        // Filtro por estado
-                        Expanded(
-                          flex: 3,
-                          child: DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              labelText: 'Estado',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            ),
-                            value: _filtroEstado,
-                            items: [
-                              DropdownMenuItem(value: 'todos', child: Text('Todos')),
-                              DropdownMenuItem(
-                                value: 'sincronizados',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.check_circle, color: Colors.green, size: 16),
-                                    SizedBox(width: 8),
-                                    Text('Sincronizados'),
-                                  ],
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'pendientes',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.schedule, color: Colors.grey, size: 16),
-                                    SizedBox(width: 8),
-                                    Text('Pendientes'),
-                                  ],
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'error',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.error, color: Colors.red, size: 16),
-                                    SizedBox(width: 8),
-                                    Text('Con error'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _filtroEstado = value;
-                                  _aplicarFiltros();
-                                });
-                              }
-                            },
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 500;
+                        final dropEstado = DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            labelText: 'Estado',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           ),
-                        ),
-
-                        SizedBox(width: 12),
-
-                        // Ordenamiento
-                        Expanded(
-                          flex: 4,
-                          child: DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              labelText: 'Ordenar por',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          value: _filtroEstado,
+                          items: [
+                            DropdownMenuItem(value: 'todos', child: Text('Todos')),
+                            DropdownMenuItem(
+                              value: 'sincronizados',
+                              child: Row(children: [Icon(Icons.check_circle, color: Colors.green, size: 16), SizedBox(width: 8), Text('Sincronizados')]),
                             ),
-                            value: _ordenActual,
-                            items: [
-                              DropdownMenuItem(
-                                value: 'fecha_desc',
-                                child: Text('Fecha (más reciente)'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'fecha_asc',
-                                child: Text('Fecha (más antigua)'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'estado',
-                                child: Text('Estado (error, pendiente, ok)'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'total_desc',
-                                child: Text('Importe (mayor a menor)'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _ordenActual = value;
-                                  _aplicarFiltros();
-                                });
-                              }
-                            },
+                            DropdownMenuItem(
+                              value: 'pendientes',
+                              child: Row(children: [Icon(Icons.schedule, color: Colors.grey, size: 16), SizedBox(width: 8), Text('Pendientes')]),
+                            ),
+                            DropdownMenuItem(
+                              value: 'error',
+                              child: Row(children: [Icon(Icons.error, color: Colors.red, size: 16), SizedBox(width: 8), Text('Con error')]),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) setState(() { _filtroEstado = value; _aplicarFiltros(); });
+                          },
+                        );
+                        final dropOrden = DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            labelText: 'Ordenar por',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           ),
-                        ),
-                      ],
+                          value: _ordenActual,
+                          items: [
+                            DropdownMenuItem(value: 'fecha_desc', child: Text('Fecha (más reciente)')),
+                            DropdownMenuItem(value: 'fecha_asc', child: Text('Fecha (más antigua)')),
+                            DropdownMenuItem(value: 'estado', child: Text('Estado')),
+                            DropdownMenuItem(value: 'total_desc', child: Text('Importe (mayor a menor)')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) setState(() { _ordenActual = value; _aplicarFiltros(); });
+                          },
+                        );
+
+                        if (isWide) {
+                          return Row(
+                            children: [
+                              Expanded(flex: 3, child: dropEstado),
+                              SizedBox(width: 12),
+                              Expanded(flex: 4, child: dropOrden),
+                            ],
+                          );
+                        }
+                        return Column(
+                          children: [dropEstado, SizedBox(height: 12), dropOrden],
+                        );
+                      },
                     ),
                   ],
                 ),
