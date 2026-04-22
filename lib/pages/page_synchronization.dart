@@ -137,59 +137,55 @@ class SynchronizationPage extends StatelessWidget {
           child: BlocBuilder<SynchronizationCubit, SynchronizationState>(
             builder: (context, state) {
               if (state is SynchronizationInProgress) {
-                // Mostrar la barra de progreso mientras la sincronización está en progreso
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text('Sincronización en progreso...', style: TextStyle(fontSize: 18)),
-                      SizedBox(height: 10),
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.shade300),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'NO BLOQUEE SU DISPOSITIVO. La sincronización se interrumpirá si la pantalla se apaga.',
-                                style: TextStyle(
-                                  color: Colors.amber.shade900,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text('Sincronización en progreso...', style: TextStyle(fontSize: 18)),
+                          SizedBox(height: 16),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.amber.shade300),
                             ),
-                          ],
-                        ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'NO BLOQUEE SU DISPOSITIVO. La sincronización se interrumpirá si la pantalla se apaga.',
+                                    style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          TextButton.icon(
+                            onPressed: () {
+                              try { AppSettings.openAppSettings(); } catch (e) {}
+                            },
+                            icon: Icon(Icons.settings),
+                            label: Text('Cambiar tiempo de espera de pantalla'),
+                            style: TextButton.styleFrom(foregroundColor: Colors.blue),
+                          ),
+                          SizedBox(height: 24),
+                          LinearProgressIndicator(value: state.progress, minHeight: 8.0),
+                          SizedBox(height: 16),
+                          Text('${(state.progress * 100).toInt()}% completado', style: TextStyle(fontSize: 16)),
+                          SizedBox(height: 12),
+                          Text(state.currentTask, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
                       ),
-                      SizedBox(height: 10),
-                      TextButton.icon(
-                        onPressed: () {
-                          try {
-                            AppSettings.openAppSettings();
-                          } catch (e) {
-                                      }
-                        },
-                        icon: Icon(Icons.settings),
-                        label: Text('Cambiar tiempo de espera de pantalla'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      LinearProgressIndicator(value: state.progress, minHeight: 8.0),
-                      SizedBox(height: 20),
-                      Text('${(state.progress * 100).toInt()}% completado', style: TextStyle(fontSize: 16)),
-                      SizedBox(height: 20),
-                      Text(state.currentTask, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
+                    ),
                   ),
                 );
               } else if (state is SynchronizationInitial) {
