@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "767896169017",
-    "project_id": "facturadoroff",
-    "storage_bucket": "facturadoroff.firebasestorage.app"
+    "project_number": "TU_PROJECT_NUMBER",
+    "project_id": "TU_PROJECT_ID",
+    "storage_bucket": "TU_PROJECT_ID.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:767896169017:android:f06d42294f66e500fb7be8",
+        "mobilesdk_app_id": "TU_APP_ID_ANDROID",
         "android_client_info": {
           "package_name": "com.ultrix.facturador_offline"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD4aPx1JBtUPksAOIqY3UvBiiaWpXFW4N8"
+          "current_key": "TU_API_KEY_ANDROID"
         }
       ],
       "services": {
