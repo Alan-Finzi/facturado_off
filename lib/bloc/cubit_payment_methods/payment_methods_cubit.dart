@@ -1,29 +1,25 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../helper/database_helper.dart';
 import '../../models/clientes_mostrador.dart';
 import '../../models/payment_method.dart';
 import '../../models/payment_provider.dart';
 import '../../models/split_payment_item.dart';
 import '../../models/split_payment_collection.dart';
+import '../../services/firestore_service.dart';
 
 part 'payment_methods_state.dart';
 
 /// Cubit para manejar el estado relacionado con los métodos de pago
 class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
-  final DatabaseHelper _databaseHelper;
-
-  PaymentMethodsCubit({DatabaseHelper? databaseHelper})
-      : _databaseHelper = databaseHelper ?? DatabaseHelper.instance,
-        super(PaymentMethodsInitial()) {
-    // Precarga de proveedores y métodos de pago al inicializar
+  PaymentMethodsCubit({dynamic databaseHelper})
+      : super(PaymentMethodsInitial()) {
     _preloadPaymentProviders();
   }
 
   /// Precarga los proveedores y métodos de pago en segundo plano
   Future<void> _preloadPaymentProviders() async {
     try {
-      final providers = await _databaseHelper.getPaymentProviders();
+      final providers = await FirestoreService.instance.getPaymentProviders();
       if (providers.isNotEmpty && state is PaymentMethodsInitial) {
         emit(PaymentMethodsLoaded(
           providers: providers,
@@ -43,7 +39,7 @@ class PaymentMethodsCubit extends Cubit<PaymentMethodsState> {
   Future<void> loadPaymentProviders() async {
     try {
       emit(PaymentMethodsLoading());
-      final providers = await _databaseHelper.getPaymentProviders();
+      final providers = await FirestoreService.instance.getPaymentProviders();
       if (providers.isEmpty) {
         emit(PaymentMethodsEmpty());
       } else {

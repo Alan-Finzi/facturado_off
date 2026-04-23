@@ -212,41 +212,57 @@ class _UserInfoPageState extends State<UserInfoPage> with SingleTickerProviderSt
       return Center(child: Text('No hay información del usuario actual'));
     }
 
-    // Convertir el mapa a una lista de entradas para mostrar
-    List<MapEntry<String, dynamic>> entries = _userData.entries.toList();
+    final entries = _userData.entries.toList();
+    final avatar = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(height: 16),
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: Constants.miColor.withOpacity(0.2),
+          child: Icon(Icons.person, size: 50, color: Constants.miColor),
+        ),
+        SizedBox(height: 16),
+        Text(
+          '${_userData['username'] ?? 'Usuario'}',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          '${_userData['email'] ?? ''}',
+          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 24),
+      ],
+    );
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          SizedBox(height: 16),
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Constants.miColor.withOpacity(0.2),
-            child: Icon(
-              Icons.person,
-              size: 50,
-              color: Constants.miColor,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 800) {
+          // Desktop: avatar a la izquierda, info a la derecha
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 200, child: avatar),
+                SizedBox(width: 24),
+                Expanded(child: _buildInfoSection('Información de Usuario', entries)),
+              ],
             ),
+          );
+        }
+        // Mobile: stacked
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              avatar,
+              _buildInfoSection('Información de Usuario', entries),
+            ],
           ),
-          SizedBox(height: 16),
-          Text(
-            '${_userData['username'] ?? 'Usuario'}',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            '${_userData['email'] ?? ''}',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-          ),
-          SizedBox(height: 24),
-          _buildInfoSection('Información de Usuario', entries),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -197,35 +197,100 @@ class _ClientesListPageState extends State<ClientesListPage> {
 
         final listaPrecios = context.watch<ListaPreciosCubit>().state.currentList;
 
-        return ListView.builder(
-          itemCount: state.filteredClientes.length,
-          itemBuilder: (context, index) {
-            final cliente = state.filteredClientes[index];
-            final listaPrecioNombre = listaPrecios.firstWhere(
-                  (lista) => lista.id == cliente.listaPrecio,
-              orElse: () => Lista(id: 1, nombre: 'sin lista'),
-            ).nombre;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 800;
 
-            return ListTile(
-              title: Text('Nombre Cliente: ${cliente.nombre}'),
-              subtitle: Text(
-                'CUIT/DNI: ${cliente.dni ?? ''}\nLista de Precios: $listaPrecioNombre',
-              ),
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ModBajaCliente(cliente: cliente),
+            if (isWide) {
+              return _buildClientTable(state.filteredClientes, listaPrecios);
+            }
+
+            return ListView.builder(
+              itemCount: state.filteredClientes.length,
+              itemBuilder: (context, index) {
+                final cliente = state.filteredClientes[index];
+                final listaPrecioNombre = listaPrecios
+                    .firstWhere(
+                      (lista) => lista.id == cliente.listaPrecio,
+                      orElse: () => Lista(id: 1, nombre: 'sin lista'),
+                    )
+                    .nombre;
+
+                return ListTile(
+                  title: Text(cliente.nombre ?? ''),
+                  subtitle: Text(
+                    'CUIT/DNI: ${cliente.dni ?? ''}\nLista: $listaPrecioNombre',
                   ),
+                  onTap: () => _editarCliente(cliente),
                 );
-                if (result == true) {
-                  context.read<ClientesMostradorCubit>().getClientesBD();
-                }
               },
             );
           },
         );
       },
     );
+  }
+
+  Widget _buildClientTable(
+    List<ClientesMostrador> clientes,
+    List<Lista> listaPrecios,
+  ) {
+    return SingleChildScrollView(
+      child: DataTable(
+        columnSpacing: 24,
+        headingRowColor: WidgetStatePropertyAll(Colors.grey.shade100),
+        columns: const [
+          DataColumn(label: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('CUIT/DNI', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Lista de Precios', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
+        ],
+        rows: clientes.map((cliente) {
+          final listaNombre = listaPrecios
+              .firstWhere(
+                (l) => l.id == cliente.listaPrecio,
+                orElse: () => Lista(id: 1, nombre: 'sin lista'),
+              )
+              .nombre;
+
+          return DataRow(
+            onSelectChanged: (_) => _editarCliente(cliente),
+            cells: [
+              DataCell(Text(cliente.nombre ?? '')),
+              DataCell(Text(cliente.dni ?? '')),
+              DataCell(Text(listaNombre ?? '')),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (cliente.activo == 1 ? Colors.green : Colors.grey).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    cliente.activo == 1 ? 'Activo' : 'Inactivo',
+                    style: TextStyle(
+                      color: cliente.activo == 1 ? Colors.green.shade700 : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Future<void> _editarCliente(ClientesMostrador cliente) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModBajaCliente(cliente: cliente),
+      ),
+    );
+    if (result == true) {
+      context.read<ClientesMostradorCubit>().getClientesBD();
+    }
   }
 }

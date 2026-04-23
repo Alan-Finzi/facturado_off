@@ -101,32 +101,39 @@ class _FormaCobroPageState extends State<FormaCobroPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sección Cliente - Usando el widget de búsqueda unificado
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: BuscarClienteWidget(
-                            clearProductsOnSelection: false, // No limpiar productos al seleccionar
-                          ),
-                        ),
-                        SizedBox(width: 8.0),
-                        Expanded(
-                          flex: 1,
-                          child: Column(
+                    // Sección Cliente
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 500;
+                        final clienteWidget = BuscarClienteWidget(clearProductsOnSelection: false);
+                        final vendedorWidget = Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Vendedor'),
+                            ElevatedButton.icon(
+                              icon: Icon(Icons.person),
+                              label: Text('DEMO'),
+                              onPressed: () {},
+                            ),
+                          ],
+                        );
+
+                        if (isWide) {
+                          return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Vendedor'),
-                              ElevatedButton.icon(
-                                icon: Icon(Icons.person),
-                                label: Text('DEMO'),
-                                onPressed: () {},
-                              ),
+                              Expanded(flex: 3, child: clienteWidget),
+                              SizedBox(width: 8.0),
+                              Expanded(flex: 1, child: vendedorWidget),
                             ],
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [clienteWidget, SizedBox(height: 12), vendedorWidget],
+                        );
+                      },
                     ),
                     SizedBox(height: 16.0),
                     // Sección Forma de Cobro (usando el widget especializado)

@@ -1,64 +1,60 @@
-import 'dart:io';
 import 'package:facturador_offline/bloc/cubit_cliente_mostrador/cliente_mostrador_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_payment_methods/payment_methods_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_resumen/resumen_cubit.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:facturador_offline/bloc/cubit_productos/productos_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_status_apis/status_apis_cubit.dart';
 import 'package:facturador_offline/bloc/cubit_thema/thema_cubit.dart';
 import 'package:facturador_offline/pages/splash_screen_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/cubit_lista_precios/lista_precios_cubit.dart';
 import 'bloc/cubit_login/login_cubit.dart';
 import '../services/user_repository.dart';
 import 'bloc/cubit_producto_precio_stock/producto_precio_stock_cubit.dart';
-import 'data/database_seeder.dart';
-import 'helper/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'util/platform_service.dart';
-import 'widget/platform_adaptive_widget.dart';
 import 'util/constants.dart';
 
 
 void main() async {
-  // Inicializar el entorno Flutter y la base de datos
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar plataforma específica
+  // Inicializar Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Habilitar persistencia offline de Firestore
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  } catch (_) {
+    // Plataformas que no soportan persistencia continúan sin ella
+  }
+
+  // Inicializar plataforma específica (tamaño de ventana en desktop, etc.)
   final platformService = PlatformService();
   await platformService.initPlatformSettings();
 
-  // Configurar SQLite para todas las plataformas
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Configuración para desktop
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-
   // Inicializar preferencias compartidas
   final prefs = await SharedPreferences.getInstance();
-  final isFirstSyncDone = prefs.getBool('isFirstSyncDone') ?? false;
-
-  if (!isFirstSyncDone) {
-    // 🔥 Solo borra la DB la primera vez
-    await DatabaseHelper.instance.deleteDatabaseIfExists();
+  final isFirstRun = prefs.getBool('isFirstSyncDone') ?? false;
+  if (!isFirstRun) {
     await prefs.setBool('isFirstSyncDone', true);
   }
 
-  await DatabaseHelper.instance.database; // Siempre inicializa la base
-
-  // Configurar manejo de foco
   WidgetsBinding.instance.addPostFrameCallback((_) {
     FocusManager.instance.primaryFocus?.unfocus();
   });
 
-  // Ejecutar la aplicación
   runApp(BlocProviders());
 }
-
-
 
 
 class BlocProviders extends StatelessWidget {
@@ -66,20 +62,19 @@ class BlocProviders extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (context) => LoginCubit( )),
+        BlocProvider(create: (context) => LoginCubit()),
         BlocProvider(create: (context) => StatusApisCubit()),
         BlocProvider(create: (context) => ThemaCubit()),
         BlocProvider(create: (context) => ResumenCubit()),
         BlocProvider(create: (context) => ListaPreciosCubit(UserRepository())),
         BlocProvider(create: (context) => ClientesMostradorCubit(UserRepository())),
         BlocProvider(
-            create: (context) {
-              final loginCubit = BlocProvider.of<LoginCubit>(context);
-              return ProductosMaestroCubit( );
-            }
+          create: (context) => ProductosMaestroCubit(),
         ),
-        BlocProvider(create: (context) => ProductosCubit(UserRepository(), currentListProductCubit: [])),
-        BlocProvider(create: (context) => PaymentMethodsCubit(databaseHelper: DatabaseHelper.instance)),
+        BlocProvider(
+            create: (context) =>
+                ProductosCubit(UserRepository(), currentListProductCubit: [])),
+        BlocProvider(create: (context) => PaymentMethodsCubit()),
       ],
       child: const Myapp(),
     );
@@ -101,14 +96,11 @@ class _MyappState extends State<Myapp> {
   Widget build(BuildContext context) {
     final themeCubit = context.watch<ThemaCubit>();
 
-    // Definir colores principales
-    final primaryColor = Constants.miColor; // Usar el rojo puro desde Constants
+    final primaryColor = Constants.miColor;
     const secondaryColor = Color(0xFF3F51B5);
 
-    // Crear tema para aplicación
     final ThemeData lightTheme = ThemeData(
-      hoverColor:primaryColor ,
-
+      hoverColor: primaryColor,
       primaryColor: primaryColor,
       colorScheme: ColorScheme.light(
         primary: primaryColor,
@@ -150,7 +142,6 @@ class _MyappState extends State<Myapp> {
       ),
     );
 
-    // Crear tema oscuro
     final ThemeData darkTheme = ThemeData.dark().copyWith(
       primaryColor: primaryColor,
       colorScheme: ColorScheme.dark(
@@ -168,7 +159,6 @@ class _MyappState extends State<Myapp> {
           fontWeight: FontWeight.bold,
         ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: MaterialStateProperty.all<Color>(primaryColor),
@@ -177,32 +167,21 @@ class _MyappState extends State<Myapp> {
       ),
     );
 
-    // Ajustar tamaños de fuente para móvil/desktop
-    double fontSizeAdjustment = _platformService.isMobile ? 0.0 : 2.0;
+    final double textScaleFactor =
+        _platformService.isDesktop ? 1.0 : 1.0;
 
     return MaterialApp(
       title: 'Facturador Offline',
       theme: lightTheme,
       darkTheme: themeCubit.state.isDark ? darkTheme : lightTheme,
-      themeMode: themeCubit.state.isDark ? ThemeMode.dark : ThemeMode.light,
+      themeMode:
+          themeCubit.state.isDark ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-
-      // Definir el widget inicial adaptado a la plataforma
       home: const SplashScreenAuth(),
-
-      // Configuraciones de plataforma adicionales
       builder: (context, child) {
         final mediaQueryData = MediaQuery.of(context);
-
-        // Ajuste de escala para diferentes tamaños de pantalla
-        final textScaleFactor = _platformService.isDesktop
-            ? 1.0
-            : (mediaQueryData.size.width < 360 ? 0.9 : 1.0);
-
         return MediaQuery(
-          data: mediaQueryData.copyWith(
-            textScaleFactor: textScaleFactor,
-          ),
+          data: mediaQueryData.copyWith(textScaleFactor: textScaleFactor),
           child: child!,
         );
       },
