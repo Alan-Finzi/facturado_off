@@ -536,14 +536,18 @@ class FirestoreService {
   // ── PRODUCTOS IVAS ────────────────────────────────────────────────────────
 
   Future<void> upsertProductosIvas(List<ProductosIvasModel> ivas) async {
-    final batch = _db.batch();
-    for (final iva in ivas) {
-      final docId =
-          '${iva.productId}_${iva.sucursalId}_${iva.comercioId}';
-      batch.set(_productosIvas.doc(docId), iva.toMap(),
-          SetOptions(merge: true));
+    const batchSize = 400;
+    for (int i = 0; i < ivas.length; i += batchSize) {
+      final batch = _db.batch();
+      final slice = ivas.skip(i).take(batchSize);
+      for (final iva in slice) {
+        if (iva.productId == null) continue;
+        final docId = '${iva.productId}_${iva.sucursalId}_${iva.comercioId}';
+        batch.set(_productosIvas.doc(docId), iva.toMap(),
+            SetOptions(merge: true));
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   Future<List<ProductosIvasModel>> getProductosIvas() async {

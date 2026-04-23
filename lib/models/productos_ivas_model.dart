@@ -12,11 +12,13 @@ class ProductosIvasModel {
   });
 
   factory ProductosIvasModel.fromMap(Map<String, dynamic> map) {
+    int? _parseInt(dynamic v) =>
+        v == null ? null : (v is int ? v : int.tryParse(v.toString()));
     return ProductosIvasModel(
-      productId: map['product_id'],
-      comercioId: map['comercio_id'],
-      sucursalId: map['sucursal_id'],
-      iva: map['iva'] != null ? (map['iva'] is int ? map['iva'].toDouble() : map['iva']) : null,
+      productId: _parseInt(map['product_id']),
+      comercioId: _parseInt(map['comercio_id']),
+      sucursalId: _parseInt(map['sucursal_id']),
+      iva: map['iva'] != null ? double.tryParse(map['iva'].toString()) : null,
     );
   }
 
